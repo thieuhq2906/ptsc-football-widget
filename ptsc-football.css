@@ -1,0 +1,90 @@
+/* PTSC Cup 6v6 — embeddable cartoon football match. Loaded by ptsc-football.js into the widget's
+   shadow root, so nothing here touches the host page and the host page's CSS cannot reach in. */
+:host { display: block; }
+.ptsc-football {
+  --color-paper: oklch(97.6% 0.014 92);
+  --color-paper-2: oklch(95% 0.02 92);
+  --color-card: oklch(99.6% 0.004 92);
+  --color-ink: oklch(25.5% 0.06 268);
+  --color-ink-2: oklch(42% 0.045 268);
+  --color-muted: oklch(51% 0.03 268);
+  --color-pear: oklch(91% 0.19 118);
+  --color-pear-soft: oklch(96.5% 0.07 118);
+  --color-sky: oklch(52% 0.15 252);
+  --color-sky-soft: oklch(91% 0.045 255);
+  --color-coral: oklch(73% 0.16 40);
+  --color-danger: oklch(55% 0.19 26);
+  --color-sun: oklch(90% 0.11 88);
+  --color-mint-ink: oklch(44% 0.1 155);
+  --art-skin: oklch(90% 0.05 60);
+  --art-skin-2: oklch(76% 0.07 55);
+  --art-red: oklch(60% 0.2 27);
+  --art-blue: oklch(57% 0.15 255);
+  --art-gk-r: oklch(60% 0.14 300);
+  --art-gk-b: oklch(78% 0.15 62);
+  --art-ref: oklch(88% 0.17 100);
+  --art-hair: oklch(22% 0.01 260);
+  --art-hair-brown: oklch(36% 0.05 55);
+  --art-shorts: oklch(30% 0.02 250);
+  --art-gold: oklch(82% 0.15 85);
+  --art-gold-deep: oklch(66% 0.14 70);
+  --art-shadow: oklch(24% 0.07 262);
+  --art-grass: oklch(64% 0.15 142);
+  --art-grass-2: oklch(59.5% 0.15 142);
+  --art-surround: oklch(50% 0.09 165);
+  --art-surround-deep: oklch(43% 0.08 165);
+  --art-stand: oklch(86% 0.03 255);
+  --art-stand-deep: oklch(72% 0.04 255);
+  --art-card-yellow: oklch(88% 0.17 98);
+  --art-card-red: oklch(55% 0.21 27);
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --line: 2.5px solid var(--color-ink);
+  --shadow-sticker: 4px 5px 0 var(--color-ink);
+  color-scheme: light;
+}
+.ptsc-football, .ptsc-football * { box-sizing: border-box; }
+@keyframes pf-pop { from { opacity: 0; transform: scale(.85) translateY(10px); } to { opacity: 1; transform: none; } }
+.ptsc-football .tv { position: relative; width: 100%; max-width: 760px; aspect-ratio: 16 / 9; border: 3px solid var(--color-ink); border-radius: 22px; overflow: hidden;
+  background: linear-gradient(var(--color-sky-soft), var(--color-paper-2) 70%); box-shadow: 5px 6px 0 var(--color-ink); container-type: inline-size; }
+.ptsc-football .tv svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.ptsc-football .live { position: absolute; top: 3.2cqw; right: 3cqw; display: flex; align-items: center; gap: 6px; padding: .5cqw 1.6cqw; border: 2px solid var(--color-ink); border-radius: 99px;
+  background: var(--color-card); font-family: var(--font-mono); font-size: max(10px, 1.6cqw); font-weight: 700; letter-spacing: .06em; box-shadow: 2px 3px 0 var(--color-ink); }
+.ptsc-football .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); animation: pf-blink 1.2s steps(2, jump-none) infinite; }
+@keyframes pf-blink { 50% { opacity: .25; } }
+.ptsc-football .sb { position: absolute; top: 3cqw; left: 3cqw; display: grid; gap: .5cqw; font-size: max(11px, 1.9cqw); }
+.ptsc-football .sb-bug { display: flex; align-items: stretch; border: 2px solid var(--color-ink); border-radius: 12px; overflow: hidden; background: var(--color-card); box-shadow: 3px 4px 0 var(--color-ink); }
+.ptsc-football .sb-cup { display: grid; place-items: center; padding: 0 1.2cqw; background: var(--color-ink); color: var(--color-card); font-family: var(--font-mono); font-size: .78em; letter-spacing: .08em; }
+.ptsc-football .sb-team { display: flex; align-items: center; gap: .8cqw; padding: .7cqw 1.2cqw; font-weight: 800; }
+.ptsc-football .sb-team.has-ball { background: var(--color-pear-soft); }
+.ptsc-football .sb-dot { width: 1.1em; height: 1.1em; flex: none; border: 2px solid var(--color-ink); border-radius: 50%; }
+.ptsc-football .sb-dot.R { background: var(--art-red); }
+.ptsc-football .sb-dot.B { background: var(--art-blue); }
+.ptsc-football .sb-cards { display: flex; gap: 2px; }
+.ptsc-football .sb-cards i { width: .55em; height: .8em; border: 1.2px solid var(--color-ink); border-radius: 2px; background: var(--art-card-yellow); }
+.ptsc-football .sb-cards i.red { background: var(--art-card-red); }
+.ptsc-football .sb-score { display: flex; align-items: center; gap: .6cqw; padding: 0 1cqw; border-inline: 2px solid var(--color-ink); font-family: var(--font-mono); font-size: 1.3em; font-variant-numeric: tabular-nums; }
+.ptsc-football .sb-score b { display: inline-block; min-width: 1ch; text-align: center; }
+.ptsc-football .sb-score b.is-changed { animation: pf-sb-pop .7s ease-out; }
+.ptsc-football .sb-clock { display: grid; place-items: center; padding: 0 1.2cqw; border-left: 2px solid var(--color-ink); font-family: var(--font-mono); font-size: .9em; font-variant-numeric: tabular-nums; background: var(--color-sun); }
+.ptsc-football .sb-note { justify-self: start; max-width: 100%; padding: .3cqw 1.2cqw; border: 2px solid var(--color-ink); border-radius: 99px; background: var(--color-card); font-size: .82em; font-weight: 700; color: var(--color-ink-2);
+  box-shadow: 2px 3px 0 var(--color-ink); animation: pf-note-in .35s ease-out; white-space: nowrap; }
+.ptsc-football .sb-note.is-golden { background: var(--art-gold); color: var(--color-ink); }
+.ptsc-football .sb-shape { justify-self: start; display: flex; gap: .8cqw; padding: .2cqw 1cqw; border: 2px solid var(--color-ink); border-radius: 8px; background: var(--color-card);
+  font-family: var(--font-mono); font-size: .7em; font-weight: 700; box-shadow: 2px 3px 0 var(--color-ink); }
+.ptsc-football .sb-shape b { display: inline-flex; align-items: center; gap: .5cqw; font-weight: 700; }
+.ptsc-football .sb-shape b::before { content: ""; width: .8em; height: .8em; border: 1.5px solid var(--color-ink); border-radius: 50%; }
+.ptsc-football .sb-shape b.R::before { background: var(--art-red); }
+.ptsc-football .sb-shape b.B::before { background: var(--art-blue); }
+@keyframes pf-sb-pop { 0% { transform: scale(1.8); color: var(--color-mint-ink); } 100% { transform: none; } }
+@keyframes pf-note-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.ptsc-football .caption { max-width: 760px; margin: -6px 0 0; color: var(--color-muted); font-size: 13px; font-weight: 600; text-align: center; text-wrap: balance; }
+@media (prefers-reduced-motion: reduce) {
+.ptsc-football .live i, .ptsc-football .sb-note, .ptsc-football .sb-score b.is-changed { animation: none; }
+}
+.ptsc-football.is-recording .bubble, .ptsc-football.is-recording .live i, .ptsc-football.is-recording .sb-note, .ptsc-football.is-recording .sb-score b.is-changed { animation: none !important; }
+
+/* Widget box: sized by the host page; room for the sticker shadow. */
+.ptsc-football { display: block; width: 100%; padding: 0 7px 8px 0; color: var(--color-ink); font-family: var(--font-display); line-height: 1.4; }
+.ptsc-football .tv { max-width: none; }
+.ptsc-football .caption { margin: 10px 0 0; }
