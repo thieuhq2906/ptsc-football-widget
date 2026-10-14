@@ -589,6 +589,9 @@
       return false;
     };
     api.status = () => ({ mode: settings.mode ?? "watch", support, phase: game.mode, stoppage: game.stoppage, note: game.note, minute: minute(), score: { ...game.score }, winner: game.winner,
+      duration, extraTime: !!game.extraTime, clockStopped: game.mode !== "play" || game.stoppage || !!game.pendingSubs?.length,
+      penalty: game.penalty ? { score: { ...game.penalty.score }, history: { R: [...game.penalty.history.R], B: [...game.penalty.history.B] }, attack: game.penalty.attack, phase: game.penalty.phase, turn: game.penalty.turn, last: game.penalty.phase === "choose" ? null : game.penalty.last, winner: game.penalty.winner,
+        players: humans.map(h => ({ slot: h.slot, team: h.team, role: h.team === game.penalty.attack ? "attack" : "defend", locked: !!game.penalty.choices[h.team] })) } : null,
       ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
       players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
@@ -664,8 +667,9 @@
           game.stoppage = true; game.carrier = null;
           setNote(`Ra ngoài · phát bóng ${TEAM_NAME[defendingTeam]}`);
           at(T + 1, () => {
-            if (game.mode !== "play") return;
-            carry(keeper); game.carrier = keeper; game.poss = defendingTeam; game.stoppage = false; keeper.busyUntil = T + 0.4; game.dirty = true;
+            prepareRestart(() => {
+              carry(keeper); game.carrier = keeper; game.poss = defendingTeam; game.stoppage = false; keeper.busyUntil = T + 0.4; game.dirty = true;
+            });
           });
         } });
       });
@@ -721,7 +725,12 @@
     }
     /** Match minutes per second of ball in play. */
     /** Match minutes per second of play: two halves of 30 minutes, about 45 s of running clock each. */
-    const PACE = 0.68, HALF = 30, FULL = 60;
+    const HALF = 30, FULL = 60;
+    const duration = clamp(Number(settings.duration) || 2, 1, 20);
+    const PACE = interactive ? FULL / (duration * 60) : 0.68;
+    const useExtraTime = interactive && (settings.extraTime === true || settings.extraTime === "true");
+    const usePenalties = interactive && (settings.penalties === true || settings.penalties === "true");
+    const periodEnd = () => game.extraTime ? FULL + 30 : FULL;
     /** Flight time for a ball that rises `arc` metres above its straight line: what gravity needs (t = √(8h/g)). */
     const gravFlight = arc => Math.sqrt(8 * Math.max(0, arc) / 9.8);
     /** Amateur pace: ground passes, one-touch passes and the fastest a scripted run may go (m/s). */
@@ -740,8 +749,8 @@
       ball.seg = { t0: T, t1: T + dur, a: { g: [...ball.g], h: ball.h }, b, arc, roll: !!opts.roll, onEnd: opts.onEnd, kind: opts.kind ?? "pass", curve: opts.curve ?? 0, wobble: opts.wobble ?? 0 };
       ball.kind = ball.seg.kind;
     }
-    function carry(p) { ball.mode = "carried"; ball.owner = p; ball.seg = null; ball.kind = null; ball.show = true; selectBallOwner(p); }
-    function holdBall(p) { ball.mode = "held"; ball.owner = p; ball.seg = null; ball.kind = null; selectBallOwner(p); }
+    function carry(p) { ball.mode = "carried"; ball.owner = p; ball.seg = null; ball.kind = null; ball.show = true; game.keeperSince = p.role === "GK" ? T : null; selectBallOwner(p); }
+    function holdBall(p) { ball.mode = "held"; ball.owner = p; ball.seg = null; ball.kind = null; game.keeperSince = T; selectBallOwner(p); }
     function updateBall(dt) {
       const before = [...ball.g];
       if (ball.mode === "carried" && ball.owner) {
@@ -1062,7 +1071,7 @@
       ref.keys.push([T + 0.2, T + 1.1, "point"]);
       at(T + 0.5, () => { ball.show = false; });
       at(T + 0.8, () => {
-        if (game.mode !== "play") return;
+        prepareRestart(() => {
         ball.mode = "dead"; ball.seg = null; ball.g = ground(...spot); ball.h = 0;
         const taker = nearest(outfield(team[t]), spot).p;
         if (!taker) return;
@@ -1075,6 +1084,7 @@
           if (game.mode !== "play") return;
           carry(taker); game.carrier = taker; game.poss = t; game.stoppage = false; clearRestartNote(); game.restart = "kickIn"; taker.busyUntil = T; game.dirty = true;
         });
+        });
       });
     }
     
@@ -1084,7 +1094,14 @@
      * the keeper stays on his line; then the cross comes in: a header, a defender heading it clear, or the keeper
      * claiming it.
      */
-    function corner(att, sideV) {
+    function corner(att, sideV, prepared = false) {
+      if (!prepared) {
+        game.stoppage = true; game.carrier = null;
+        const end = toW(att, [1, 0.5])[0] > 0.5 ? 0.995 : 0.005;
+        ball.mode = "dead"; ball.owner = null; ball.seg = null; ball.g = ground(end, sideV ? 0.995 : 0.005); ball.h = 0;
+        setNote(`Phạt góc · ${TEAM_NAME[att]}`);
+        return prepareRestart(() => corner(att, sideV, true));
+      }
       const def = otherTeam(att), gk = GK[def], endU = toW(att, [1, 0.5])[0] > 0.5 ? 1 : 0;   // the end he attacks (ends change at half time)
       game.stoppage = true; game.carrier = null; game.counter = null; game.chain = null; game.stats.corners++;
       setNote(`Phạt góc · ${TEAM_NAME[att]}`);
@@ -1668,14 +1685,21 @@
      * referee marks the distance, the keeper covers the side the wall leaves open, the taker steps back and waits
      * for the whistle. In range it is a shot over the wall; further out, a long ball once everyone is set.
      */
-    function setPiece(c, spot) {
+    function setPiece(c, spot, prepared = false) {
+      if (!prepared) {
+        game.stoppage = true; game.carrier = null;
+        ball.mode = "dead"; ball.owner = null; ball.seg = null; ball.g = ground(...spot); ball.h = 0; ball.show = true;
+        setNote(`Đá phạt · ${TEAM_NAME[c.team]}`);
+        return prepareRestart(() => setPiece(c, spot, true));
+      }
       const att = c.team, def = otherTeam(att), d = toT(att, spot)[0], gk = GK[def];
       game.stoppage = true; game.carrier = null; game.poss = att; game.dirty = true;
       ball.mode = "dead"; ball.seg = null; ball.kind = null; ball.g = ground(...spot); ball.h = 0; ball.show = true;
       setNote(`Đá phạt · ${TEAM_NAME[att]}`);
       const direct = d >= 0.6, walled = d >= 0.45, WALL_M = 6.5;
       // The fouled man takes it, unless he is far away (a substitute who has just come on): then whoever is nearest.
-      const near = mdist(c.pos, spot) > 10 ? nearest(outfield(team[att]), spot).p ?? c : c;
+      const near = !on(c) || mdist(c.pos, spot) > 10 ? nearest(outfield(team[att]), spot).p : c;
+      if (!near) return;
       const taker = att === "R" && direct && on(STAR[7]) && mdist(STAR[7].pos, spot) < 15 ? STAR[7] : near;
       const goal = toW(att, [1, 0.5]), dm = [(goal[0] - spot[0]) * LEN, (goal[1] - spot[1]) * WID], dl = Math.hypot(...dm) || 1, dn = [dm[0] / dl, dm[1] / dl];
       const atM = (m, side = 0) => inPitch([spot[0] + (dn[0] * m - dn[1] * side) / LEN, spot[1] + (dn[1] * m + dn[0] * side) / WID]);
@@ -1954,9 +1978,10 @@
         fly({ g: ground(...out), h: 0 }, 0.5, over ? 0.3 : 0.08, { roll: true });
         at(T + 1.2, () => { ball.show = false; });
         at(T + 1.9, () => {
-          if (game.mode !== "play") return;
+          prepareRestart(() => {
           ball.g = footPoint(gk); ball.h = 0; carry(gk); game.carrier = gk; game.poss = def; game.stoppage = false; gk.busyUntil = T + 1.1; game.dirty = true;
           setNote(`Phát bóng · ${TEAM_NAME[def]}`);
+          });
         });
       }
     }
@@ -2372,6 +2397,7 @@
     
     /* ---------------------------------- modes ---------------------------------- */
     function startMatch() {
+      game.extraTime = false; game.extraHalf2 = false; game.penalty = null; game.keeperSince = null;
       game.timers = []; game.pendingSubs = []; game.newMatch = true; game.redPending = 0;
       for (const p of people) { p.script = null; p.keys = []; p.faceLock = null; p.busyUntil = 0; }
       for (const m of medics) { m.off = false; m.pos = [...m.post]; m.g = ground(...m.pos); }
@@ -2390,7 +2416,8 @@
       const m = game.mode, s = T - game.modeT;
       if (m === "celebrate" && s > (game.celebrateFor ?? 3.0)) {
         for (const p of players) p.near = null;
-        if (game.score.R !== game.score.B && (game.golden || minute() > FULL)) return fullTime();
+        if (game.golden && game.score.R !== game.score.B) return fullTime();
+        if (minute() > periodEnd() && (interactive || game.score.R !== game.score.B)) return endPeriod();
         game.mode = "reset"; game.modeT = T; game.net = null; game.afterGoal = true;
         if (!game.ballFetched) ball.show = false;
         for (const t of TEAMS) planSubs(t);
@@ -2401,7 +2428,7 @@
         const lined = players.filter(on).every(p => !p.script && mdist(p.pos, kickoffSpot(p)) < (p === taker ? 0.5 : 1.0));
         const subbing = T < (game.subsUntil ?? 0), since = T - Math.max(game.modeT, game.subsUntil ?? 0);
         const limit = game.halfBreak || game.newMatch ? 16 : 9, takerReady = mdist(taker.pos, kickoffSpot(taker)) < 1.5;
-        if ((s > 1.5 && lined && !subbing) || (since > limit && takerReady) || s > 25) {
+        if (!subbing && !game.pendingSubs?.length && ((s > 1.5 && lined) || (since > limit && takerReady) || s > 25)) {
           game.mode = "play"; game.stoppage = false; game.halfBreak = false; game.newMatch = false; game.afterGoal = false; game.ballFetched = false; game.poss = game.kickoffTeam; game.kickoffPass = true; game.dirty = true;
           taker.pos = toW(taker.team, [0.487, 0.5]); taker.g = ground(...taker.pos);
           carry(taker); game.carrier = taker; taker.busyUntil = T + 0.6;
@@ -2410,16 +2437,19 @@
       } else if (m === "play") {
         // Half time at 30 minutes, once someone has the ball under control.
         if (!game.half2 && minute() > HALF && !game.stoppage && game.carrier && ball.owner === game.carrier) return halfTime();
+        if (game.extraTime && !game.extraHalf2 && minute() > FULL + 15 && !game.stoppage && game.carrier && ball.owner === game.carrier) return halfTime(true);
         // Either side can win. Play modes allow a draw; watch mode retains a golden-goal finale.
-        if (minute() > FULL && ball.kind !== "shot" && !game.stoppage) {
-          if (game.score.R !== game.score.B || interactive) fullTime();
+        if (minute() > periodEnd() && ball.kind !== "shot" && !game.stoppage) {
+          if (interactive) endPeriod();
+          else if (game.score.R !== game.score.B) fullTime();
           else if (!game.golden) { game.golden = true; setNote("Hòa! Bàn thắng vàng"); }
         }
       } else if (m === "halftime" && s > 2.5) {
         // Change of ends: everyone walks across to the other half, and the side that did not kick off first starts.
-        SWAP = !initialSwap; game.clock = HALF / PACE; game.kickoffTeam = otherTeam(game.firstKick);
+        SWAP = game.extraTime ? !SWAP : !initialSwap;
+        game.clock = (game.extraTime ? FULL + 15 : HALF) / PACE; game.kickoffTeam = otherTeam(game.firstKick);
         game.mode = "reset"; game.modeT = T; game.halfBreak = true; game.dirty = true;
-        setNote("Hiệp 2 · đổi sân");
+        setNote(game.extraTime ? "Hiệp phụ 2 · đổi sân" : "Hiệp 2 · đổi sân");
         // A breather at the break, and the coach's changes.
         for (const p of players) if (on(p)) p.energy = Math.min(1, p.energy + 0.12);
         for (const t of TEAMS) planSubs(t);
@@ -2460,6 +2490,7 @@
      * the new man runs on and the old one goes and sits down (he can come back on later, once rested).
      */
     function substitute(p, b) {
+      if (!game.stoppage || p.subbing || b.subbing) return;
       const t = p.team, line = [t === "R" ? 0.485 : 0.515, 0.005], wait = [line[0], -0.03];
       p.subbing = b.subbing = true;
       const tP = T + Math.max(1, mdist(p.pos, line) / 4.2), tB = T + Math.max(0.8, mdist(b.pos, wait) / 3), tm = Math.max(tP, tB) + 0.5;
@@ -2487,28 +2518,24 @@
      * is really spent.
      */
     function planSubs(t, slack = 3) {
+      if (!game.stoppage) return;
       // A break in play is a good moment: anyone due within the next few minutes goes now (two at most).
       const off = outfield(team[t]).filter(p => !p.subbing && !p.script && dueOff(p, slack)).sort(offOrder);
       const fresh = benchReady(t).sort((a, b) => a.benchSince - b.benchSince || b.energy - a.energy);
       for (let n = 0; n < 2 && off.length && fresh.length; n++) substitute(off.shift(), fresh.shift());
     }
-    /**
-     * Rolling substitutions on the fly (six-a-side rules): every player except the key men gets about 20 minutes,
-     * then, once he is well away from the ball, jogs off at the halfway line and a rested team-mate runs on while
-     * play goes on. A spent player comes off the same way. One at a time per side.
-     */
-    function rollingSubs() {
-      if (game.mode !== "play" || game.stoppage || ball.mode === "fly") return;
-      // Not in the last minute of a half: the change would be cut short by the whistle.
-      if ((!game.half2 && minute() >= HALF - 1) || minute() >= FULL - 1) return;
-      for (const t of TEAMS) {
-        if (T < (game.subCheck?.[t] ?? 0) || bench[t].some(b => b.subbing)) continue;
-        (game.subCheck ??= { R: 0, B: 0 })[t] = T + 2;
-        const fresh = benchReady(t).sort((a, b) => a.benchSince - b.benchSince || b.energy - a.energy)[0];
-        if (!fresh) continue;
-        const p = outfield(team[t]).filter(p => dueOff(p) && !p.script && T >= p.busyUntil && ball.owner !== p && mdist(p.pos, ballUV()) > 12).sort(offOrder)[0];
-        if (p) { substitute(p, fresh); game.subCheck[t] = T + 4; }
-      }
+    /** Plan changes only at a dead ball, before choosing the restart taker and runners. */
+    function prepareRestart(resume) {
+      if (game.mode !== "play" || !game.stoppage) return;
+      for (const t of TEAMS) planSubs(t, 0);
+      waitForSubs(resume);
+    }
+    /** Keep the ball dead until both substitutions and the players' entry onto the pitch finish. */
+    function waitForSubs(resume) {
+      if (game.mode !== "play" || !game.stoppage) return;
+      if (game.pendingSubs?.length || T < (game.subsUntil ?? 0)) {
+        at(T + 0.1, () => waitForSubs(resume));
+      } else resume();
     }
     /**
      * An injury from a foul: he stays down holding his leg, then hobbles off by the nearest touchline. Someone
@@ -2595,7 +2622,8 @@
       return tOut + 0.4;
     }
     
-    function halfTime() {
+    function halfTime(extra = false) {
+      if (extra) game.extraHalf2 = true;
       game.half2 = true; game.mode = "halftime"; game.modeT = T; game.stoppage = true; game.dirty = true;
       game.carrier = null; game.counter = null; game.chain = null; game.press = { R: null, B: null };
       // Whoever had it lets it go: a pass or shot he was shaping to hit is never struck. A substitution under way
@@ -2604,15 +2632,69 @@
       ball.owner = null;
       (game.pendingSubs ?? []).slice().forEach(finishSub);
       for (const p of people) if (!p.medic) { p.script = null; p.busyUntil = 0; }
-      ref.keys.push([T, T + 1.2, "whistle"]); say(ref, "Hết hiệp 1!", "var(--color-card)", 1.4);
+      ref.keys.push([T, T + 1.2, "whistle"]); say(ref, extra ? "Hết hiệp phụ 1!" : "Hết hiệp 1!", "var(--color-card)", 1.4);
       at(T + 1.0, () => { ball.show = false; });
-      setNote(`Hết hiệp 1 · Đỏ ${game.score.R}–${game.score.B} Xanh`);
+      setNote(`${extra ? "Hết hiệp phụ 1" : "Hết hiệp 1"} · Đỏ ${game.score.R}–${game.score.B} Xanh`);
     }
+
+    /** Finish regulation or extra time, using the options chosen before kick-off. */
+    function endPeriod() {
+      if (game.score.R !== game.score.B) return fullTime();
+      if (useExtraTime && !game.extraTime) {
+        game.extraTime = true; game.extraHalf2 = false; game.clock = FULL / PACE;
+        game.stoppage = true; game.mode = "reset"; game.modeT = T; game.halfBreak = true;
+        game.carrier = null; game.counter = null; game.chain = null; game.timers = [];
+        ball.mode = "dead"; ball.owner = null; ball.g = ground(0.5, 0.5); ball.h = 0; ball.show = true;
+        SWAP = initialSwap; game.kickoffTeam = game.firstKick;
+        for (const p of people) { p.script = null; p.busyUntil = 0; p.keys = []; }
+        for (const h of humans) h.charge = null;
+        for (const t of TEAMS) planSubs(t, 0);
+        setNote("Hòa · hiệp phụ 1 (2 hiệp, mỗi hiệp 15 phút trên đồng hồ trận)");
+        return;
+      }
+      if (usePenalties) return startPenalties();
+      fullTime();
+    }
+
+    function startPenalties() {
+      game.mode = "penalties"; game.stoppage = true; game.carrier = null; game.timers = [];
+      ball.mode = "dead"; ball.owner = null;
+      for (const h of humans) h.charge = null;
+      game.penalty = { score: { R: 0, B: 0 }, history: { R: [], B: [] }, attack: game.firstKick, phase: "choose", choices: {}, last: null, winner: null, turn: 0 };
+      setNote("Luân lưu · 5 lượt mỗi đội, hòa thì đá tiếp từng cặp");
+      chooseCpuPenalty();
+    }
+    function chooseCpuPenalty() {
+      if (settings.mode !== "cpu") return;
+      const p = game.penalty, cpu = otherTeam(humans[0].team);
+      p.choices[cpu] = pick(["left", "center", "right"]);
+    }
+    api.choosePenalty = (slot, direction) => {
+      const h = humans.find(h => h.slot === slot), p = game.penalty;
+      if (game.mode !== "penalties" || p.phase !== "choose" || !h || !["left", "center", "right"].includes(direction) || p.choices[h.team]) return false;
+      p.choices[h.team] = direction;
+      if (p.choices.R && p.choices.B) {
+        const attack = p.attack, defend = otherTeam(attack), goal = p.choices[attack] !== p.choices[defend];
+        p.history[attack].push(goal); if (goal) p.score[attack]++;
+        p.phase = "result"; p.last = { attack, shot: p.choices[attack], dive: p.choices[defend], goal, turn: p.turn };
+        const remainingR = Math.max(0, 5 - p.history.R.length), remainingB = Math.max(0, 5 - p.history.B.length);
+        if (p.history.R.length <= 5 && p.history.B.length <= 5 && p.score.R > p.score.B + remainingB) p.winner = "R";
+        else if (p.history.R.length <= 5 && p.history.B.length <= 5 && p.score.B > p.score.R + remainingR) p.winner = "B";
+        else if (p.history.R.length >= 5 && p.history.R.length === p.history.B.length && p.score.R !== p.score.B) p.winner = p.score.R > p.score.B ? "R" : "B";
+        at(T + 3, () => {
+          if (game.mode !== "penalties") return;
+          if (p.winner) { p.phase = "finished"; fullTime(p.winner, true); }
+          else { p.attack = defend; p.choices = {}; p.phase = "choose"; p.turn++; chooseCpuPenalty(); }
+        });
+      }
+      return true;
+    };
     
-    function fullTime(forfeitWinner = null) {
+    function fullTime(forfeitWinner = null, penaltyWin = false) {
       game.winner = forfeitWinner ?? (game.score.R === game.score.B ? null : game.score.R > game.score.B ? "R" : "B");
       game.mode = "fulltime"; game.modeT = T; game.stoppage = true; game.carrier = null; game.counter = null; game.chain = null;
-      if (ball.mode === "carried") ball.mode = "dead";
+      if (ball.mode === "carried" || ball.mode === "held") ball.mode = "dead";
+      ball.owner = null;
       // Nothing from open play carries on past the whistle: substitutions finish at once, arguments, actions and
       // shouts stop.
       (game.pendingSubs ?? []).slice().forEach(finishSub);
@@ -2625,7 +2707,7 @@
         setNote(`Hết giờ · Hòa ${game.score.R}–${game.score.B}`);
         return;
       }
-      setNote(forfeitWinner ? `Hết giờ · ${TEAM_NAME[game.winner]} thắng do đối thủ thiếu người` : `Hết giờ · ${TEAM_NAME[game.winner]} thắng ${game.score[game.winner]}–${game.score[otherTeam(game.winner)]}`);
+      setNote(penaltyWin ? `${TEAM_NAME[game.winner]} thắng luân lưu ${game.penalty.score[game.winner]}–${game.penalty.score[otherTeam(game.winner)]}` : forfeitWinner ? `Hết giờ · ${TEAM_NAME[game.winner]} thắng do đối thủ thiếu người` : `Hết giờ · ${TEAM_NAME[game.winner]} thắng ${game.score[game.winner]}–${game.score[otherTeam(game.winner)]}`);
       game.kickoffTeam = otherTeam(game.winner);
       // The beaten side, each in his own way: one or two crouch or sit for a moment (the keeper sits down in his
       // area), the others hands on hips or head in hands. Those who went down get up during the ceremony.
@@ -2736,54 +2818,57 @@
       T += dt;
       game.timers.sort((a, b) => a.t - b.t);
       while (game.timers.length && game.timers[0].t <= T) game.timers.shift().fn();
+      if (game.mode === "penalties") return;
       // The clock only runs while the ball is in play (celebrations, restarts and rows are added on, like stoppage time).
-      if (game.mode === "play" && !game.stoppage) {
-        const before = Math.min(FULL + 1, minute()); game.clock += dt; if (Math.min(FULL + 1, minute()) !== before) game.dirty = true;
+      if (game.mode === "play" && !game.stoppage && !game.pendingSubs?.length) {
+        const before = minute(); game.clock += dt; if (minute() !== before) game.dirty = true;
       }
       updateEnergy(dt);
-      rollingSubs();
       updateModes();
       updateShape();
       updateControls();
       updatePress();
+      releaseKeeperIfLate();
       if (game.mode === "play" && !game.stoppage && game.carrier && ball.owner === game.carrier && (ball.mode === "carried" || ball.mode === "held") && T >= game.carrier.busyUntil && !humanFor(game.carrier)) decide(game.carrier);
       for (const p of people) updatePerson(p, dt);
       updateBall(dt);
       updateCamera(dt);
+    }
+
+    /** A keeper can be controlled manually, but cannot hold possession indefinitely. */
+    function releaseKeeperIfLate() {
+      const keeper = ball.owner;
+      if (game.mode !== "play" || game.stoppage || keeper?.role !== "GK" || !["held", "carried"].includes(ball.mode)) return;
+      game.keeperSince ??= T;
+      if (T - game.keeperSince < 6) return;
+      game.keeperSince = T; keeper.script = null; keeper.busyUntil = T;
+      const human = humanFor(keeper); if (human) human.charge = null;
+      game.carrier = keeper; say(keeper, "Đưa bóng vào cuộc!", "var(--color-sky-soft)", 1);
+      if (!pass(keeper, { style: ball.mode === "held" ? "throw" : "pass", backOk: true })) {
+        game.carrier = null;
+        looseBall(inPitch(along(keeper.team, keeper.pos, 8)), { maxArc: .2, exclude: keeper });
+      }
     }
     
     /* ---------------------------------- camera ---------------------------------- */
     const PITCH_BOX = (() => { const c = [ground(0, 0), ground(1, 0), ground(0, 1), ground(1, 1)]; return { x0: Math.min(...c.map(p => p[0])), x1: Math.max(...c.map(p => p[0])), y0: Math.min(...c.map(p => p[1])), y1: Math.max(...c.map(p => p[1])) }; })();
     function updateCamera(dt) {
       const m = game.mode, bs = [ball.g[0], ball.g[1] - ball.h * K * 0.5];
-      // Wide by default; it tightens for tricks, shots and goalmouth play, and pulls right out for kick-offs.
+      // Keep the existing perspective and easing; the ball always determines the camera position.
       let tx = bs[0], ty = bs[1], tz = 0.68;
       if (m === "play") {
-        const lead = ATT[game.poss] * 75;
+        const lead = game.stoppage ? 0 : ATT[game.poss] * 75;
         tx += lead; ty += -lead * 0.3;
         const bu = ballUV()[0];
         if (T < game.skillUntil) { tz = 0.82; tx -= lead * 0.6; ty += lead * 0.18; }
         if (ball.kind === "shot" || bu < 0.18 || bu > 0.82) tz = 0.82;
-        if (game.fight && T < game.fight.until) { [tx, ty] = add(ground(...game.fight.uv), [0, -30]); tz = 0.95; }
-        // Free kick: frame the ball, the wall and the goal together.
-        if (game.fk && T < game.fk.until && game.fk.direct) { [tx, ty] = add(lerp(ground(...game.fk.spot), ground(...game.fk.goal), 0.45), [0, -10]); tz = 0.88; }
+        if (game.fk && T < game.fk.until && game.fk.direct) tz = 0.88;
       } else if (m === "celebrate") {
-        tx = game.scorer.g[0]; ty = game.scorer.g[1] - 30; tz = T - game.modeT > 0.8 ? 1.08 : 0.9;
-        // If the defence is arguing, widen to keep the scorer and the row in the same shot.
-        const bl = game.blame;
-        if (bl && T > bl.from && T < bl.until) {
-          const mid = lerp(bl.a.g, bl.c.g, 0.5), span = Math.max(Math.abs(mid[0] - tx) * 0.9, Math.abs(mid[1] - ty) * 1.6);
-          tx = (mid[0] + tx) / 2; ty = (mid[1] + ty) / 2 - 20; tz = clamp(560 / (span + 220), 0.62, 1.0);
-        }
+        tz = T - game.modeT > 0.8 ? 1.08 : 0.9;
       }
-      else if (m === "reset") {
-        [tx, ty] = ground(0.5, 0.5); tz = 0.6;
-        const bl = game.blame;
-        if (bl && T < bl.until) { [tx, ty] = add(lerp(bl.a.g, bl.c.g, 0.5), [0, -30]); tz = 0.95; }
-      }
+      else if (m === "reset") tz = 0.6;
       else if (m === "fulltime") tz = 0.78;
-      else if (m === "ceremony") { [tx, ty] = add(ground(0.52, 0.48), [0, -12]); tz = T - game.modeT > 1.5 ? 1.12 : 0.8; }
-      if ((m === "play" || m === "reset") && game.pendingSubs?.length) { const sp = ground(0.5, -0.02); ty = Math.min(ty, sp[1] + 40 / tz); }
+      else if (m === "ceremony") tz = T - game.modeT > 1.5 ? 1.12 : 0.8;
       const kz = 1 - Math.exp(-dt * 1.4), kp = 1 - Math.exp(-dt * 2.4);
       cam.z += (tz - cam.z) * kz;
       const hw = VW / 2 / cam.z, hh = VH / 2 / cam.z;
@@ -3196,9 +3281,11 @@
         const left = team[t].filter(inSquad).length, sb = bench[t].filter(b => !b.off && !b.injured).length;
         $(`shape-${t}`).textContent = (left < 6 ? `${game.shape[t]} (${left})` : game.shape[t]) + ` · DB ${sb}`;
       }
-      const m = Math.min(FULL, minute());
+      const m = Math.min(periodEnd(), minute());
       $("clock").textContent = game.mode === "ceremony" || game.mode === "fulltime" || game.mode === "draw" ? "HẾT"
-        : game.mode === "halftime" || (game.mode === "reset" && game.halfBreak) ? "HẾT H1"
+        : game.mode === "penalties" ? "PEN"
+        : game.mode === "halftime" || (game.mode === "reset" && game.halfBreak) ? game.extraTime ? "HIỆP PHỤ" : "HẾT H1"
+        : game.extraTime ? `HP ${m}'`
         : !game.half2 && minute() > HALF ? `${HALF}+${minute() - HALF}'`
         : game.golden ? `${FULL}+${Math.max(1, minute() - FULL)}'` : `${m}'`;
       const note = $("note");

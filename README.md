@@ -11,7 +11,7 @@ Không cần thư viện, không cần build, không cần server riêng.
 - **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh; máy điều khiển đội còn lại.
 - **Hai người:** A chọn áo, B chọn sân trái/phải lúc bắt đầu và nhận màu áo còn lại. Hai đội đổi sân giữa hiệp.
 
-Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, camera bám bóng, thể lực, thay người tự động, thẻ phạt và nghỉ giữa hiệp.
+Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người tự động chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong.
 Chế độ chơi không dùng lịch bàn thắng của chế độ xem; tỷ số phụ thuộc vào thao tác, vị trí sút, đối thủ và thể lực. Hết giờ có thể hòa.
 
 Tam giác xanh trên đầu và vòng dưới chân đánh dấu người đang điều khiển, giống mẫu tham chiếu; người B dùng xanh lam.
@@ -22,16 +22,16 @@ Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi
 | Thao tác | Người A / đấu với máy | Người B |
 |---|---|---|
 | Di chuyển theo hướng màn hình | W A S D | Các phím mũi tên |
-| Giữ để nạp lực chuyền, thả để đá | F | N |
-| Giữ để nạp lực sút, thả để đá | G | M |
-| Giữ pressing để tự áp sát (không tự tranh bóng) | H | Dấu phẩy |
-| Xoạc theo hướng mũi tên | J hoặc nút Xoạc A | Dấu chấm hoặc nút Xoạc B |
+| Có bóng: giữ để nạp lực chuyền, thả để đá; phòng ngự: giữ để áp sát | F | N |
+| Có bóng: giữ để nạp lực sút, thả để đá; phòng ngự: xoạc theo hướng | G | M |
 | Đổi cầu thủ khi phòng ngự | Q | L |
 | Chạy nhanh | Shift trái | Shift phải |
-| Tạm dừng / tiếp tục khi sân có focus | Space | Space |
 
-Bấm **Bắt đầu trận**, sau đó dùng bàn phím. Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
+Bấm **Bắt đầu trận** hoặc **Bắt đầu trận mới**: sân luôn tạm dừng, phủ nền mờ và hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
+Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn cơ bản nằm riêng góc trái/phải sân, độ mờ 30%.
+Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
 Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không cầm bóng.
+Thủ môn tự đưa bóng trở lại sau tối đa 6 giây giữ bóng nếu người chơi hoặc AI chưa phát bóng, tránh ôm bóng đến hết trận.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
 Chọn **Tiếp tục** để trở lại. Đổi lựa chọn áo/sân áp dụng ở trận mới. Website chơi cùng máy cần bàn phím.
@@ -42,11 +42,19 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 ### Thao tác nâng cao
 
 - Nhấn **sút hai lần nhanh** (G hoặc M): sút thần sầu, lấy đà 0,6 giây, tiêu hao 18% thể lực, cần ít nhất 23% thể lực. Có thể bị cản; không bảo đảm ghi bàn.
-- Nhấn **pressing hai lần nhanh** (H hoặc dấu phẩy) khi gần đối thủ: 30% chỉ phạm lỗi, 50% cướp bóng, 15% thẻ vàng, 5% thẻ đỏ. Tỷ lệ áp dụng khi pha tranh bóng thực sự diễn ra; người đang có vàng nhận vàng lần hai vẫn bị đuổi.
+- Khi phòng ngự, nhấn **F hoặc N hai lần nhanh** khi gần đối thủ: 30% chỉ phạm lỗi, 50% cướp bóng, 15% thẻ vàng, 5% thẻ đỏ. Tỷ lệ áp dụng khi pha tranh bóng thực sự diễn ra; người đang có vàng nhận vàng lần hai vẫn bị đuổi.
 - Xoạc nguy hiểm hơn pressing: khi va chạm có xác suất phạm lỗi cao và gần như luôn có thẻ nếu bị thổi phạt.
 
-**Toàn màn hình** phóng sân và giữ nguyên góc máy. Hướng dẫn trong sân chỉ có nút cơ bản, hiển thị với độ mờ 30%; thao tác nhấn hai lần chỉ được hướng dẫn bên ngoài sân.
-Chọn **Thu nhỏ** hoặc Escape để thoát. Nếu trình duyệt không cho phép Fullscreen API, sân vẫn được mở phủ cửa sổ.
+**Toàn màn hình** là một nút biểu tượng ở góc dưới phải sân, giống nút của trình phát video, có cả ở chế độ xem. Bấm cùng nút để thu nhỏ, hoặc Escape để thoát. Nếu trình duyệt không cho phép Fullscreen API, sân vẫn được mở phủ cửa sổ.
+Hướng dẫn trong sân chỉ có nút cơ bản; thao tác nhấn hai lần nằm trong mục nâng cao ngoài sân.
+
+### Thời lượng, hiệp phụ và luân lưu
+
+- Hai chế độ chơi có thể chọn 2, 4, 6 hoặc 10 phút bóng trong cuộc. Hai hiệp chia đều; thời gian bóng chết, thay người và tạm dừng không tính vào thời lượng này. Đồng hồ trận vẫn thể hiện hai hiệp 30 phút mô phỏng; mức tiêu hao thể lực theo đồng hồ này được giữ nguyên.
+- Bật **Hiệp phụ nếu hòa**: thêm hai hiệp 15 phút mô phỏng, tương ứng tổng thời gian bằng một nửa thời lượng chính, đổi sân giữa hai hiệp phụ. Nếu không bật luân lưu, hòa sau hiệp phụ được giữ nguyên.
+- Bật **Luân lưu nếu vẫn hòa**: nếu có hiệp phụ, đá luân lưu sau hiệp phụ; nếu không, đá ngay khi hết thời gian chính.
+- Luân lưu chuyển riêng sang góc nhìn từ sau cầu thủ về khung thành. Cả bên sút và thủ môn chọn trái / giữa / phải bằng nút trên sân, hoặc A/S/D cho người A và ←/↓/→ cho B. Hai hướng được giữ kín đến khi cả hai bên chốt. Máy chọn ngẫu nhiên trước khi người chơi chốt.
+- Thủ môn chọn cùng hướng sút sẽ cản phá; khác hướng là bàn thắng. Mỗi đội 5 lượt, có thể kết thúc sớm nếu đã phân thắng bại; hòa thì đá tiếp từng cặp. Tỷ số luân lưu được hiển thị riêng với tỷ số trận.
 
 ## Kiểm tra phát triển
 
@@ -110,4 +118,6 @@ useEffect(() => {
 - `ptsc-football.css`: giao diện (màu, bảng tỉ số, nhãn).
 - `demo.html`: trang ví dụ.
 - `index.html`, `game.js`, `game.css`: trang ba chế độ, lựa chọn trước trận và bàn phím.
+- `assets/control-pad.svg`: hình pad minh họa phím di chuyển.
+- `penalties.js`: giao diện luân lưu và góc nhìn từ sau cầu thủ sút.
 - `tests/game-browser.cjs`: kiểm tra tích hợp game trên trình duyệt.

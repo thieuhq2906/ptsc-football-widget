@@ -7,9 +7,15 @@
   const names = { R: "Đỏ", B: "Xanh" };
   const opposite = team => team === "R" ? "B" : "R";
   const bindings = {
-    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", press: "KeyH", actions: { KeyF: "pass", KeyG: "shoot", KeyH: "press", KeyJ: "slide", KeyQ: "switch" } },
-    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", press: "Comma", actions: { KeyN: "pass", KeyM: "shoot", Comma: "press", Period: "slide", KeyL: "switch" } }
+    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", pass: "KeyF", actions: { KeyF: "pass", KeyG: "shoot", KeyQ: "switch" } },
+    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", pass: "KeyN", actions: { KeyN: "pass", KeyM: "shoot", KeyL: "switch" } }
   };
+  for (const guide of document.querySelectorAll(".pad-help")) {
+    const slot = guide.dataset.slot, b = bindings[slot];
+    const labels = slot === "A" ? { up: "W", left: "A", down: "S", right: "D" } : { up: "↑", left: "←", down: "↓", right: "→" };
+    const actionKeys = slot === "A" ? ["F", "G", "Q"] : ["N", "M", "L"];
+    guide.innerHTML = `<div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${Object.entries(labels).map(([direction, label]) => `<span class="pad-key pad-${direction}" data-code="${b[direction]}">${label}</span>`).join("")}</div><div class="pad-actions"><strong>NGƯỜI ${slot}</strong><p><b>${actionKeys[0]}:</b> chuyền / áp sát / tranh bóng</p><p><b>${actionKeys[1]}:</b> sút / xoạc</p><p><b>${actionKeys[2]}:</b> đổi người</p><small>Shift: chạy nhanh</small></div>`;
+  }
   const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, ...Object.keys(b.actions)])]);
   const pendingShots = new Map(), chargeStarts = new Map(), lastPress = new Map();
   let activeMode = "watch";
@@ -17,15 +23,18 @@
 
   function applyKeys(session = sessions.get(activeMode)) {
     if (!session) return;
+    const state = session.api.status();
     for (const [slot, b] of Object.entries(bindings)) {
       session.api.setInput(slot, session.paused ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
-        y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint), pressing: keys.has(b.press)
+        y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint),
+        pressing: keys.has(b.pass) && !state.players.find(p => p.slot === slot)?.hasBall
       });
     }
   }
   function releaseKeys() {
     keys.clear();
+    highlightPads();
     for (const pending of pendingShots.values()) clearTimeout(pending.timer);
     pendingShots.clear(); chargeStarts.clear(); lastPress.clear();
     for (const session of sessions.values()) {
@@ -33,11 +42,16 @@
       session.api.cancelCharge("A"); session.api.cancelCharge("B");
     }
   }
+  function highlightPads() {
+    for (const key of document.querySelectorAll(".pad-key")) key.classList.toggle("is-held", keys.has(key.dataset.code));
+  }
   function setPaused(session, paused) {
     session.paused = paused;
+    if (!paused) session.awaitingStart = false;
+    session.panel.querySelector(".start-overlay").hidden = !session.awaitingStart;
     releaseKeys();
     if (paused) session.api.pause(); else session.api.play();
-    session.panel.querySelector(".pause").textContent = paused ? "Tiếp tục" : "Tạm dừng";
+    session.panel.querySelector(".pause").textContent = session.awaitingStart ? "Bắt đầu" : paused ? "Tiếp tục" : "Tạm dừng";
     updateHud(session);
   }
   function selectTab(mode) {
@@ -75,7 +89,8 @@
     const teamA = panel.querySelector('input[name$="-team"]:checked').value;
     const teamB = opposite(teamA);
     const sideB = panel.querySelector('input[name="local-side"]:checked')?.value ?? "right";
-    return { mode: panel.dataset.mode, support: panel.querySelector(".support").checked, teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
+    return { mode: panel.dataset.mode, duration: Number(panel.querySelector(".duration").value), extraTime: panel.querySelector(".extra-time").checked, penalties: panel.querySelector(".penalties").checked,
+      support: panel.querySelector(".support").checked, teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
   }
   function setupSummary(panel) {
     const options = optionsFor(panel), sideA = options.leftTeam === options.teamA ? "trái" : "phải";
@@ -103,22 +118,28 @@
     }
   }
   function updateHud(session) {
+    if (session === sessions.get(activeMode)) applyKeys(session);
     const state = session.api.status();
+    session.penaltyView.update(state, session.paused);
+    session.panel.querySelector(".arena-hints").hidden = !!state.penalty;
     const status = session.panel.querySelector(".match-status");
     const pause = session.panel.querySelector(".pause");
     if (state.ended) {
       const result = state.winner ? `Đội ${names[state.winner]} thắng` : "Hai đội hòa";
-      status.textContent = state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${result} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
+      status.textContent = state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${result} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
       pause.disabled = true;
       session.api.setInput("A"); session.api.setInput("B");
     } else {
       pause.disabled = false;
       const phase = { reset: "Chuẩn bị giao bóng", celebrate: "Bàn thắng!", halftime: "Nghỉ giữa hiệp · đổi sân" }[state.phase];
-      status.textContent = session.paused ? "Đang tạm dừng · Nhấn Tiếp tục để chơi" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
+      status.textContent = session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
     }
     for (const player of state.players) {
       const slideButton = session.panel.querySelector(`.slide-action[data-slot="${player.slot}"]`);
-      if (slideButton) slideButton.disabled = session.paused || state.ended || !player.slideReady;
+      if (slideButton) {
+        slideButton.disabled = session.paused || state.ended || !player.ready || (!player.hasBall && !player.slideReady);
+        slideButton.textContent = `${player.hasBall ? "Sút" : "Xoạc"} ${player.slot} · ${player.slot === "A" ? "G" : "M"}`;
+      }
       const card = session.panel.querySelector(`.player-card[data-slot="${player.slot}"]`);
       if (!card) continue;
       const side = state.leftTeam === player.team ? "trái" : "phải";
@@ -129,10 +150,15 @@
       card.querySelector(".charge-text").textContent = player.charge ? `${player.charge.action === "pass" ? "Lực chuyền" : "Lực sút"}: ${Math.round(player.charge.power * 100)}%` : player.pressing ? "Đang pressing · áp sát" : "Giữ phím chuyền/sút để nạp lực";
     }
   }
-  for (const panel of document.querySelectorAll(".game-panel")) {
-    const form = panel.querySelector("form");
-    const arena = panel.querySelector(".arena");
-    const fullscreen = panel.querySelector(".fullscreen");
+  for (const arena of document.querySelectorAll(".arena")) {
+    const fullscreen = arena.querySelector(".fullscreen");
+    function syncFullscreenButton() {
+      const expanded = document.fullscreenElement === arena || arena.classList.contains("fullscreen-fallback");
+      fullscreen.classList.toggle("is-expanded", expanded);
+      fullscreen.setAttribute("aria-label", expanded ? "Thu nhỏ" : "Toàn màn hình");
+      fullscreen.setAttribute("title", expanded ? "Thu nhỏ" : "Toàn màn hình");
+      fullscreen.setAttribute("aria-pressed", String(expanded));
+    }
     async function toggleFullscreen() {
       releaseKeys();
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -140,15 +166,30 @@
       else if (arena.requestFullscreen) {
         try { await arena.requestFullscreen(); } catch { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
       } else { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
+      syncFullscreenButton();
       arena.focus({ preventScroll: true });
     }
     fullscreen.addEventListener("click", toggleFullscreen);
-    panel.querySelector(".fullscreen-exit").addEventListener("click", toggleFullscreen);
-    document.addEventListener("fullscreenchange", () => {
-      fullscreen.textContent = document.fullscreenElement === arena ? "Thu nhỏ" : "Toàn màn hình";
-      releaseKeys();
-      if (activeMode === panel.dataset.mode) arena.focus({ preventScroll: true });
+    arena.addEventListener("keydown", event => {
+      if (event.code === "Escape" && arena.classList.contains("fullscreen-fallback")) { event.preventDefault(); event.stopPropagation(); toggleFullscreen(); }
     });
+    document.addEventListener("fullscreenchange", () => {
+      syncFullscreenButton();
+      releaseKeys();
+      if (arena.closest('[role="tabpanel"]').id === "panel-" + activeMode) arena.focus({ preventScroll: true });
+    });
+  }
+  for (const panel of document.querySelectorAll(".game-panel")) {
+    const form = panel.querySelector("form");
+    const arena = panel.querySelector(".arena");
+    const matchOptions = document.createElement("fieldset"); matchOptions.className = "match-options";
+    matchOptions.innerHTML = '<legend>Thời gian &amp; phân thắng thua</legend><label>Thời lượng <select class="duration" aria-label="Thời lượng trận đấu"><option value="2">2 phút</option><option value="4">4 phút</option><option value="6">6 phút</option><option value="10">10 phút</option></select></label><label><input type="checkbox" class="extra-time">Hiệp phụ nếu hòa</label><label><input type="checkbox" class="penalties">Luân lưu nếu vẫn hòa</label>';
+    form.insertBefore(matchOptions, form.querySelector(".setup-summary"));
+    const overlay = document.createElement("div"); overlay.className = "start-overlay"; overlay.hidden = true;
+    overlay.innerHTML = '<span>Nhấn <kbd>Space</kbd> để bắt đầu trận đấu</span>';
+    arena.querySelector(".arena-surface").append(overlay);
+    const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
+    arena.querySelector(".arena-surface").append(penaltyHost);
     form.addEventListener("change", () => setupSummary(panel));
     setupSummary(panel);
     panel.querySelector(".support").addEventListener("change", event => {
@@ -159,7 +200,10 @@
     for (const button of panel.querySelectorAll(".slide-action")) {
       button.addEventListener("click", () => {
         const session = sessions.get(panel.dataset.mode);
-        if (session && !session.paused) { session.api.action(button.dataset.slot, "slide"); arena.focus({ preventScroll: true }); updateHud(session); }
+        if (session && !session.paused) {
+          const player = session.api.status().players.find(p => p.slot === button.dataset.slot);
+          session.api.action(button.dataset.slot, player?.hasBall ? "shoot" : "slide"); arena.focus({ preventScroll: true }); updateHud(session);
+        }
       });
     }
     form.addEventListener("submit", event => {
@@ -169,10 +213,16 @@
       const options = optionsFor(panel);
       const host = panel.querySelector(".match-host"); host.replaceChildren();
       const api = window.PTSCFootball.mount(host, options);
-      const session = { panel, api, options, paused: false };
+      api.pause();
+      const session = { panel, api, options, paused: true, awaitingStart: true,
+        penaltyView: new window.PTSCPenaltyView(penaltyHost, (slot, direction) => {
+          const current = sessions.get(mode);
+          if (current === session && !session.paused) { api.choosePenalty(slot, direction); updateHud(session); arena.focus({ preventScroll: true }); }
+        }) };
       sessions.set(mode, session);
       form.querySelector(".start").textContent = "Bắt đầu trận mới";
-      panel.querySelector(".pause").textContent = "Tạm dừng";
+      panel.querySelector(".pause").textContent = "Bắt đầu";
+      overlay.hidden = false;
       playerCards(session); updateHud(session); setupSummary(panel);
       arena.focus({ preventScroll: true });
     });
@@ -193,15 +243,24 @@
     event.preventDefault();
     if (event.code === "Space" || event.code === "Escape") {
       if (event.code === "Escape" && session.panel.querySelector(".arena").classList.contains("fullscreen-fallback")) {
-        session.panel.querySelector(".fullscreen-exit").click(); return;
+        session.panel.querySelector(".fullscreen").click(); return;
       }
       if (!event.repeat && !session.api.status().ended) setPaused(session, event.code === "Escape" ? true : !session.paused);
       return;
     }
     if (session.paused || session.api.status().ended) return;
+    if (session.api.status().phase === "penalties") {
+      if (!event.repeat) for (const [slot, b] of Object.entries(bindings)) {
+        const direction = event.code === b.left ? "left" : event.code === b.right ? "right" : event.code === b.down || event.code === b.up ? "center" : null;
+        if (direction) session.api.choosePenalty(slot, direction);
+      }
+      updateHud(session); return;
+    }
     keys.add(event.code); applyKeys(session);
     if (!event.repeat) for (const [slot, binding] of Object.entries(bindings)) {
-      const action = binding.actions[event.code];
+      const player = session.api.status().players.find(p => p.slot === slot);
+      const bound = binding.actions[event.code];
+      const action = bound === "pass" && !player?.hasBall ? "press" : bound === "shoot" && !player?.hasBall ? "slide" : bound;
       if (action === "pass" || action === "shoot") {
         const pending = pendingShots.get(slot);
         if (action === "shoot" && pending?.session === session) {
@@ -212,14 +271,19 @@
           if (session.api.beginCharge(slot, action)) chargeStarts.set(slot, performance.now());
         }
       } else if (action === "press") {
+        const pending = pendingShots.get(slot);
+        if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
+        chargeStarts.delete(slot);
         const now = performance.now(), previous = lastPress.get(slot);
         if (previous != null && now - previous < 300) { session.api.action(slot, "challenge"); lastPress.delete(slot); }
         else lastPress.set(slot, now);
       } else if (action) session.api.action(slot, action);
     }
+    highlightPads();
   });
   document.addEventListener("keyup", event => {
     keys.delete(event.code); applyKeys();
+    highlightPads();
     const session = sessions.get(activeMode);
     if (!session || session.paused || !session.panel.querySelector(".arena").contains(document.activeElement)) return;
     for (const [slot, binding] of Object.entries(bindings)) {
@@ -251,5 +315,5 @@
     if (document.hidden) suspend();
     else if (activeMode === "watch") watcher?.play();
   });
-  setInterval(() => { const session = sessions.get(activeMode); if (session) updateHud(session); }, 250);
+  setInterval(() => { const session = sessions.get(activeMode); if (session) updateHud(session); highlightPads(); }, 250);
 })();
