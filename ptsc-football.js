@@ -22,7 +22,7 @@
   const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const template = (UID, caption) => `<div class="tv" data-id="tv">
   <svg data-id="scene" viewBox="0 0 640 360" role="img" preserveAspectRatio="xMidYMid slice"
-    aria-label="Trận bóng đá sân 6 người hoạt hình giữa đội Đỏ và đội Xanh, máy quay rộng bám theo bóng: rê dắt, đảo chân, cầu vồng, sút xa, đá phạt, xe đạp chổng ngược, ăn mừng và trao cúp cho đội Đỏ"
+    aria-label="Trận bóng đá sân 6 người giữa đội Đỏ và đội Xanh, máy quay rộng bám theo bóng"
     fill="none" stroke="var(--color-ink)" stroke-linecap="round" stroke-linejoin="round">
     <defs>
       <pattern id="${UID}-net" width="5" height="5" patternUnits="userSpaceOnUse">
@@ -68,6 +68,8 @@
     if (host.__ptscFootball) return host.__ptscFootball;
     const UID = "ptscf" + (++count);
     const settings = Object.assign({}, host.dataset, options);
+    const interactive = settings.mode === "cpu" || settings.mode === "local";
+    const initialSwap = settings.leftTeam === "B";
     const opts = { query: new URLSearchParams() };
     for (const k of ["seed", "still", "gif"]) if (settings[k] != null && settings[k] !== false) opts.query.set(k, settings[k] === true ? "" : settings[k]);
     if (settings.fonts !== "none") addFonts();
@@ -90,7 +92,7 @@
      * Court frame (u, v): u = length (0 = Đỏ's goal line, 1 = Xanh's), v = width (0 far touchline, 1 near).
      * Team frame (d, w): d = 0 own goal line … 1 the goal the team attacks; Xanh mirrors both axes.
      * A fixed-step simulation: a director picks the ball carrier's next action (skill, pass, dribble,
-     * shot); everyone else runs to formation spots that follow the ball. Đỏ always ends up winning.
+     * shot); everyone else runs to formation spots that follow the ball. Human teams control their carrier.
      * ========================================================================================== */
     const NS = "http://www.w3.org/2000/svg";
     const LEN = 45, WID = 30;                       // metres
@@ -109,7 +111,7 @@
     const TEAM_NAME = { R: "Đỏ", B: "Xanh" };
     /** Screen-x direction of the goal each team attacks. */
     /** True in the second half, when the teams have changed ends. */
-    let SWAP = false;
+    let SWAP = initialSwap;
     const ATT = { get R() { return SWAP ? -1 : 1; }, get B() { return SWAP ? 1 : -1; } };
     const toW = (team, [d, w]) => (team === "R") !== SWAP ? [d, w] : [1 - d, 1 - w];
     const toT = toW;
@@ -423,7 +425,7 @@
     /* ---------------------------------- storylines ---------------------------------- */
     /**
      * Each match follows a storyline: who scores, from roughly which minute. The losing side always hits back at
-     * some point, and Đỏ always finishes ahead (with stoppage time or a golden goal if the script runs late).
+     * some point. Story roles are randomly assigned to either shirt colour.
      */
     const STORIES = [
       { name: "2-0 → 2-2 → 3-2", goals: [["R", 9], ["R", 20], ["B", 31], ["B", 39], ["R", 48]] },
@@ -440,8 +442,9 @@
     ];
     function newStory() {
       const st = pick(STORIES);
-      const goals = st.goals.map(([t, m]) => [t, clamp(Math.round(m * 0.85) + Math.round((rng() - 0.5) * 6), 3, 47)]).sort((a, b) => a[1] - b[1]);
-      return { name: st.name, goals };
+      const mirror = rng() < 0.5;
+      const goals = interactive ? [] : st.goals.map(([t, m]) => [mirror ? otherTeam(t) : t, clamp(Math.round(m * 0.85) + Math.round((rng() - 0.5) * 6), 3, 47)]).sort((a, b) => a[1] - b[1]);
+      return { name: interactive ? "Tự do" : st.name, goals, favourite: mirror ? "B" : "R" };
     }
     
     /* ---------------------------------- game state ---------------------------------- */
@@ -458,6 +461,61 @@
     game.story = newStory();
     const ball = { mode: "hidden", owner: null, seg: null, g: ground(0.5, 0.5), h: 0, alpha: 0, show: false, spin: 0, kind: null };
     const cam = { x: ground(0.5, 0.5)[0], y: ground(0.5, 0.5)[1], z: 0.6 };
+
+    // Input changes only the selected player's target; camera, rigs, fatigue and rolling subs stay shared.
+    const humans = interactive ? [{ slot: "A", team: settings.teamA === "B" ? "B" : "R", selected: null, x: 0, y: 0, sprint: false, tackleAt: -99 }] : [];
+    if (settings.mode === "local") humans.push({ slot: "B", team: otherTeam(humans[0].team), selected: null, x: 0, y: 0, sprint: false, tackleAt: -99 });
+    const humanFor = p => p && humans.find(h => h.team === p.team);
+    const manual = p => interactive && game.mode === "play" && !game.stoppage && on(p) && p.role !== "GK" && humanFor(p)?.selected === p;
+    function updateControls() {
+      for (const h of humans) {
+        if (!h.selected || !on(h.selected)) h.selected = nearest(outfield(team[h.team]), ballUV()).p;
+        if (game.carrier?.team === h.team && game.carrier.role !== "GK" && on(game.carrier)) h.selected = game.carrier;
+        const p = h.selected;
+        if (p && p.busyUntil === Infinity && !p.script && ball.owner !== p && !p.keys.some(k => k[1] > T)) p.busyUntil = T;
+      }
+      const c = game.carrier;
+      if (game.mode !== "play" || game.stoppage || !c || !humanFor(c) || c.script || ball.mode !== "carried" || T < c.busyUntil) return;
+      const d = nearest(outfield(opponents(c.team)).filter(p => !manual(p) && !p.script && T >= p.busyUntil), c.pos);
+      if (d.p && d.d < 2.1 && T - (game.manualChallengeAt ?? -99) > 1.2) {
+        game.manualChallengeAt = T;
+        tackle(c, d.p, T + 0.3);
+      }
+    }
+    api.setInput = (slot, input = {}) => {
+      const h = humans.find(h => h.slot === slot);
+      if (h) Object.assign(h, { x: clamp(Number(input.x) || 0, -1, 1), y: clamp(Number(input.y) || 0, -1, 1), sprint: !!input.sprint });
+    };
+    api.action = (slot, action) => {
+      const h = humans.find(h => h.slot === slot);
+      if (!h || game.mode !== "play" || game.stoppage) return false;
+      const p = h.selected;
+      if (!p || !on(p)) return false;
+      if (action === "switch" && game.poss !== h.team) {
+        const choices = outfield(team[h.team]).filter(p => p !== h.selected && !p.script);
+        h.selected = nearest(choices, ballUV()).p ?? h.selected;
+        return true;
+      }
+      if (p.script || T < p.busyUntil) return false;
+      if (ball.owner === p && ball.mode === "carried") {
+        game.kickoffPass = false; game.freeKick = false; game.restart = null;
+        if (action === "pass") return pass(p, { manual: true });
+        if (action === "shoot") { shoot(p, { style: h.sprint ? "power" : "kick" }); return true; }
+      }
+      if (action === "tackle" && T - h.tackleAt > 1) {
+        const c = game.carrier;
+        if (c && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 3) {
+          h.tackleAt = T; tackle(c, p, T + 0.25); return true;
+        }
+      }
+      return false;
+    };
+    api.status = () => ({ mode: settings.mode ?? "watch", phase: game.mode, stoppage: game.stoppage, note: game.note, minute: minute(), score: { ...game.score }, winner: game.winner,
+      ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
+      players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
+        energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
+        ready: !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
+        position: h.selected ? [...h.selected.pos] : null })) });
     
     const at = (t, fn) => game.timers.push({ t, fn });
     const ballUV = () => courtUV(ball.g);
@@ -604,7 +662,7 @@
     }
     
     function decide(c) {
-      const [d] = toT(c.team, c.pos), opp = nearest(outfield(opponents(c.team)), c.pos), red = c.team === "R", mom = game.momentum;
+      const [d] = toT(c.team, c.pos), opp = nearest(outfield(opponents(c.team)), c.pos), mom = game.momentum;
       c.dribStyle = null;
       if (game.kickoffPass) { game.kickoffPass = false; if (pass(c, { backOk: true })) return; }
       if (game.freeKick) { game.freeKick = false; return pass(c, { long: true }) || dribble(c); }
@@ -616,7 +674,7 @@
       }
       // A man through on goal or breaking away: the nearest defender behind him sometimes just pulls him back.
       const breaking = d > 0.45 && throughOnGoal(c) || (game.counter && game.counter.team === c.team && T < game.counter.until);
-      if (breaking && T - (game.pullAt ?? -99) > 20 && rng() < (c.team === "R" ? 0.4 : 0.3)) {
+      if (breaking && T - (game.pullAt ?? -99) > 20 && rng() < 0.35) {
         const puller = nearest(outfield(opponents(c.team)), c.pos);
         if (puller.p && puller.d < 4) {
           game.pullAt = T; game.stats.pulls = (game.stats.pulls ?? 0) + 1;
@@ -651,19 +709,19 @@
       // When this side's goal is overdue they take the game to the other side: shots from the edge of the box, and
       // passing moves into it (beyond the usual couple a match).
       const next = game.story.goals[game.storyIdx];
-      const due = game.golden && c.team === "R" ? 5 : next && next[0] === c.team ? minute() - next[1] : -1;
+      const due = game.golden ? 5 : next && next[0] === c.team ? minute() - next[1] : -1;
       if (due >= 2 && d > 0.55 && rng() < (d > 0.62 ? 0.75 : 0.45)) return shoot(c, { label: d < 0.66 ? "Sút xa!" : undefined });
-      // Deep into stoppage time Đỏ go for it from anywhere in range: a few minutes at most.
-      if (game.golden && c.team === "R" && minute() >= FULL + 3 && d > 0.45) return shoot(c, { style: "power", label: "Sút xa!" });
+      // Both teams seek a sudden-death winner from anywhere in range.
+      if (game.golden && minute() >= FULL + 3 && d > 0.45) return shoot(c, { style: "power", label: "Sút xa!" });
       if (due >= 3 && d > 0.3 && d < 0.6 && rng() < 0.5 && (chain(c) || combo(c))) return;
       if (due >= 2 && d <= 0.55 && rng() < 0.7 && pass(c, { forwardOnly: true, toFwd: true, long: d < 0.4 })) return;
       if (due >= 3 && d >= 0.6) return dribble(c, { direct: true });
       // Now and then a flowing move: three or four players passing one-touch into the box (a couple a match at most).
-      if (d > 0.3 && d < 0.72 && game.chainsUsed[c.team] < 2 && rng() < (c.team === mom ? 0.12 : red ? 0.05 : 0.02) && chain(c)) return;
+      if (d > 0.3 && d < 0.72 && game.chainsUsed[c.team] < 2 && rng() < (c.team === mom ? 0.12 : 0.04) && chain(c)) return;
       // One-twos and triangles.
-      if (d > 0.28 && d < 0.7 && rng() < (c.team === mom ? 0.3 : mom ? 0.08 : red ? 0.22 : 0.15) && combo(c)) return;
+      if (d > 0.28 && d < 0.7 && rng() < (c.team === mom ? 0.3 : mom ? 0.08 : 0.18) && combo(c)) return;
       // A trick only when a defender is right on him, and not often.
-      const trick = red ? (c.star ? 0.2 : 0.07) : 0.04;
+      const trick = c.star ? 0.2 : 0.06;
       if (opp.p && opp.d < 3.5 && rng() < trick) { game.stats.tricks++; return skill(c, opp.p); }
       if (opp.d < 4.5 && rng() < 0.7) return pass(c) || dribble(c);
       return rng() < 0.6 ? (pass(c) || dribble(c)) : dribble(c);
@@ -683,7 +741,10 @@
         const goalUV = toW(c.team, [1, 0.5]), nearer = mdist(c.pos, goalUV) - mdist(tgt, goalUV);
         if (o.closerOnly && (nearer < 2 || nearest(opponents(c.team), tgt).d < 3)) continue;
         const open = nearest(opponents(c.team), tgt).d;
-        const s = (tT[0] - cT[0]) * (o.backOk ? -1 : 2) + rng() * 0.6 + Math.min(open, 8) * 0.05 - (open < 2.5 ? 0.5 : 0) + (m.star ? 0.3 : 0)
+        const h = o.manual ? humanFor(c) : null;
+        const aim = h && (h.x || h.y) ? courtUV([h.x, h.y]) : null;
+        const aimDot = aim ? ((pred[0] - c.pos[0]) * LEN * aim[0] * LEN + (pred[1] - c.pos[1]) * WID * aim[1] * WID) / (dist * Math.hypot(aim[0] * LEN, aim[1] * WID)) : 0;
+        const s = aimDot * 4 + (tT[0] - cT[0]) * (o.backOk ? -1 : 2) + rng() * 0.6 + Math.min(open, 8) * 0.05 - (open < 2.5 ? 0.5 : 0) + (m.star ? 0.3 : 0)
           + (o.toFwd && shapeSlot(m, SHAPES[game.shape[c.team]]).line === "FW" ? 1.2 : 0)
           - (!o.backOk && cT[0] > 0.6 && tT[0] < cT[0] - 0.03 ? 1.2 : 0)
           // In the final third, a pass that takes the ball further from goal (out to the flank) is a last resort.
@@ -692,10 +753,10 @@
       }
       if (!best) return false;
       let { m, tgt, dist } = best;
-      // Stoppage time with Đỏ pressing for the winner: Xanh's legs and nerves go, and passes go astray.
+      // Under sudden-death pressure either side can misplace a pass.
       let misplaced = false;
-      if (!throwing && game.golden && c.team === "B" && rng() < 0.35) {
-        const r = nearest(outfield(team.R), tgt);
+      if (!throwing && game.golden && rng() < 0.15) {
+        const r = nearest(outfield(opponents(c.team)), tgt);
         if (r.p && r.d < 14) { m = r.p; tgt = [...r.p.pos]; dist = mdist(c.pos, tgt); misplaced = true; at(T + 0.6, () => say(c, "Chuyền hỏng!", "var(--color-card)", 0.9)); }
       }
       const cross = !misplaced && !throwing && cT[0] > 0.6 && (cT[1] < 0.24 || cT[1] > 0.76) && best.tT[0] > 0.7;
@@ -716,7 +777,7 @@
       // A defender may read a ground pass. The side whose goal is due gets the better of it, within reason.
       let thief = null;
       const f = 0.55, mom = game.momentum, next = game.story.goals[game.storyIdx], overdue = game.golden ? 8 : next ? Math.max(0, minute() - next[1]) : 0;
-      const thiefP = mom ? (c.team === mom ? 0.04 : Math.min(0.55, 0.18 + overdue * 0.05)) : (c.team === "R" ? 0.1 : 0.18);
+      const thiefP = mom ? (c.team === mom ? 0.04 : Math.min(0.55, 0.18 + overdue * 0.05)) : 0.14;
       if (!lofted && !throwing && rng() < thiefP + 0.12 * (1 - fit(c))) {
         const mid = lerp(c.pos, tgt, f), n = nearest(outfield(opponents(c.team)), mid);
         if (n.p && n.d / RUN < Tk + flight * f - T) thief = { p: n.p, mid };
@@ -779,7 +840,7 @@
       }
       carry(p); game.carrier = p; p.busyUntil = T + 0.2 + rng() * 0.25;
       // A late challenge now and then, from a defender who can actually get there.
-      if (rng() < (p.team === game.momentum ? 0.16 : p.team === "R" ? 0.3 : 0.22)) {
+      if (rng() < (p.team === game.momentum ? 0.16 : 0.26)) {
         const opp = nearest(outfield(opponents(p.team)), p.pos);
         if (opp.p && opp.d < 4.5) { const Tt = T + Math.max(0.5, opp.d / RUN); p.busyUntil = Tt + 0.1; tackle(p, opp.p, Tt); }
       }
@@ -797,7 +858,7 @@
       mkScript(c, [T, c.pos], [T + dur, tgt]);
       c.busyUntil = T + dur;
       // A challenge comes from a nearby defender who can reach him (about 6 m/s), and is usually clean.
-      const tackleP = o.direct ? 0.25 : mom ? (c.team === mom ? 0.3 : 0.55) : (c.team === "B" ? 0.6 : 0.5);
+      const tackleP = o.direct ? 0.25 : mom ? (c.team === mom ? 0.3 : 0.55) : 0.55;
       if (opp.p && opp.d < 7 && rng() < tackleP * (1 + 0.6 * (1 - fit(c)))) {
         const Tt = T + Math.max(dur * 0.6, (opp.d - 0.6) / 6);
         if (Tt < T + dur) tackle(c, opp.p, Tt);
@@ -1154,7 +1215,7 @@
     /* ---------------------------------- tricks ---------------------------------- */
     function skill(c, d) {
       // Moves an amateur actually tries; and a good share of the time the defender simply wins it.
-      if (rng() < (c.team === "R" ? 0.25 : 0.45)) {
+      if (rng() < 0.35) {
         const reach = Math.max(0.4, mdist(d.pos, c.pos) / 5), Tt = T + reach;
         holdStill(c, T, Tt + 0.4); c.keys.push([T, T + 0.3, "tap"], [Tt + 0.05, Tt + 0.5, "shrug"]); c.busyUntil = Infinity;
         mkScript(d, [T, d.pos], [Tt, lerp(c.pos, d.pos, 0.7 / Math.max(0.7, mdist(c.pos, d.pos)))]);
@@ -1286,7 +1347,7 @@
         }
         // Most challenges are clean. A defender already on a yellow is careful.
         const counter = game.counter && game.counter.team === c.team && T < game.counter.until;
-        const foulP = ((d.yellows ?? 0) >= 1 ? 0.45 : counter ? 0.65 : d.team === game.momentum ? 0.32 : c.team === "R" ? 0.55 : 0.42) + 0.25 * (1 - fit(d));
+        const foulP = ((d.yellows ?? 0) >= 1 ? 0.45 : counter ? 0.65 : d.team === game.momentum ? 0.32 : 0.48) + 0.25 * (1 - fit(d));
         if (rng() < foulP) foul(c, d, Tt, slide);
         else {
           praise(d);
@@ -1490,15 +1551,17 @@
       return true;
     }
     
-    /** How likely this shot is to go in; Đỏ always ends up ahead. */
+    /** Play modes use position and fitness; watch mode favours the next dramatic story beat. */
     function goalChance(c, style) {
-      const R = game.score.R, Bs = game.score.B, next = game.story.goals[game.storyIdx];
-      // Stoppage time or a golden goal: only Đỏ can score, and probably will.
-      if (game.golden) return c.team === "R" ? (minute() >= FULL + 3 ? 1 : 0.9) : 0;
-      if (!next) return c.team === "R" && R <= Bs ? 0.85 : 0;
-      if (c.team !== next[0] || minute() < next[1]) return 0;
-      // Late on, a Đỏ goal still due has to come.
-      if (c.team === "R" && R <= Bs && minute() >= FULL - 4) return 0.9;
+      const next = game.story.goals[game.storyIdx];
+      const distance = mdist(c.pos, toW(c.team, [1, 0.5]));
+      if (interactive) {
+        const open = nearest(outfield(opponents(c.team)), c.pos).d;
+        return clamp(0.74 - distance * 0.024 + (open > 4 ? 0.08 : -0.1) - (1 - fit(c)) * 0.18, 0.025, 0.82);
+      }
+      if (game.golden) return minute() >= FULL + 3 ? 0.85 : 0.6;
+      if (!next) return clamp(0.35 - distance * 0.012, 0.03, 0.35);
+      if (c.team !== next[0] || minute() < next[1]) return 0.015;
       // The scheduled scorer: a good chance that grows the longer it is overdue, so it usually takes 1–2 attempts
       // (a match minute is only about 1.5 s of play); a shot from long range rarely goes in.
       const quality = game.finishing === c ? 0.1 : { curl: 0.05, knuckle: 0.03, chip: 0.05, volley: 0.02 }[style] ?? 0;
@@ -1538,7 +1601,7 @@
         if (gkOff && rng() < 0.6) style = "chip";
         else if (c.star === 10 && rng() < 0.5) style = "curl";
         else if (c.star === 7 && rng() < 0.5) style = "power";
-        else if (d < 0.66 && c.team === "R" && rng() < 0.4) style = "power";
+        else if (d < 0.66 && rng() < 0.4) style = "power";
         else style = "kick";
       }
       const spec = SHOT[style], aerial = style === "header" || style === "bicycle";
@@ -1549,7 +1612,7 @@
       if (outcome === "post" && game.posts[c.team] >= 2) outcome = "wide";
       if (outcome === "post") game.posts[c.team]++;
       // A free kick that does not go in sometimes just hits the wall.
-      if (o.wall && o.wallPt && outcome !== "goal" && rng() < (c.team === "R" ? 0.4 : 0.45)) outcome = "wallHit";
+      if (o.wall && o.wallPt && outcome !== "goal" && rng() < 0.425) outcome = "wallHit";
       const side = rng() < 0.5 ? -1 : 1;
       let w = 0.5 + side * (0.03 + rng() * 0.06), h = style === "chip" ? 0.4 + rng() * 0.6 : style === "knuckle" ? 1.1 + rng() * 0.45 : 0.25 + rng() * 1.1, over = false;
       if (outcome === "post") { w = 0.5 + side * (GOAL_V[1] - 0.5); h = 0.5 + rng() * 0.8; }
@@ -1952,7 +2015,7 @@
         if (p.team !== game.scorer.team) return T - game.modeT < 1.8 ? p.pos : around(p, kickoffSpot(p), game.scorer.pos);
         return toW(p.team, KICKOFF_DEF[p.i]);
       }
-      if (m === "fulltime") return p.pos;
+      if (m === "fulltime" || m === "draw") return p.pos;
       if (m === "ceremony") return ceremonySpot(p);
       if (game.press[p.team] === p) {
         const bT = toT(p.team, ballUV());
@@ -2065,8 +2128,12 @@
         }
         p.vel = [(p.pos[0] - before[0]) * LEN / dt, (p.pos[1] - before[1]) * WID / dt];
       } else {
-        const tgt = targetFor(p), dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
-        const top = speedFor(p, dist) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
+        const h = manual(p) ? humanFor(p) : null;
+        const direction = h ? courtUV([h.x, h.y]) : null;
+        const directionLength = direction ? Math.hypot(direction[0] * LEN, direction[1] * WID) : 0;
+        const tgt = h ? inPitch([p.pos[0] + (directionLength ? direction[0] / directionLength * 4 : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * 4 : 0)]) : targetFor(p);
+        const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
+        const top = (h ? h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
         // Keep a little space between bodies. Players ignore the referee; he steps around them.
         const dn = Math.hypot(...des) > 0.1 ? mul(des, 1 / Math.hypot(...des)) : null;
@@ -2089,6 +2156,7 @@
         const k = Math.min(1, dt * 3);
         p.vel = [p.vel[0] + (des[0] - p.vel[0]) * k, p.vel[1] + (des[1] - p.vel[1]) * k];
         p.pos = [p.pos[0] + p.vel[0] / LEN * dt, p.pos[1] + p.vel[1] / WID * dt];
+        if (h) p.pos = inPitch(p.pos);
       }
       p.g = ground(...p.pos);
       const speed = Math.hypot(...p.vel);
@@ -2128,7 +2196,7 @@
       game.story = newStory(); game.storyIdx = 0; game.extra = false; game.shapeAt = { R: -99, B: -99 }; game.chainsUsed = { R: 0, B: 0 }; game.posts = { R: 0, B: 0 }; game.scuffled = false; game.trailed = { R: 0, B: 0 }; game.momentum = null; game.counter = null; game.chain = null;
       game.pullAt = -99;
       game.score = { R: 0, B: 0 }; game.cards = { R: 0, B: 0 }; game.reds = { R: 0, B: 0 }; game.shape = { R: "2-1-2", B: "2-1-2" }; game.clock = 0; game.golden = false; game.winner = null;
-      SWAP = false; game.half2 = false; game.halfBreak = false; game.afterGoal = false; game.ballFetched = false; game.firstKick = game.kickoffTeam;
+      SWAP = initialSwap; game.half2 = false; game.halfBreak = false; game.afterGoal = false; game.ballFetched = false; game.firstKick = game.kickoffTeam;
       game.mode = "reset"; game.modeT = T; game.stoppage = true; ball.show = false; game.dirty = true;
       setNote(null);
     }
@@ -2136,7 +2204,7 @@
       const m = game.mode, s = T - game.modeT;
       if (m === "celebrate" && s > (game.celebrateFor ?? 3.0)) {
         for (const p of players) p.near = null;
-        if (game.score.R > game.score.B && (game.golden || minute() > FULL)) return fullTime();
+        if (game.score.R !== game.score.B && (game.golden || minute() > FULL)) return fullTime();
         game.mode = "reset"; game.modeT = T; game.net = null; game.afterGoal = true;
         if (!game.ballFetched) ball.show = false;
         for (const t of TEAMS) planSubs(t);
@@ -2156,15 +2224,14 @@
       } else if (m === "play") {
         // Half time at 30 minutes, once someone has the ball under control.
         if (!game.half2 && minute() > HALF && !game.stoppage && game.carrier && ball.owner === game.carrier) return halfTime();
-        // At 60: Đỏ ahead ends it at once (any goals left in the script are simply not needed). Otherwise a few
-        // minutes of stoppage time for Đỏ to get there.
+        // Either side can win. Play modes allow a draw; watch mode retains a golden-goal finale.
         if (minute() > FULL && ball.kind !== "shot" && !game.stoppage) {
-          if (game.score.R > game.score.B) fullTime();
-          else if (!game.golden) { game.golden = true; setNote(game.score.R === game.score.B ? "Hòa! Bàn thắng vàng" : "Bù giờ"); }
+          if (game.score.R !== game.score.B || interactive) fullTime();
+          else if (!game.golden) { game.golden = true; setNote("Hòa! Bàn thắng vàng"); }
         }
       } else if (m === "halftime" && s > 2.5) {
         // Change of ends: everyone walks across to the other half, and the side that did not kick off first starts.
-        SWAP = true; game.clock = HALF / PACE; game.kickoffTeam = otherTeam(game.firstKick);
+        SWAP = !initialSwap; game.clock = HALF / PACE; game.kickoffTeam = otherTeam(game.firstKick);
         game.mode = "reset"; game.modeT = T; game.halfBreak = true; game.dirty = true;
         setNote("Hiệp 2 · đổi sân");
         // A breather at the break, and the coach's changes.
@@ -2178,7 +2245,7 @@
         const lc = team[otherTeam(game.winner)].find(p => p.i === 3 && on(p)) ?? team[otherTeam(game.winner)].find(on);
         if (lc) at(T + TROPHY_IN + 0.4, () => sayFT(lc, pick(["Chúc mừng các anh!", "Trận sau gặp lại!", "Các anh đá hay!"]), "var(--color-card)", 1.5));
         for (const p of team[otherTeam(game.winner)]) at(T + 4.5, () => lockFace(p, T + 6, Math.sign(ground(...WINNERS_AT)[0] - p.g[0]) || 1));
-      } else if (m === "ceremony" && s > CEREMONY) startMatch();
+      } else if (m === "ceremony" && s > CEREMONY && !interactive) startMatch();
     }
     const TUNNEL = [0.32, -0.11];
     
@@ -2357,7 +2424,7 @@
     }
     
     function fullTime() {
-      game.winner = game.score.R > game.score.B ? "R" : "B";
+      game.winner = game.score.R === game.score.B ? null : game.score.R > game.score.B ? "R" : "B";
       game.mode = "fulltime"; game.modeT = T; game.stoppage = true; game.carrier = null; game.counter = null; game.chain = null;
       if (ball.mode === "carried") ball.mode = "dead";
       // Nothing from open play carries on past the whistle: substitutions finish at once, arguments, actions and
@@ -2367,6 +2434,11 @@
       game.blame = null; game.callouts = [];
       ref.keys.push([T, T + 1.2, "whistle"]); say(ref, "Hết giờ!", "var(--color-card)", 1.4);
       at(T + 1.2, () => { ball.show = false; });
+      if (!game.winner) {
+        game.mode = "draw";
+        setNote(`Hết giờ · Hòa ${game.score.R}–${game.score.B}`);
+        return;
+      }
       setNote(`Hết giờ · ${TEAM_NAME[game.winner]} thắng ${game.score[game.winner]}–${game.score[otherTeam(game.winner)]}`);
       game.kickoffTeam = otherTeam(game.winner);
       // The beaten side, each in his own way: one or two crouch or sit for a moment (the keeper sits down in his
@@ -2435,10 +2507,9 @@
       return "2-1-2";
     }
     function updateShape() {
-      // Whoever the storyline says scores next has the run of play for a while before it; late on, Đỏ when a goal is still due.
+      // Narrative momentum belongs to either side and is disabled for human play.
       const next = game.story.goals[game.storyIdx];
-      game.momentum = game.golden ? "R" : next && next[0] === "R" && game.score.R <= game.score.B && minute() >= FULL - 4 ? "R"
-        : next && minute() >= next[1] - 5 ? next[0] : null;
+      game.momentum = !interactive && next && minute() >= next[1] - 5 ? next[0] : null;
       if (game.mode !== "play" && game.mode !== "reset") return;
       for (const t of TEAMS) {
         const want = shapeFor(t);
@@ -2487,8 +2558,9 @@
       rollingSubs();
       updateModes();
       updateShape();
+      updateControls();
       updatePress();
-      if (game.mode === "play" && !game.stoppage && game.carrier && ball.owner === game.carrier && (ball.mode === "carried" || ball.mode === "held") && T >= game.carrier.busyUntil) decide(game.carrier);
+      if (game.mode === "play" && !game.stoppage && game.carrier && ball.owner === game.carrier && (ball.mode === "carried" || ball.mode === "held") && T >= game.carrier.busyUntil && (!humanFor(game.carrier) || game.carrier.role === "GK")) decide(game.carrier);
       for (const p of people) updatePerson(p, dt);
       updateBall(dt);
       updateCamera(dt);
@@ -2827,6 +2899,11 @@
       const shake = T - game.shake < 0.5 ? Math.sin(T * 70) * 3 * (1 - (T - game.shake) / 0.5) : 0;
       set(layer.world, { transform: `translate(${(VW / 2 + shake).toFixed(1)} ${(VH / 2).toFixed(1)}) scale(${cam.z.toFixed(4)}) translate(${(-cam.x).toFixed(1)} ${(-cam.y).toFixed(1)})` });
       for (const p of people) drawPerson(p);
+      controlMarkers.forEach(({ h, ring, label }) => {
+        const p = h.selected, visible = !!p && on(p) && ["play", "reset"].includes(game.mode);
+        set(ring, { cx: p?.g[0] ?? 0, cy: (p?.g[1] ?? 0) + 2, opacity: visible ? 1 : 0 });
+        set(label, { x: p?.g[0] ?? 0, y: (p?.g[1] ?? 0) - 53, opacity: visible ? 1 : 0 });
+      });
       // Ball, shadow and the streak behind a hard shot.
       const bs = [ball.g[0], ball.g[1] - ball.h * K];
       set(ballNode, { transform: `translate(${pt(bs)})`, opacity: ball.alpha.toFixed(2) });
@@ -2921,7 +2998,7 @@
         $(`shape-${t}`).textContent = (left < 6 ? `${game.shape[t]} (${left})` : game.shape[t]) + ` · DB ${sb}`;
       }
       const m = Math.min(FULL, minute());
-      $("clock").textContent = game.mode === "ceremony" || game.mode === "fulltime" ? "HẾT"
+      $("clock").textContent = game.mode === "ceremony" || game.mode === "fulltime" || game.mode === "draw" ? "HẾT"
         : game.mode === "halftime" || (game.mode === "reset" && game.halfBreak) ? "HẾT H1"
         : !game.half2 && minute() > HALF ? `${HALF}+${minute() - HALF}'`
         : game.golden ? `${FULL}+${Math.max(1, minute() - FULL)}'` : `${m}'`;
@@ -2933,6 +3010,10 @@
     
     /* ---------------------------------- run ---------------------------------- */
     drawStadium(); drawPitch();
+    const controlMarkers = humans.map(h => ({ h,
+      ring: el("ellipse", { rx: 14, ry: 7, fill: "none", stroke: h.slot === "A" ? "#fff37a" : "#ffffff", "stroke-width": 3 }, layer.shadows),
+      label: el("text", { "text-anchor": "middle", fill: h.slot === "A" ? "#fff37a" : "#ffffff", stroke: "#1d2340", "stroke-width": 3, "paint-order": "stroke", "font-size": 16, "font-weight": 800 }, layer.wfx) }));
+    controlMarkers.forEach(({ h, label }) => { label.textContent = h.slot; });
     // Recording mode (?gif): frames are stepped by hand, so wall-clock CSS animations would be caught half-way.
     if (query.has("gif")) root.classList.add("is-recording");
     // Everyone starts in kick-off shape.
@@ -2945,9 +3026,9 @@
       ball: ball.mode, kind: ball.kind, callout: game.callout && T - game.callout.t < game.callout.life ? game.callout.text : null, note: game.note, cam: { z: +cam.z.toFixed(2) } });
     api.__fastForward = (minutes) => { game.clock = (minutes - 1) / PACE; game.dirty = true; };
     api.__energy = () => Object.fromEntries([...players, ...bench.R, ...bench.B].filter(p => !p.off).map(p => [`${p.team}:${p.name}${p.bench ? "*" : ""}`, +p.energy.toFixed(2)]));
-    api.__stats = () => ({ ...game.stats, story: game.story.name, shape: { ...game.shape }, onPitch: { R: team.R.filter(on).length, B: team.B.filter(on).length } });
+    api.__stats = () => ({ ...game.stats, story: game.story.name, storyGoals: game.story.goals.map(g => [...g]), shape: { ...game.shape }, onPitch: { R: team.R.filter(on).length, B: team.B.filter(on).length } });
     
-    if (query.has("still") || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    if (query.has("still") || (!interactive && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)) {
       api.__step(query.has("still") ? Number(query.get("still")) || 0 : 9);
       api.pause = api.play = () => {};
       api.destroy = () => { shadow.innerHTML = ""; delete host.__ptscFootball; };

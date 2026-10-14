@@ -4,17 +4,63 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PTSC Cup 6v6</title>
-<style>
-  body { margin: 0; padding: 32px 16px; font-family: system-ui, sans-serif; background: #f4f1e8; color: #1d2340; }
-  main { max-width: 820px; margin: 0 auto; display: grid; gap: 28px; }
-  h1 { margin: 0; }
-</style>
+<link rel="stylesheet" href="game.css">
 </head>
 <body>
 <main>
-  <h1>PTSC Cup 6v6</h1>
-  <div class="ptsc-football"></div>
+  <header><span class="eyebrow">SÂN CỎ VĂN PHÒNG</span><h1>PTSC Cup <span>6v6</span></h1></header>
+  <nav class="tabs" role="tablist" aria-label="Chế độ trận đấu">
+    <button id="tab-watch" role="tab" aria-selected="true" aria-controls="panel-watch" data-tab="watch">Chỉ xem</button>
+    <button id="tab-cpu" role="tab" aria-selected="false" aria-controls="panel-cpu" data-tab="cpu" tabindex="-1">Đấu với máy</button>
+    <button id="tab-local" role="tab" aria-selected="false" aria-controls="panel-local" data-tab="local" tabindex="-1">Hai người</button>
+  </nav>
+  <section id="panel-watch" role="tabpanel" aria-labelledby="tab-watch">
+    <div id="watch-match" class="ptsc-football"></div>
+    <div class="watch-actions"><span>Một trận mới mỗi lần tải trang.</span><button id="new-watch" class="secondary">Trận mới</button></div>
+  </section>
+  <section id="panel-cpu" class="game-panel" role="tabpanel" aria-labelledby="tab-cpu" data-mode="cpu" hidden>
+    <form class="setup">
+      <fieldset><legend>Chọn màu áo của bạn</legend><div class="choices">
+        <label class="kit"><input type="radio" name="cpu-team" value="R" checked><span class="shirt red"></span>Đội Đỏ</label>
+        <label class="kit"><input type="radio" name="cpu-team" value="B"><span class="shirt blue"></span>Đội Xanh</label>
+      </div></fieldset>
+      <p class="setup-summary" aria-live="polite"></p>
+      <button class="primary start" type="submit">Bắt đầu trận</button>
+    </form>
+    <div class="arena" tabindex="0" role="group" aria-label="Sân đấu với máy; dùng bàn phím để chơi">
+      <div class="match-host"><div class="placeholder">Chọn màu áo rồi bắt đầu trận.</div></div>
+    </div>
+    <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><button class="secondary pause" disabled>Tạm dừng</button></div>
+    <div class="player-status"></div>
+    <div class="controls"><article><h2>Bạn · A</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển theo màn hình</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng</p><p><kbd>Q</kbd> Đổi cầu thủ khi phòng ngự <kbd>Shift trái</kbd> Chạy nhanh</p></article></div>
+    <p class="hint">Giữ hướng di chuyển để hướng đường chuyền. Vòng vàng đánh dấu cầu thủ A. Thể lực giảm khi chạy; thay người tự động.</p>
+  </section>
+  <section id="panel-local" class="game-panel" role="tabpanel" aria-labelledby="tab-local" data-mode="local" hidden>
+    <form class="setup">
+      <fieldset><legend>Người A chọn màu áo</legend><div class="choices">
+        <label class="kit"><input type="radio" name="local-team" value="R" checked><span class="shirt red"></span>Đội Đỏ</label>
+        <label class="kit"><input type="radio" name="local-team" value="B"><span class="shirt blue"></span>Đội Xanh</label>
+      </div></fieldset>
+      <fieldset><legend>Người B chọn sân bắt đầu</legend><div class="choices">
+        <label class="side"><input type="radio" name="local-side" value="left">Sân trái</label>
+        <label class="side"><input type="radio" name="local-side" value="right" checked>Sân phải</label>
+      </div></fieldset>
+      <p class="setup-summary" aria-live="polite"></p>
+      <button class="primary start" type="submit">Bắt đầu trận</button>
+    </form>
+    <div class="arena" tabindex="0" role="group" aria-label="Sân đấu hai người; dùng chung bàn phím để chơi">
+      <div class="match-host"><div class="placeholder">Chọn màu áo và sân rồi bắt đầu trận.</div></div>
+    </div>
+    <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><button class="secondary pause" disabled>Tạm dừng</button></div>
+    <div class="player-status"></div>
+    <div class="controls">
+      <article><h2>Người A · vòng vàng</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng</p><p><kbd>Q</kbd> Đổi cầu thủ <kbd>Shift trái</kbd> Chạy nhanh</p></article>
+      <article><h2>Người B · vòng trắng</h2><p><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Di chuyển</p><p><kbd>N</kbd> Chuyền <kbd>M</kbd> Sút <kbd>,</kbd> Tranh bóng</p><p><kbd>L</kbd> Đổi cầu thủ <kbd>Shift phải</kbd> Chạy nhanh</p></article>
+    </div>
+    <p class="hint">Cùng chơi trên một bàn phím. Tự chọn cầu thủ nhận bóng; đổi cầu thủ khi phòng ngự. Hai đội đổi sân sau hiệp 1.</p>
+  </section>
 </main>
 <script src="ptsc-football.js" defer></script>
+<script src="game.js" defer></script>
 </body>
 </html>
