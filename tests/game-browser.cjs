@@ -99,6 +99,86 @@ const server = http.createServer((req, res) => {
     assert(defending.switched && defending.accepted, "Human defensive switch and tackle must work");
     console.log("PASS defensive player switching and nearby tackling");
 
+    const aiming = await page.evaluate(() => {
+      function fixture(seed = 7) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none", support: false });
+        let carrier;
+        for (let i = 0; i < 600 && !carrier; i++) {
+          api.__step(.05); carrier = api.status().players.find(p => p.ready && p.hasBall);
+        }
+        if (!carrier) throw new Error("No ready carrier in aiming fixture");
+        return { api, host, carrier, done() { api.destroy(); host.remove(); } };
+      }
+      const directions = [];
+      for (const action of ["pass", "shoot"]) for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const f = fixture();
+        f.api.setInput(f.carrier.slot, { x, y }); f.api.setInput(f.carrier.slot);
+        f.api.__step(0);
+        const aim = f.api.status().players.find(p => p.slot === f.carrier.slot).aim;
+        const arrow = f.host.shadowRoot.querySelector(`[data-id="aim-${f.carrier.slot}"]`).getAttribute("d");
+        const accepted = f.api.action(f.carrier.slot, action), kick = f.api.__state().kick;
+        directions.push({ action, x, y, aim, arrow, accepted, kick }); f.done();
+      }
+      const supportPass = fixture();
+      supportPass.api.setSupport(true); supportPass.api.setInput(supportPass.carrier.slot, { x: 0, y: -1 });
+      const passed = supportPass.api.action(supportPass.carrier.slot, "pass"), passPlan = supportPass.api.__state().kick;
+      for (let i = 0; i < 240 && supportPass.api.__state().owner !== passPlan.receiver; i++) supportPass.api.__step(.05);
+      const received = supportPass.api.status(), passOwner = supportPass.api.__state().owner;
+      supportPass.done();
+      const supportedShots = [], keepers = [];
+      for (let seed = 1; seed <= 8; seed++) {
+        const f = fixture(seed); f.api.setSupport(true); f.api.setInput(f.carrier.slot, { x: 0, y: -1 });
+        const accepted = f.api.action(f.carrier.slot, "shoot"), plan = f.api.__state().kick;
+        let keeper = null;
+        for (let i = 0; i < 160 && !f.api.status().ended; i++) {
+          f.api.__step(.05);
+          keeper = f.api.status().players.find(p => p.role === "GK" && p.hasBall);
+          if (keeper) break;
+          if (f.api.status().phase === "celebrate") break;
+        }
+        let keeperPass = null;
+        if (keeper) {
+          for (let i = 0; i < 80 && !f.api.status().players.find(p => p.slot === keeper.slot)?.ready; i++) f.api.__step(.05);
+          keeperPass = f.api.action(keeper.slot, "pass");
+          f.api.__step(.4);
+          keepers.push({ seed, keeper, keeperPass, afterPassRole: f.api.status().players.find(p => p.slot === keeper.slot).role });
+        }
+        supportedShots.push({ seed, accepted, plan, state: f.api.__state() }); f.done();
+      }
+      const sliding = fixture(11);
+      const defender = sliding.api.status().players.find(p => !p.hasBall && p.ready);
+      sliding.api.setInput(defender.slot, { x: 0, y: -1 });
+      const energy = defender.energy, accepted = sliding.api.action(defender.slot, "slide");
+      const cooldownBlocked = !sliding.api.action(defender.slot, "slide"); sliding.api.__step(.2);
+      const slid = sliding.api.status().players.find(p => p.slot === defender.slot);
+      const sprites = [...sliding.host.shadowRoot.querySelectorAll("svg [transform]")].length;
+      const stats = sliding.api.__stats(); sliding.done();
+      return { directions, passed, passPlan, received, passOwner, supportedShots, keepers, slide: { accepted, cooldownBlocked, energy, slid, sprites, stats } };
+    });
+    for (const result of aiming.directions) {
+      assert(result.accepted && result.arrow.startsWith("M"));
+      assert.deepEqual(result.aim, [result.x, result.y], "Aim must persist after key release");
+      const du = result.kick.target[0] - result.kick.origin[0], dv = result.kick.target[1] - result.kick.origin[1];
+      const dx = du * 684 + dv * 352, dy = du * -387 + dv * 231;
+      const dot = (dx * result.x + dy * result.y) / Math.hypot(dx, dy);
+      assert(dot > .999, `Free ${result.action} must follow its screen direction`);
+    }
+    assert(aiming.passed && aiming.passPlan.assisted && aiming.passPlan.receiver);
+    assert.equal(aiming.passOwner, aiming.passPlan.receiver);
+    assert(aiming.received.players.some(p => p.hasBall && p.name === aiming.passOwner), "Receiver must immediately be selected");
+    for (const shot of aiming.supportedShots) {
+      assert(shot.accepted && shot.plan.assisted);
+      assert(shot.plan.target[1] > .4 && shot.plan.target[1] < .6, "Support shots must aim inside goal posts");
+      assert(shot.plan.target[0] === 0 || shot.plan.target[0] === 1);
+    }
+    assert(aiming.keepers.length > 0, "Goalkeepers must still be able to save support shots");
+    assert(aiming.keepers.every(result => result.keeperPass), "Ball-holding keepers must be selected and able to pass");
+    assert(aiming.keepers.every(result => result.afterPassRole !== "GK"), "Control must leave the keeper after releasing the ball");
+    assert(aiming.slide.accepted && aiming.slide.cooldownBlocked && aiming.slide.stats.slides === 1);
+    assert(aiming.slide.slid.energy < aiming.slide.energy, "Sliding must consume stamina");
+    console.log("PASS persistent aim arrows, free passing/shooting in all four directions, accurate support, keeper control, slide and cooldown");
+
     await page.locator("#tab-local").click();
     await page.evaluate(() => { document.querySelector("#panel-local .match-host").dataset.seed = "42"; });
     for (const colour of ["R", "B"]) for (const side of ["left", "right"]) {
@@ -147,6 +227,34 @@ const server = http.createServer((req, res) => {
     const shotsAfter = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().shots);
     assert.equal(shotsAfter, shotsBefore + 1, "Shoot key must shoot");
     console.log("PASS human shooting key");
+
+    await page.locator("#panel-local .support").uncheck();
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.status().support), false);
+    await page.locator("#panel-local .support").check();
+    assert.equal(await page.evaluate(() => document.activeElement.className), "arena", "Support toggle should return keyboard focus to the pitch");
+    const slideSlot = await page.evaluate(() => {
+      const api = document.querySelector("#panel-local .match-host").__ptscFootball;
+      for (let i = 0; i < 400 && !api.status().players.some(p => p.slideReady); i++) api.__step(.05);
+      return api.status().players.find(p => p.slideReady)?.slot;
+    });
+    assert(slideSlot, "A defender must become ready to slide");
+    const slidesBefore = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides ?? 0);
+    await page.locator("#panel-local .arena").focus();
+    await page.keyboard.press(slideSlot === "A" ? "j" : ".");
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides), slidesBefore + 1);
+    console.log("PASS live support toggle and slide key binding");
+    const buttonSlot = await page.evaluate(() => {
+      const api = document.querySelector("#panel-local .match-host").__ptscFootball;
+      for (let i = 0; i < 500 && !api.status().players.some(p => p.slideReady); i++) api.__step(.05);
+      return api.status().players.find(p => p.slideReady)?.slot;
+    });
+    const slideButton = page.locator(`#panel-local .slide-action[data-slot="${buttonSlot}"]`);
+    await page.waitForFunction(slot => !document.querySelector(`#panel-local .slide-action[data-slot="${slot}"]`).disabled, buttonSlot);
+    const beforeButton = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides ?? 0);
+    await slideButton.click();
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides), beforeButton + 1);
+    assert.equal(await page.evaluate(() => document.activeElement.className), "arena");
+    console.log("PASS visible slide button and keyboard focus restoration");
 
     const halftime = await page.evaluate(() => {
       const api = document.querySelector("#panel-local .match-host").__ptscFootball;

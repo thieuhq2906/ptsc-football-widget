@@ -14,18 +14,25 @@ Không cần thư viện, không cần build, không cần server riêng.
 Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, camera bám bóng, thể lực, thay người tự động, thẻ phạt và nghỉ giữa hiệp.
 Chế độ chơi không dùng lịch bàn thắng của chế độ xem; tỷ số phụ thuộc vào thao tác, vị trí sút, đối thủ và thể lực. Hết giờ có thể hòa.
 
+Mũi tên dưới chân hiển thị hướng theo input và giữ hướng cuối cùng khi thả phím.
+**Hỗ trợ ngắm** bật mặc định, có thể bật/tắt ngay trong trận: chuyền tới đồng đội gần hướng ngắm nhất và sút trúng khung thành.
+Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi tên; có thể chuyền hụt, ra biên, sút lệch hoặc phản lưới.
+
 | Thao tác | Người A / đấu với máy | Người B |
 |---|---|---|
 | Di chuyển theo hướng màn hình | W A S D | Các phím mũi tên |
 | Chuyền (giữ hướng để chọn đường chuyền) | F | N |
 | Sút | G | M |
 | Tranh bóng khi ở gần đối thủ | H | Dấu phẩy |
+| Xoạc theo hướng mũi tên | J hoặc nút Xoạc A | Dấu chấm hoặc nút Xoạc B |
 | Đổi cầu thủ khi phòng ngự | Q | L |
 | Chạy nhanh / sút căng | Shift trái | Shift phải |
 | Tạm dừng / tiếp tục khi sân có focus | Space | Space |
 
 Bấm **Bắt đầu trận**, sau đó dùng bàn phím. Cầu thủ đang điều khiển có vòng vàng (A) hoặc trắng (B).
-Tự chuyển điều khiển sang người nhận bóng; thủ môn và đồng đội hỗ trợ tự động. Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
+Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không cầm bóng.
+Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
+Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
 Chọn **Tiếp tục** để trở lại. Đổi lựa chọn áo/sân áp dụng ở trận mới. Website chơi cùng máy cần bàn phím.
 
 ## Kiểm tra phát triển

@@ -36,6 +36,9 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .placeholder { display: grid; place-items: center; min-height: 250px; aspect-ratio: 16 / 9; border: 2px dashed #b7bdae; border-radius: 20px; background: linear-gradient(145deg, #e1ead8, #efeee2); color: #54624c; text-align: center; padding: 20px; }
 .match-toolbar { display: flex; align-items: center; gap: 14px; justify-content: space-between; padding: 18px 0; }
 .match-toolbar button { flex-shrink: 0; white-space: nowrap; }
+.support-toggle { display: flex; align-items: center; gap: 10px; margin: 18px 0 0; padding: 13px 16px; border: 1px solid #c9d4b6; border-radius: 10px; background: #edf4df; font-size: 13px; font-weight: 650; cursor: pointer; line-height: 1.6; }
+.support-toggle input { width: 18px; height: 18px; flex-shrink: 0; accent-color: #48693a; }
+.slide-action { margin-top: 9px; min-width: 130px; background: #fff6d9; }
 .match-status { font-size: 14px; font-weight: 650; margin: 0; }
 .player-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .player-card { background: #fffdf6; border: 1px solid #d6d7cc; padding: 13px 16px; border-radius: 12px; border-left: 5px solid #e45248; }

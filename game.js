@@ -7,8 +7,8 @@
   const names = { R: "Đỏ", B: "Xanh" };
   const opposite = team => team === "R" ? "B" : "R";
   const bindings = {
-    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", actions: { KeyF: "pass", KeyG: "shoot", KeyH: "tackle", KeyQ: "switch" } },
-    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", actions: { KeyN: "pass", KeyM: "shoot", Comma: "tackle", KeyL: "switch" } }
+    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", actions: { KeyF: "pass", KeyG: "shoot", KeyH: "tackle", KeyJ: "slide", KeyQ: "switch" } },
+    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", actions: { KeyN: "pass", KeyM: "shoot", Comma: "tackle", Period: "slide", KeyL: "switch" } }
   };
   const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, ...Object.keys(b.actions)])]);
   let activeMode = "watch";
@@ -71,7 +71,7 @@
     const teamA = panel.querySelector('input[name$="-team"]:checked').value;
     const teamB = opposite(teamA);
     const sideB = panel.querySelector('input[name="local-side"]:checked')?.value ?? "right";
-    return { mode: panel.dataset.mode, teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
+    return { mode: panel.dataset.mode, support: panel.querySelector(".support").checked, teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
   }
   function setupSummary(panel) {
     const options = optionsFor(panel), sideA = options.leftTeam === options.teamA ? "trái" : "phải";
@@ -111,6 +111,8 @@
       status.textContent = session.paused ? "Đang tạm dừng · Nhấn Tiếp tục để chơi" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
     }
     for (const player of state.players) {
+      const slideButton = session.panel.querySelector(`.slide-action[data-slot="${player.slot}"]`);
+      if (slideButton) slideButton.disabled = session.paused || state.ended || !player.slideReady;
       const card = session.panel.querySelector(`.player-card[data-slot="${player.slot}"]`);
       if (!card) continue;
       const side = state.leftTeam === player.team ? "trái" : "phải";
@@ -124,6 +126,17 @@
     const arena = panel.querySelector(".arena");
     form.addEventListener("change", () => setupSummary(panel));
     setupSummary(panel);
+    panel.querySelector(".support").addEventListener("change", event => {
+      const session = sessions.get(panel.dataset.mode);
+      session?.api.setSupport(event.target.checked);
+      if (session && !session.paused) arena.focus({ preventScroll: true });
+    });
+    for (const button of panel.querySelectorAll(".slide-action")) {
+      button.addEventListener("click", () => {
+        const session = sessions.get(panel.dataset.mode);
+        if (session && !session.paused) { session.api.action(button.dataset.slot, "slide"); arena.focus({ preventScroll: true }); updateHud(session); }
+      });
+    }
     form.addEventListener("submit", event => {
       event.preventDefault(); releaseKeys();
       const mode = panel.dataset.mode;

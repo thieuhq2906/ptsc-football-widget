@@ -30,10 +30,11 @@
     <div class="arena" tabindex="0" role="group" aria-label="Sân đấu với máy; dùng bàn phím để chơi">
       <div class="match-host"><div class="placeholder">Chọn màu áo rồi bắt đầu trận.</div></div>
     </div>
+    <label class="support-toggle"><input type="checkbox" class="support" checked>Hỗ trợ ngắm · chuyền đến đồng đội, sút trúng khung thành</label>
     <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><button class="secondary pause" disabled>Tạm dừng</button></div>
     <div class="player-status"></div>
-    <div class="controls"><article><h2>Bạn · A</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển theo màn hình</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng</p><p><kbd>Q</kbd> Đổi cầu thủ khi phòng ngự <kbd>Shift trái</kbd> Chạy nhanh</p></article></div>
-    <p class="hint">Giữ hướng di chuyển để hướng đường chuyền. Vòng vàng đánh dấu cầu thủ A. Thể lực giảm khi chạy; thay người tự động.</p>
+    <div class="controls"><article><h2>Bạn · A</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển theo màn hình</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng <kbd>J</kbd> Xoạc</p><p><kbd>Q</kbd> Đổi cầu thủ khi phòng ngự <kbd>Shift trái</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="A" disabled>Xoạc · J</button></article></div>
+    <p class="hint">Mũi tên dưới chân giữ hướng cuối cùng khi thả phím. Tắt hỗ trợ để chuyền/sút tự do theo mũi tên. Hỗ trợ ngắm không ngăn thủ môn cứu thua. Tự chọn người cầm bóng, kể cả thủ môn; xoạc tốn thể lực và có thể bị phạt.</p>
   </section>
   <section id="panel-local" class="game-panel" role="tabpanel" aria-labelledby="tab-local" data-mode="local" hidden>
     <form class="setup">
@@ -51,13 +52,14 @@
     <div class="arena" tabindex="0" role="group" aria-label="Sân đấu hai người; dùng chung bàn phím để chơi">
       <div class="match-host"><div class="placeholder">Chọn màu áo và sân rồi bắt đầu trận.</div></div>
     </div>
+    <label class="support-toggle"><input type="checkbox" class="support" checked>Hỗ trợ ngắm cho A/B · chuyền đến đồng đội, sút trúng khung thành</label>
     <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><button class="secondary pause" disabled>Tạm dừng</button></div>
     <div class="player-status"></div>
     <div class="controls">
-      <article><h2>Người A · vòng vàng</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng</p><p><kbd>Q</kbd> Đổi cầu thủ <kbd>Shift trái</kbd> Chạy nhanh</p></article>
-      <article><h2>Người B · vòng trắng</h2><p><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Di chuyển</p><p><kbd>N</kbd> Chuyền <kbd>M</kbd> Sút <kbd>,</kbd> Tranh bóng</p><p><kbd>L</kbd> Đổi cầu thủ <kbd>Shift phải</kbd> Chạy nhanh</p></article>
+      <article><h2>Người A · vòng vàng</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng <kbd>J</kbd> Xoạc</p><p><kbd>Q</kbd> Đổi cầu thủ <kbd>Shift trái</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="A" disabled>Xoạc A · J</button></article>
+      <article><h2>Người B · vòng trắng</h2><p><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Di chuyển</p><p><kbd>N</kbd> Chuyền <kbd>M</kbd> Sút <kbd>,</kbd> Tranh bóng <kbd>.</kbd> Xoạc</p><p><kbd>L</kbd> Đổi cầu thủ <kbd>Shift phải</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="B" disabled>Xoạc B · .</button></article>
     </div>
-    <p class="hint">Cùng chơi trên một bàn phím. Tự chọn cầu thủ nhận bóng; đổi cầu thủ khi phòng ngự. Hai đội đổi sân sau hiệp 1.</p>
+    <p class="hint">Mũi tên dưới chân là hướng chuyền/sút và xoạc, giữ nguyên khi thả phím. Hỗ trợ ngắm tự chọn đích; thủ môn vẫn cứu thua được. Người đang cầm bóng luôn được chọn. Xoạc tốn thể lực, có thể bị phạt. Hai đội đổi sân sau hiệp 1.</p>
   </section>
 </main>
 <script src="ptsc-football.js" defer></script>
