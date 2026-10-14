@@ -22,16 +22,21 @@ Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi
 | Thao tác | Người A / đấu với máy | Người B |
 |---|---|---|
 | Di chuyển theo hướng màn hình | W A S D | Các phím mũi tên |
-| Có bóng: giữ để nạp lực chuyền, thả để đá; phòng ngự: giữ để áp sát | F | N |
-| Có bóng: giữ để nạp lực sút, thả để đá; phòng ngự: xoạc theo hướng | G | M |
-| Đổi cầu thủ khi phòng ngự | Q | L |
-| Chạy nhanh | Shift trái | Shift phải |
+| Giữ để nạp lực chuyền, thả để đá (khi có bóng) | F | J |
+| Có bóng: giữ để nạp lực sút, thả để đá; phòng ngự: bấm để xoạc theo hướng | G | K |
+| Đổi cầu thủ khi phòng ngự | R | U |
+| Giữ để chạy nhanh | T | I |
+| Giữ để pressing / áp sát khi phòng ngự | V | N |
+| Bấm để tranh bóng khi đủ gần đối thủ | B | M |
+
+Các phím hành động nằm thành cụm hai cột, ba hàng: A **R/T – F/G – V/B**, B **U/I – J/K – N/M**. Chuyền, pressing và tranh bóng có phím riêng. Hai người dùng các phím không trùng nhau; hướng dẫn trên sân và ngoài sân vẽ đúng cụm phím này.
 
 Bấm **Bắt đầu trận** hoặc **Bắt đầu trận mới**: sân luôn tạm dừng, phủ nền mờ và hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
 Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn cơ bản nằm riêng góc trái/phải sân, độ mờ 30%.
 Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
 Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không cầm bóng.
 Thủ môn tự đưa bóng trở lại sau tối đa 6 giây giữ bóng nếu người chơi hoặc AI chưa phát bóng, tránh ôm bóng đến hết trận.
+Khi đang giữ bóng (trên tay hoặc dưới chân), thủ môn và bóng luôn nằm trong vòng cấm bán nguyệt của đội mình: giới hạn áp dụng cho điều khiển tay, AI và sau đổi sân. Quán tính di chuyển và va chạm cũng không đẩy thủ môn đang giữ bóng vượt đường biên vòng cấm.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
 Chọn **Tiếp tục** để trở lại. Đổi lựa chọn áo/sân áp dụng ở trận mới. Website chơi cùng máy cần bàn phím.
@@ -41,8 +46,8 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 
 ### Thao tác nâng cao
 
-- Nhấn **sút hai lần nhanh** (G hoặc M): sút thần sầu, lấy đà 0,6 giây, tiêu hao 18% thể lực, cần ít nhất 23% thể lực. Có thể bị cản; không bảo đảm ghi bàn.
-- Khi phòng ngự, nhấn **F hoặc N hai lần nhanh** khi gần đối thủ: 30% chỉ phạm lỗi, 50% cướp bóng, 15% thẻ vàng, 5% thẻ đỏ. Tỷ lệ áp dụng khi pha tranh bóng thực sự diễn ra; người đang có vàng nhận vàng lần hai vẫn bị đuổi.
+- Nhấn **sút hai lần nhanh** (G hoặc K): sút thần sầu, lấy đà 0,6 giây, tiêu hao 18% thể lực, cần ít nhất 23% thể lực. Có thể bị cản; không bảo đảm ghi bàn.
+- Khi phòng ngự, bấm **B hoặc M** khi gần đối thủ: 30% chỉ phạm lỗi, 50% cướp bóng, 15% thẻ vàng, 5% thẻ đỏ. Tỷ lệ áp dụng khi pha tranh bóng thực sự diễn ra; người đang có vàng nhận vàng lần hai vẫn bị đuổi. Giữ V/N chỉ áp sát, không tự tranh bóng.
 - Xoạc nguy hiểm hơn pressing: khi va chạm có xác suất phạm lỗi cao và gần như luôn có thẻ nếu bị thổi phạt.
 
 **Toàn màn hình** là một nút biểu tượng ở góc dưới phải sân, giống nút của trình phát video, có cả ở chế độ xem. Bấm cùng nút để thu nhỏ, hoặc Escape để thoát. Nếu trình duyệt không cho phép Fullscreen API, sân vẫn được mở phủ cửa sổ.

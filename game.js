@@ -7,17 +7,22 @@
   const names = { R: "Đỏ", B: "Xanh" };
   const opposite = team => team === "R" ? "B" : "R";
   const bindings = {
-    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", pass: "KeyF", actions: { KeyF: "pass", KeyG: "shoot", KeyQ: "switch" } },
-    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", pass: "KeyN", actions: { KeyN: "pass", KeyM: "shoot", KeyL: "switch" } }
+    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "KeyT", press: "KeyV", actions: { KeyR: "switch", KeyF: "pass", KeyG: "shoot", KeyB: "challenge" } },
+    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "KeyI", press: "KeyN", actions: { KeyU: "switch", KeyJ: "pass", KeyK: "shoot", KeyM: "challenge" } }
   };
   for (const guide of document.querySelectorAll(".pad-help")) {
     const slot = guide.dataset.slot, b = bindings[slot];
     const labels = slot === "A" ? { up: "W", left: "A", down: "S", right: "D" } : { up: "↑", left: "←", down: "↓", right: "→" };
-    const actionKeys = slot === "A" ? ["F", "G", "Q"] : ["N", "M", "L"];
-    guide.innerHTML = `<div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${Object.entries(labels).map(([direction, label]) => `<span class="pad-key pad-${direction}" data-code="${b[direction]}">${label}</span>`).join("")}</div><div class="pad-actions"><strong>NGƯỜI ${slot}</strong><p><b>${actionKeys[0]}:</b> chuyền / áp sát / tranh bóng</p><p><b>${actionKeys[1]}:</b> sút / xoạc</p><p><b>${actionKeys[2]}:</b> đổi người</p><small>Shift: chạy nhanh</small></div>`;
+    const actionKeys = slot === "A" ? ["R", "T", "F", "G", "V", "B"] : ["U", "I", "J", "K", "N", "M"];
+    const actions = ["Đổi người", "Chạy nhanh", "Chuyền", "Sút / xoạc", "Áp sát", "Tranh bóng"];
+    const gestures = ["Bấm", "Giữ", "Giữ → thả", "Giữ → thả / bấm", "Giữ", "Bấm"];
+    guide.innerHTML = `<div class="movement-help"><strong>NGƯỜI ${slot}</strong><div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${Object.entries(labels).map(([direction, label]) => `<span class="pad-key pad-${direction}" data-code="${b[direction]}">${label}</span>`).join("")}</div></div><div class="action-grid">${actionKeys.map((key, i) => {
+      const clickable = i === 3 && !!guide.closest(".controls"), tag = clickable ? "button" : "div";
+      return `<${tag} class="action-key${clickable ? " slide-action" : ""}" data-code="Key${key}" data-action="${["switch", "sprint", "pass", "shoot", "press", "challenge"][i]}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}><kbd>${key}</kbd><span><span class="action-label">${actions[i]}</span><small>${gestures[i]}</small></span></${tag}>`;
+    }).join("")}</div>`;
   }
-  const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, ...Object.keys(b.actions)])]);
-  const pendingShots = new Map(), chargeStarts = new Map(), lastPress = new Map();
+  const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press, ...Object.keys(b.actions)])]);
+  const pendingShots = new Map(), chargeStarts = new Map();
   let activeMode = "watch";
   let watcher = document.getElementById("watch-match").__ptscFootball;
 
@@ -28,7 +33,7 @@
       session.api.setInput(slot, session.paused ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
         y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint),
-        pressing: keys.has(b.pass) && !state.players.find(p => p.slot === slot)?.hasBall
+        pressing: keys.has(b.press) && !state.players.find(p => p.slot === slot)?.hasBall
       });
     }
   }
@@ -36,14 +41,14 @@
     keys.clear();
     highlightPads();
     for (const pending of pendingShots.values()) clearTimeout(pending.timer);
-    pendingShots.clear(); chargeStarts.clear(); lastPress.clear();
+    pendingShots.clear(); chargeStarts.clear();
     for (const session of sessions.values()) {
       session.api.setInput("A"); session.api.setInput("B");
       session.api.cancelCharge("A"); session.api.cancelCharge("B");
     }
   }
   function highlightPads() {
-    for (const key of document.querySelectorAll(".pad-key")) key.classList.toggle("is-held", keys.has(key.dataset.code));
+    for (const key of document.querySelectorAll(".pad-key, .action-key")) key.classList.toggle("is-held", keys.has(key.dataset.code));
   }
   function setPaused(session, paused) {
     session.paused = paused;
@@ -138,7 +143,7 @@
       const slideButton = session.panel.querySelector(`.slide-action[data-slot="${player.slot}"]`);
       if (slideButton) {
         slideButton.disabled = session.paused || state.ended || !player.ready || (!player.hasBall && !player.slideReady);
-        slideButton.textContent = `${player.hasBall ? "Sút" : "Xoạc"} ${player.slot} · ${player.slot === "A" ? "G" : "M"}`;
+        slideButton.querySelector(".action-label").textContent = player.hasBall ? "Sút" : "Xoạc";
       }
       const card = session.panel.querySelector(`.player-card[data-slot="${player.slot}"]`);
       if (!card) continue;
@@ -260,7 +265,7 @@
     if (!event.repeat) for (const [slot, binding] of Object.entries(bindings)) {
       const player = session.api.status().players.find(p => p.slot === slot);
       const bound = binding.actions[event.code];
-      const action = bound === "pass" && !player?.hasBall ? "press" : bound === "shoot" && !player?.hasBall ? "slide" : bound;
+      const action = bound === "shoot" && !player?.hasBall ? "slide" : bound;
       if (action === "pass" || action === "shoot") {
         const pending = pendingShots.get(slot);
         if (action === "shoot" && pending?.session === session) {
@@ -270,13 +275,11 @@
           if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
           if (session.api.beginCharge(slot, action)) chargeStarts.set(slot, performance.now());
         }
-      } else if (action === "press") {
+      } else if (action === "challenge" || action === "slide") {
         const pending = pendingShots.get(slot);
         if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
         chargeStarts.delete(slot);
-        const now = performance.now(), previous = lastPress.get(slot);
-        if (previous != null && now - previous < 300) { session.api.action(slot, "challenge"); lastPress.delete(slot); }
-        else lastPress.set(slot, now);
+        session.api.action(slot, action);
       } else if (action) session.api.action(slot, action);
     }
     highlightPads();

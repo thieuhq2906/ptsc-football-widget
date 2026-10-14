@@ -104,7 +104,7 @@
      * shot); everyone else runs to formation spots that follow the ball. Human teams control their carrier.
      * ========================================================================================== */
     const NS = "http://www.w3.org/2000/svg";
-    const LEN = 45, WID = 30;                       // metres
+    const LEN = 45, WID = 30, PENALTY_RADIUS = 9.5;  // metres
     const A = [684, -387], B = [352, 231], K = 32;   // world px per court unit; K = px per metre of height
     const ground = (u, v) => [u * A[0] + v * B[0], u * A[1] + v * B[1]];
     function courtUV(g) { const det = A[0] * B[1] - A[1] * B[0]; return [(g[0] * B[1] - g[1] * B[0]) / det, (A[0] * g[1] - A[1] * g[0]) / det]; }
@@ -478,6 +478,14 @@
     const chargePower = h => h.charge ? h.charge.frozen ?? clamp((T - h.charge.start) / 0.9, 0.08, 1) : 0;
     const humanFor = p => p && humans.find(h => h.team === p.team);
     const manual = p => interactive && game.mode === "play" && !game.stoppage && on(p) && (p.role !== "GK" || ball.owner === p) && humanFor(p)?.selected === p;
+    /** Keep a keeper in possession, and the ball, inside the drawn semicircular penalty area. */
+    function keeperBallSpot(p, position, held = ball.mode === "held") {
+      const contact = held ? handPoint(p) : footPoint(p), offset = courtUV([contact[0] - p.g[0], held ? 1 : 1.5]);
+      const margin = Math.hypot(offset[0] * LEN, offset[1] * WID) + .3;
+      const [depth, width] = toT(p.team, position), radius = PENALTY_RADIUS - margin;
+      const forward = clamp(depth * LEN, margin, radius), lateral = Math.sqrt(Math.max(0, radius * radius - forward * forward));
+      return toW(p.team, [forward / LEN, .5 + clamp((width - .5) * WID, -lateral, lateral) / WID]);
+    }
     function selectBallOwner(p) {
       const h = humanFor(p);
       if (h && on(p)) h.selected = p;
@@ -749,10 +757,20 @@
       ball.seg = { t0: T, t1: T + dur, a: { g: [...ball.g], h: ball.h }, b, arc, roll: !!opts.roll, onEnd: opts.onEnd, kind: opts.kind ?? "pass", curve: opts.curve ?? 0, wobble: opts.wobble ?? 0 };
       ball.kind = ball.seg.kind;
     }
-    function carry(p) { ball.mode = "carried"; ball.owner = p; ball.seg = null; ball.kind = null; ball.show = true; game.keeperSince = p.role === "GK" ? T : null; selectBallOwner(p); }
-    function holdBall(p) { ball.mode = "held"; ball.owner = p; ball.seg = null; ball.kind = null; game.keeperSince = T; selectBallOwner(p); }
+    function carry(p) {
+      if (p.role === "GK" && game.mode === "play") { p.pos = keeperBallSpot(p, p.pos, false); p.g = ground(...p.pos); }
+      ball.mode = "carried"; ball.owner = p; ball.seg = null; ball.kind = null; ball.show = true; game.keeperSince = p.role === "GK" ? T : null; selectBallOwner(p);
+    }
+    function holdBall(p) {
+      p.pos = keeperBallSpot(p, p.pos, true); p.g = ground(...p.pos);
+      ball.mode = "held"; ball.owner = p; ball.seg = null; ball.kind = null; game.keeperSince = T; selectBallOwner(p);
+    }
     function updateBall(dt) {
       const before = [...ball.g];
+      if (ball.owner?.role === "GK" && ["held", "carried"].includes(ball.mode) && game.mode === "play") {
+        ball.owner.pos = keeperBallSpot(ball.owner, ball.owner.pos);
+        ball.owner.g = ground(...ball.owner.pos);
+      }
       if (ball.mode === "carried" && ball.owner) {
         const o = ball.owner, sp = Math.hypot(...o.vel), close = o.dribStyle === "dribbleLow" && T < o.busyUntil;
         ball.g = footPoint(o, close); ball.h = sp > 1 ? 0.14 * Math.abs(Math.sin(o.stride * (close ? 1.6 : 0.9))) : 0;
@@ -2342,7 +2360,8 @@
         const direction = h ? courtUV(chase ?? [h.x, h.y]) : null;
         const directionLength = direction ? Math.hypot(direction[0] * LEN, direction[1] * WID) : 0;
         const advance = pressing ? Math.max(0, Math.min(4, mdist(p.pos, game.carrier.pos) - 0.85)) : 4;
-        const tgt = h ? inPitch([p.pos[0] + (directionLength ? direction[0] / directionLength * advance : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * advance : 0)]) : targetFor(p);
+        let tgt = h ? inPitch([p.pos[0] + (directionLength ? direction[0] / directionLength * advance : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * advance : 0)]) : targetFor(p);
+        if (p.role === "GK" && ball.owner === p && ["held", "carried"].includes(ball.mode) && game.mode === "play") tgt = keeperBallSpot(p, tgt);
         const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
         const top = (h ? h.sprint ? 6.2 : pressing ? 5.5 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
@@ -2368,6 +2387,13 @@
         p.vel = [p.vel[0] + (des[0] - p.vel[0]) * k, p.vel[1] + (des[1] - p.vel[1]) * k];
         p.pos = [p.pos[0] + p.vel[0] / LEN * dt, p.pos[1] + p.vel[1] / WID * dt];
         if (h) p.pos = inPitch(p.pos);
+      }
+      if (p.role === "GK" && ball.owner === p && ["held", "carried"].includes(ball.mode) && game.mode === "play") {
+        const legal = keeperBallSpot(p, p.pos);
+        if (mdist(p.pos, legal) > 1e-5) {
+          p.pos = legal;
+          p.vel = [(p.pos[0] - before[0]) * LEN / dt, (p.pos[1] - before[1]) * WID / dt];
+        }
       }
       p.g = ground(...p.pos);
       const speed = Math.hypot(...p.vel);
@@ -2947,7 +2973,7 @@
       const dot = (u, v, r = 3) => { const c = G(u, v); el("ellipse", { cx: c[0], cy: c[1], rx: r, ry: r * 0.6, fill: "var(--color-card)", stroke: "none" }, g); };
       dot(0.5, 0.5);
       for (const e of [0, 1]) {
-        el("polyline", { points: ring(e, 0.5, 9.5, -Math.PI / 2, Math.PI / 2, e ? -1 : 1), ...W }, g);
+        el("polyline", { points: ring(e, 0.5, PENALTY_RADIUS, -Math.PI / 2, Math.PI / 2, e ? -1 : 1), ...W }, g);
         dot(e + (e ? -1 : 1) * 6 / LEN, 0.5, 2.6);
       }
       // The two benches, either side of the halfway line on the far touchline.
