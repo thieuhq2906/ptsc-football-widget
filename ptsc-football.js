@@ -19,6 +19,15 @@
 (function () {
   "use strict";
   let count = 0;
+  const challengeOutcome = roll => roll < 0.30 ? "foul" : roll < 0.80 ? "win" : roll < 0.95 ? "yellow" : "red";
+  function kickProfile(action, power = 0.2, special = false) {
+    power = Math.max(0.08, Math.min(1, Number(power) || 0.08));
+    return { power, speed: (action === "pass" ? 9 : special ? 24 : 13) + power * (action === "pass" ? 12 : 13),
+      distance: 7 + power * 27, height: action === "pass" ? 0 : 0.12 + power * power * 2.1,
+      arc: action === "pass" ? Math.max(0.035, (power - 0.4) * 4) : 0.04 + power * power * 0.85,
+      windup: special ? 0.6 : action === "pass" ? 0.16 : 0.22,
+      cost: special ? 0.18 : 0.005 + power * 0.025 };
+  }
   const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const template = (UID, caption) => `<div class="tv" data-id="tv">
   <svg data-id="scene" viewBox="0 0 640 360" role="img" preserveAspectRatio="xMidYMid slice"
@@ -466,6 +475,7 @@
     const humans = interactive ? [{ slot: "A", team: settings.teamA === "B" ? "B" : "R", selected: null, x: 0, y: 0, sprint: false, tackleAt: -99 }] : [];
     if (settings.mode === "local") humans.push({ slot: "B", team: otherTeam(humans[0].team), selected: null, x: 0, y: 0, sprint: false, tackleAt: -99 });
     let support = settings.support !== false && settings.support !== "false";
+    const chargePower = h => h.charge ? h.charge.frozen ?? clamp((T - h.charge.start) / 0.9, 0.08, 1) : 0;
     const humanFor = p => p && humans.find(h => h.team === p.team);
     const manual = p => interactive && game.mode === "play" && !game.stoppage && on(p) && (p.role !== "GK" || ball.owner === p) && humanFor(p)?.selected === p;
     function selectBallOwner(p) {
@@ -492,6 +502,7 @@
           if (game.mode === "play" && !game.stoppage) game.carrier = ball.owner;
         }
         const p = h.selected;
+        if (h.charge && (ball.owner !== h.charge.owner || game.mode !== "play" || game.stoppage || !on(h.charge.owner))) h.charge = null;
         if (p && p.busyUntil === Infinity && !p.script && ball.owner !== p && !p.keys.some(k => k[1] > T)) p.busyUntil = T;
       }
       const c = game.carrier;
@@ -505,12 +516,26 @@
     api.setInput = (slot, input = {}) => {
       const h = humans.find(h => h.slot === slot);
       if (h) {
-        Object.assign(h, { x: clamp(Number(input.x) || 0, -1, 1), y: clamp(Number(input.y) || 0, -1, 1), sprint: !!input.sprint });
+        Object.assign(h, { x: clamp(Number(input.x) || 0, -1, 1), y: clamp(Number(input.y) || 0, -1, 1), sprint: !!input.sprint, pressing: !!input.pressing });
         if (h.x || h.y) h.aim = [h.x, h.y];
       }
     };
     api.setSupport = enabled => { support = !!enabled; };
-    api.action = (slot, action) => {
+    api.beginCharge = (slot, action) => {
+      const h = humans.find(h => h.slot === slot), p = ball.owner;
+      if (!h || !["pass", "shoot"].includes(action) || !p || p.team !== h.team || !on(p) || game.mode !== "play" || game.stoppage || p.script || T < p.busyUntil) return false;
+      selectBallOwner(p); h.charge = { action, owner: p, start: T }; return true;
+    };
+    api.freezeCharge = slot => { const h = humans.find(h => h.slot === slot); if (h?.charge) h.charge.frozen = chargePower(h); };
+    api.cancelCharge = slot => { const h = humans.find(h => h.slot === slot); if (h) h.charge = null; };
+    api.releaseCharge = (slot, options = {}) => {
+      const h = humans.find(h => h.slot === slot), charge = h?.charge;
+      if (!charge) return false;
+      const power = chargePower(h); h.charge = null;
+      if (ball.owner !== charge.owner || !on(charge.owner)) return false;
+      return api.action(slot, charge.action, { power, ...options });
+    };
+    api.action = (slot, action, options = {}) => {
       const h = humans.find(h => h.slot === slot);
       if (!h || game.mode !== "play" || game.stoppage) return false;
       if (ball.owner?.team === h.team && ["carried", "held"].includes(ball.mode)) selectBallOwner(ball.owner);
@@ -524,7 +549,7 @@
       if (p.script || T < p.busyUntil) return false;
       if (ball.owner === p && ["carried", "held"].includes(ball.mode)) {
         game.kickoffPass = false; game.freeKick = false; game.restart = null;
-        if (action === "pass" || action === "shoot") return directedKick(p, h, action);
+        if (action === "pass" || action === "shoot") return directedKick(p, h, action, options);
       }
       if (action === "slide" && ball.owner !== p && T - h.tackleAt > 1.5) {
         const c = game.carrier, direction = aimFor(h, p).world;
@@ -540,10 +565,25 @@
         }
         return true;
       }
-      if (action === "tackle" && T - h.tackleAt > 1) {
+      if (["challenge", "tackle"].includes(action) && T - h.tackleAt > 1.2) {
         const c = game.carrier;
-        if (c && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 3) {
-          h.tackleAt = T; tackle(c, p, T + 0.25); return true;
+        if (c && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 2.7) {
+          h.tackleAt = T;
+          p.energy = Math.max(0.05, p.energy - 0.015);
+          p.keys.push([T, T + 0.35, "tap"]); p.busyUntil = T + 0.45;
+          at(T + 0.12, () => {
+            if (game.mode !== "play" || game.stoppage || ball.owner !== c || ball.mode !== "carried" || !on(p) || mdist(p.pos, c.pos) > 3) return;
+            const result = challengeOutcome(rng());
+            game.stats.challenges = (game.stats.challenges ?? 0) + 1;
+            game.stats.challengeResults ??= { foul: 0, win: 0, yellow: 0, red: 0 };
+            game.stats.challengeResults[result]++;
+            if (result === "win") {
+              c.script = null; c.busyUntil = T + 0.3; c.keys.push([T, T + 0.4, "shrug"]);
+              carry(p); game.carrier = p; game.poss = p.team; game.dirty = true;
+              say(p, "Cướp bóng!", "var(--color-sky-soft)");
+            } else foul(c, p, T, false, { forcedCard: result === "foul" ? "none" : result });
+          });
+          return true;
         }
       }
       return false;
@@ -554,12 +594,17 @@
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
         ready: !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
+        pressing: !!h.pressing, yellows: h.selected?.yellows ?? 0,
+        charge: h.charge ? { action: h.charge.action, power: chargePower(h) } : null,
         aim: aimFor(h).screen, role: h.selected?.role ?? null,
         position: h.selected ? [...h.selected.pos] : null })) });
 
-    function directedKick(c, h, action) {
+    function directedKick(c, h, action, options = {}) {
+      const special = action === "shoot" && !!options.special;
+      if (special && c.energy < 0.23) { say(c, "Không đủ thể lực!", "var(--color-coral)"); return false; }
+      const profile = kickProfile(action, options.power ?? 0.25, special);
       const direction = aimFor(h, c).world, assisted = support;
-      const raw = rayEnd(c, direction, action === "shoot" ? Infinity : h.sprint ? 24 : 16);
+      const raw = rayEnd(c, direction, action === "shoot" ? Infinity : profile.distance);
       let receiver = null, target = raw.position;
       if (action === "pass" && assisted) {
         let best = -Infinity;
@@ -580,16 +625,21 @@
           target = [goal[0], clamp(t > 0 ? c.pos[1] + direction[1] * t : 0.5, GOAL_V[0] + 0.015, GOAL_V[1] - 0.015)];
         }
         if ((assisted || raw.endLine) && Math.abs(target[0] - goal[0]) < 1e-5 && target[1] > GOAL_V[0] && target[1] < GOAL_V[1]) {
-          game.lastKick = { action, assisted, origin: [...c.pos], target: [...target], receiver: null };
-          return shoot(c, { style: h.sprint ? "power" : "kick", aimedW: toT(c.team, target)[1], onTarget: true, manual: true });
+          c.energy = Math.max(0.05, c.energy - profile.cost);
+          if (special) game.stats.specialShots = (game.stats.specialShots ?? 0) + 1;
+          game.lastKick = { action, assisted, power: profile.power, height: assisted ? Math.min(1.85, profile.height) : profile.height, arc: profile.arc, special, origin: [...c.pos], target: [...target], receiver: null };
+          return shoot(c, { style: special ? "knuckle" : profile.power > 0.65 ? "power" : "kick", aimedW: toT(c.team, target)[1], onTarget: true, manual: true,
+            powerProfile: profile, special, windup: profile.windup, label: special ? "SÚT THẦN SẦU!" : undefined });
         }
       }
       const distance = mdist(c.pos, target), throwing = ball.mode === "held";
-      const Tk = T + (action === "shoot" ? 0.3 : 0.22), flight = Math.max(0.25, distance / (action === "shoot" ? h.sprint ? 24 : 19 : PASS));
-      game.lastKick = { action, assisted, origin: [...c.pos], target: [...target], receiver: receiver?.name ?? null };
+      const Tk = T + profile.windup, flight = Math.max(0.25, distance / profile.speed, gravFlight(profile.arc));
+      c.energy = Math.max(0.05, c.energy - profile.cost);
+      if (special) game.stats.specialShots = (game.stats.specialShots ?? 0) + 1;
+      game.lastKick = { action, assisted, power: profile.power, height: profile.height, arc: profile.arc, special, origin: [...c.pos], target: [...target], receiver: receiver?.name ?? null };
       if (action === "shoot") game.stats.shots++;
       else game.stats.passes = (game.stats.passes ?? 0) + 1;
-      holdStill(c, T, Tk + 0.08); kickPoses(c, Tk, throwing ? "throw" : action === "pass" ? "pass" : h.sprint ? "power" : "kick");
+      holdStill(c, T, Tk + 0.08); kickPoses(c, Tk, throwing ? "throw" : action === "pass" ? "pass" : special || profile.power > 0.65 ? "power" : "kick");
       lockFace(c, Tk + 0.25, faceTowards(c, ground(...target))); c.busyUntil = Infinity;
       if (!assisted && !raw.boundary && action === "pass") {
         const candidate = nearest(players.filter(p => p !== c && on(p) && !p.script), target).p;
@@ -599,13 +649,14 @@
       at(Tk, () => {
         if (game.mode !== "play" || ball.owner !== c) return;
         game.carrier = null;
-        fly({ g: ground(...target), h: action === "shoot" ? 0.3 : 0 }, flight, action === "shoot" ? 0.15 : 0.08, { kind: action === "shoot" ? "shot" : "pass", onEnd: () => {
+        if (special) say(c, "SÚT THẦN SẦU!", "var(--color-coral)");
+        fly({ g: ground(...target), h: profile.height }, flight, profile.arc, { kind: action === "shoot" ? "shot" : "pass", onEnd: () => {
           if (game.mode !== "play") return;
           if (receiver && on(receiver)) return receive(receiver, null, { accurate: assisted });
           if (!raw.boundary) return looseBall(inPitch(target), { maxArc: 0.15, exclude: c });
           if (!raw.endLine) return ballOut(otherTeam(c.team), target);
           const attackingTeam = (target[0] > 0.5) !== SWAP ? "R" : "B";
-          if (target[1] > GOAL_V[0] && target[1] < GOAL_V[1]) {
+          if (target[1] > GOAL_V[0] && target[1] < GOAL_V[1] && profile.height < GOAL_H) {
             const credited = attackingTeam === c.team ? c : nearest(outfield(team[attackingTeam]), c.pos).p;
             if (credited) { if (attackingTeam !== c.team) say(c, "Phản lưới!", "var(--color-coral)"); return scored(credited, toT(attackingTeam, target)[1]); }
           }
@@ -1431,6 +1482,18 @@
     };
     
     function tackle(c, d, Tt, options = {}) {
+      if (interactive && !options.slide) {
+        const target = c.script ? scriptPos(c, Tt) : c.pos;
+        mkScript(d, [T, d.pos], [Tt, lerp(target, d.pos, 0.8 / Math.max(0.8, mdist(target, d.pos)))]);
+        d.keys.push([T, Tt + 0.15, "jockey"]); d.busyUntil = Tt + 0.65;
+        at(Tt, () => {
+          if (game.mode !== "play" || game.stoppage || ball.owner !== c || ball.mode !== "carried" || !on(d) || mdist(c.pos, d.pos) > 2 || rng() > 0.45) return;
+          carry(d); game.carrier = d; game.poss = d.team; game.dirty = true;
+          c.script = null; c.busyUntil = T + 0.25;
+          game.stats.pressWins = (game.stats.pressWins ?? 0) + 1;
+        });
+        return;
+      }
       const target = c.script ? scriptPos(c, Tt) : c.pos, slide = options.slide ?? rng() < 0.15;
       mkScript(d, [T, d.pos], [Tt, lerp(target, d.pos, 0.6 / Math.max(0.6, mdist(target, d.pos)))]);
       d.busyUntil = Tt + 0.8;
@@ -1448,7 +1511,7 @@
         }
         // Most challenges are clean. A defender already on a yellow is careful.
         const counter = game.counter && game.counter.team === c.team && T < game.counter.until;
-        const foulP = ((d.yellows ?? 0) >= 1 ? 0.45 : counter ? 0.65 : d.team === game.momentum ? 0.32 : 0.48) + 0.25 * (1 - fit(d));
+        const foulP = slide ? 0.65 + 0.15 * (1 - fit(d)) : 0.09 + 0.08 * (1 - fit(d));
         if (rng() < foulP) foul(c, d, Tt, slide);
         else {
           praise(d);
@@ -1460,7 +1523,7 @@
       });
     }
     /** Whistle, a yellow card, then a free kick; for Đỏ near goal, the striker comes over to take it. */
-    function foul(c, d, Tt, slide = false) {
+    function foul(c, d, Tt, slide = false, options = {}) {
       game.stoppage = true; game.carrier = null;
       setNote(`Phạm lỗi · ${d.name} (${TEAM_NAME[d.team]})`);
       game.refFocus = { uv: [...c.pos], until: Tt + 2.8 };
@@ -1471,9 +1534,23 @@
       const spot = inPitch([...c.pos]);
       fly({ g: ground(...spot), h: 0 }, 0.4, 0.05, { roll: true });
       ref.keys.push([Tt + 0.15, Tt + 0.8, "whistle"]); at(Tt + 0.2, () => say(ref, "TUÝTTT!"));
+      if (options.forcedCard != null) {
+        if (options.forcedCard === "yellow") at(Tt + 0.8, () => { if (game.mode === "play") book(d, false); });
+        if (options.forcedCard === "red") at(Tt + 0.8, () => {
+          if (game.mode !== "play") return;
+          game.redPending = T + 2; showRed(d, "THẺ ĐỎ!");
+        });
+        const resume = () => {
+          if (game.mode !== "play") return;
+          if ((game.redPending ?? 0) > T) return at(game.redPending + 0.1, resume);
+          setPiece(c, spot);
+        };
+        at(Tt + 2.6, resume);
+        return;
+      }
       // Now and then he does not get up (once a match at most); otherwise, very rarely, it boils over.
       const hurtUntil = !game.injured && c.role !== "GK" && rng() < (slide ? 0.2 : 0.07) ? injure(c, Tt) : 0;
-      if (!hurtUntil && !game.scuffled && rng() < (slide ? 0.3 : 0.1) && scuffle(c, d, Tt, spot, slide)) return;
+      if (!slide && !hurtUntil && !game.scuffled && rng() < 0.04 && scuffle(c, d, Tt, spot, slide)) return;
       // A card for a reckless slide or for stopping a counter-attack (a slide from behind, rarely, a straight red);
       // otherwise a word from the referee.
       const tactical = game.pullBack || (game.counter && game.counter.team === c.team && T < game.counter.until + 1);
@@ -1484,11 +1561,11 @@
       // The last man: a straight red, unless the referee is lenient (then yellow). For a card the referee jogs
       // over to the man first and shows it from a couple of metres away.
       let refWalk = 0, argues = false;
-      if (lastMan || tactical || rng() < (slide ? 0.95 : (d.yellows ?? 0) >= 1 ? 0.85 : 0.8)) {
+      if ((slide && (lastMan || tactical)) || rng() < (slide ? 0.98 : 0.12)) {
         const rd = mdist(ref.pos, d.pos);
         refWalk = Math.max(0, (rd - 3) / 5.5);
         game.refFocus = { uv: inPitch(lerp(d.pos, ref.pos, Math.min(1, 2.5 / Math.max(2.5, rd)))), until: Tt + 2.6 + refWalk };
-        const red = (lastMan && rng() < 0.7) || (slide && rng() < 0.3);
+        const red = slide && ((lastMan && rng() < 0.7) || rng() < 0.25);
         at(Tt + 1.3 + refWalk, () => book(d, red));
       } else {
         ref.keys.push([Tt + 1.0, Tt + 1.6, "point"]);
@@ -1496,7 +1573,7 @@
         d.keys.push([Tt + 0.9, Tt + 1.6, "shrug"]);
         // ...and sometimes he argues the call and gets booked for it (once the referee has had his say, and never
         // while a man is down injured).
-        if (!hurtUntil && rng() < 0.25) {
+        if (!hurtUntil && rng() < 0.03) {
           argues = true;
           d.keys.push([Tt + 2.1, Tt + 2.9, "armsWide"]);
           at(Tt + 2.15, () => say(d, pick(["Tôi chạm bóng mà!", "Phạt gì mà phạt!", "Thổi kiểu gì thế?!"]), "var(--color-coral)", 1.1));
@@ -1535,6 +1612,7 @@
       mkScript(p, [T + 0.6, p.pos], [T + 0.6 + dur, exit]);
       p.keys.push([T, T + 0.6, "headHands"]);
       at(T + 0.65 + dur, () => { p.off = true; });
+      if (interactive && team[p.team].filter(on).length < 3) fullTime(otherTeam(p.team));
     }
     
     const offset = (uv, [mx, my]) => [uv[0] + mx / LEN, uv[1] + my / WID];
@@ -1705,9 +1783,9 @@
         else if (d < 0.66 && rng() < 0.4) style = "power";
         else style = "kick";
       }
-      const spec = SHOT[style], aerial = style === "header" || style === "bicycle";
+      const spec = o.powerProfile ? { ...SHOT[style], speed: o.powerProfile.speed, arc: o.powerProfile.arc } : SHOT[style], aerial = style === "header" || style === "bicycle";
       const Tk = T + (aerial ? 0.02 : o.windup ?? (style === "power" ? 0.42 : 0.3));
-      const roll = rng(), gc = goalChance(c, style);
+      const roll = rng(), gc = clamp(goalChance(c, style) + (o.special ? 0.14 : 0), 0, 0.95);
       // Misses: mostly saved or off target; the woodwork is rare (and at most twice a match per side).
       let outcome = roll < gc ? "goal" : roll < gc + (1 - gc) * 0.55 ? "save" : roll < gc + (1 - gc) * 0.6 ? "post" : "wide";
       if (o.onTarget) outcome = roll < gc ? "goal" : "save";
@@ -1720,6 +1798,8 @@
       if (outcome === "post") { w = 0.5 + side * (GOAL_V[1] - 0.5); h = 0.5 + rng() * 0.8; }
       if (outcome === "wide") { if (rng() < 0.55) w = 0.5 + side * (0.12 + rng() * 0.05); else { h = GOAL_H + 0.5 + rng() * 0.6; over = true; } }
       if (o.aimedW != null) { w = o.aimedW; h = 0.55; }
+      if (o.powerProfile) h = support ? Math.min(1.85, o.powerProfile.height) : o.powerProfile.height;
+      if (o.powerProfile && h >= GOAL_H) { outcome = "wide"; over = true; }
       const mouth = toW(c.team, [1, w]);
       if (!aerial && o.noPose) holdStill(c, T, Tk + 0.3);
       else if (!aerial) {
@@ -1766,7 +1846,7 @@
           gk.busyUntil = tc + 1.5;
           return;
         }
-        const arc = Math.max(spec.arc + (style === "kick" ? dist * 0.012 : 0), wallArc(h)), flight = Math.max(0.3, dist / spec.speed, gravFlight(arc));
+        const arc = Math.max(spec.arc + (!o.powerProfile && style === "kick" ? dist * 0.012 : 0), wallArc(h)), flight = Math.max(0.3, dist / spec.speed, gravFlight(arc));
         fly({ g: ground(...mouth), h }, flight, arc, { kind: "shot", curve: curveFor(1), wobble: style === "knuckle" ? 2.5 : 0, onEnd: () => shotEnd(outcome, c, w, h, over) });
         if (outcome === "wide" && !over) {
           // Going wide: a step across and he watches it go past.
@@ -2232,11 +2312,14 @@
         p.vel = [(p.pos[0] - before[0]) * LEN / dt, (p.pos[1] - before[1]) * WID / dt];
       } else {
         const h = manual(p) ? humanFor(p) : null;
-        const direction = h ? courtUV([h.x, h.y]) : null;
+        const pressing = h?.pressing && game.carrier && game.carrier.team !== p.team && ball.mode === "carried";
+        const chase = pressing ? add(game.carrier.g, mul(p.g, -1)) : null;
+        const direction = h ? courtUV(chase ?? [h.x, h.y]) : null;
         const directionLength = direction ? Math.hypot(direction[0] * LEN, direction[1] * WID) : 0;
-        const tgt = h ? inPitch([p.pos[0] + (directionLength ? direction[0] / directionLength * 4 : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * 4 : 0)]) : targetFor(p);
+        const advance = pressing ? Math.max(0, Math.min(4, mdist(p.pos, game.carrier.pos) - 0.85)) : 4;
+        const tgt = h ? inPitch([p.pos[0] + (directionLength ? direction[0] / directionLength * advance : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * advance : 0)]) : targetFor(p);
         const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
-        const top = (h ? h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
+        const top = (h ? h.sprint ? 6.2 : pressing ? 5.5 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
         // Keep a little space between bodies. Players ignore the referee; he steps around them.
         const dn = Math.hypot(...des) > 0.1 ? mul(des, 1 / Math.hypot(...des)) : null;
@@ -2526,8 +2609,8 @@
       setNote(`Hết hiệp 1 · Đỏ ${game.score.R}–${game.score.B} Xanh`);
     }
     
-    function fullTime() {
-      game.winner = game.score.R === game.score.B ? null : game.score.R > game.score.B ? "R" : "B";
+    function fullTime(forfeitWinner = null) {
+      game.winner = forfeitWinner ?? (game.score.R === game.score.B ? null : game.score.R > game.score.B ? "R" : "B");
       game.mode = "fulltime"; game.modeT = T; game.stoppage = true; game.carrier = null; game.counter = null; game.chain = null;
       if (ball.mode === "carried") ball.mode = "dead";
       // Nothing from open play carries on past the whistle: substitutions finish at once, arguments, actions and
@@ -2542,7 +2625,7 @@
         setNote(`Hết giờ · Hòa ${game.score.R}–${game.score.B}`);
         return;
       }
-      setNote(`Hết giờ · ${TEAM_NAME[game.winner]} thắng ${game.score[game.winner]}–${game.score[otherTeam(game.winner)]}`);
+      setNote(forfeitWinner ? `Hết giờ · ${TEAM_NAME[game.winner]} thắng do đối thủ thiếu người` : `Hết giờ · ${TEAM_NAME[game.winner]} thắng ${game.score[game.winner]}–${game.score[otherTeam(game.winner)]}`);
       game.kickoffTeam = otherTeam(game.winner);
       // The beaten side, each in his own way: one or two crouch or sit for a moment (the keeper sits down in his
       // area), the others hands on hips or head in hands. Those who went down get up during the ceremony.
@@ -3002,18 +3085,24 @@
       const shake = T - game.shake < 0.5 ? Math.sin(T * 70) * 3 * (1 - (T - game.shake) / 0.5) : 0;
       set(layer.world, { transform: `translate(${(VW / 2 + shake).toFixed(1)} ${(VH / 2).toFixed(1)}) scale(${cam.z.toFixed(4)}) translate(${(-cam.x).toFixed(1)} ${(-cam.y).toFixed(1)})` });
       for (const p of people) drawPerson(p);
-      controlMarkers.forEach(({ h, ring, label, arrow }) => {
+      controlMarkers.forEach(({ h, ring, label, arrow, pointer, powerBg, powerFill }) => {
         const p = h.selected, visible = !!p && on(p) && ["play", "reset"].includes(game.mode);
         set(ring, { cx: p?.g[0] ?? 0, cy: (p?.g[1] ?? 0) + 2, opacity: visible ? 1 : 0 });
-        set(label, { x: p?.g[0] ?? 0, y: (p?.g[1] ?? 0) - 53, opacity: visible ? 1 : 0 });
+        set(label, { x: p?.g[0] ?? 0, y: (p?.g[1] ?? 0) - 81, opacity: visible ? 1 : 0 });
+        label.textContent = `${h.slot} · ${p?.name ?? ""}`;
+        set(pointer, { transform: `translate(${pt(p?.g ?? [0, 0])})`, opacity: visible ? 1 : 0 });
+        const power = chargePower(h), charging = visible && !!h.charge;
+        set(powerBg, { x: (p?.g[0] ?? 0) - 18, y: (p?.g[1] ?? 0) + 14, opacity: charging ? 0.95 : 0 });
+        set(powerFill, { x: (p?.g[0] ?? 0) - 17, y: (p?.g[1] ?? 0) + 15, width: 34 * power, fill: power > .85 ? "#ff725c" : power > .55 ? "#ffe16b" : "#66ed9d", opacity: charging ? 1 : 0 });
         const direction = aimFor(h, p).world;
         const project = metres => p ? ground(p.pos[0] + direction[0] * metres, p.pos[1] + direction[1] * metres) : [0, 0];
-        const start = project(0.7), tip = project(2.8), neck = project(2.1);
+        const start = project(0.7), tip = project(2.2), neck = project(1.1);
         const dx = tip[0] - neck[0], dy = tip[1] - neck[1], length = Math.hypot(dx, dy) || 1;
         const left = [neck[0] - dy / length * 5.5, neck[1] + dx / length * 5.5];
         const right = [neck[0] + dy / length * 5.5, neck[1] - dx / length * 5.5];
-        set(arrow, { d: `M${pt(start)} L${pt(tip)} M${pt(left)} L${pt(tip)} L${pt(right)}`, opacity: visible ? 0.95 : 0, "data-direction": aimFor(h, p).screen.join(",") });
+        set(arrow, { d: `M${pt(tip)} L${pt(left)} L${pt(right)} Z`, opacity: visible ? 0.65 : 0, "data-direction": aimFor(h, p).screen.join(",") });
       });
+      yellowMarkers.forEach(({ p, node }) => set(node, { x: p.g[0] + 10, y: p.g[1] - 55, opacity: p.yellows > 0 && !p.off && !p.sentOff ? 1 : 0, "data-player": p.name }));
       // Ball, shadow and the streak behind a hard shot.
       const bs = [ball.g[0], ball.g[1] - ball.h * K];
       set(ballNode, { transform: `translate(${pt(bs)})`, opacity: ball.alpha.toFixed(2) });
@@ -3121,9 +3210,13 @@
     /* ---------------------------------- run ---------------------------------- */
     drawStadium(); drawPitch();
     const controlMarkers = humans.map(h => ({ h,
-      ring: el("ellipse", { rx: 14, ry: 7, fill: "none", stroke: h.slot === "A" ? "#fff37a" : "#ffffff", "stroke-width": 3 }, layer.shadows),
-      arrow: el("path", { "data-id": `aim-${h.slot}`, fill: "none", stroke: h.slot === "A" ? "#fff37a" : "#ffffff", "stroke-width": 3.5, "stroke-linecap": "round", "stroke-linejoin": "round" }, layer.shadows),
-      label: el("text", { "text-anchor": "middle", fill: h.slot === "A" ? "#fff37a" : "#ffffff", stroke: "#1d2340", "stroke-width": 3, "paint-order": "stroke", "font-size": 16, "font-weight": 800 }, layer.wfx) }));
+      ring: el("ellipse", { rx: 14, ry: 7, fill: "none", stroke: h.slot === "A" ? "#ffffff" : "#73e9ff", "stroke-width": 2 }, layer.shadows),
+      arrow: el("path", { "data-id": `aim-${h.slot}`, fill: h.slot === "A" ? "#6ef5a2" : "#73e9ff", stroke: "#f4fff8", "stroke-width": 1 }, layer.shadows),
+      pointer: el("path", { "data-id": `selected-${h.slot}`, d: "M-6 -73 L6 -73 L0 -59 Z", fill: h.slot === "A" ? "#6ef5a2" : "#73e9ff", stroke: "#163c32", "stroke-width": 1 }, layer.wfx),
+      powerBg: el("rect", { "data-id": `power-${h.slot}`, width: 36, height: 6, rx: 2, fill: "#14281f", stroke: "#fff", "stroke-width": 1 }, layer.wfx),
+      powerFill: el("rect", { width: 0, height: 4, rx: 1, fill: "#66ed9d", stroke: "none" }, layer.wfx),
+      label: el("text", { "text-anchor": "middle", fill: "#ffffff", stroke: "#1d2340", "stroke-width": 2, "paint-order": "stroke", "font-size": 11, "font-weight": 700 }, layer.wfx) }));
+    const yellowMarkers = people.filter(p => p.team).map(p => ({ p, node: el("rect", { "data-id": `yellow-${p.id}`, width: 6, height: 10, rx: 1, fill: "#ffe03b", stroke: "#594915", "stroke-width": 1, opacity: 0 }, layer.wfx) }));
     controlMarkers.forEach(({ h, label }) => { label.textContent = h.slot; });
     // Recording mode (?gif): frames are stepped by hand, so wall-clock CSS animations would be caught half-way.
     if (query.has("gif")) root.classList.add("is-recording");
@@ -3157,7 +3250,7 @@
       const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && running && !raf) { last = performance.now(); raf = requestAnimationFrame(tick); } });
       io.observe(svg);
       raf = requestAnimationFrame(tick);
-      api.pause = () => { running = false; cancelAnimationFrame(raf); raf = 0; };
+      api.pause = () => { running = false; cancelAnimationFrame(raf); raf = 0; humans.forEach(h => { h.charge = null; h.pressing = false; }); };
       api.play = () => { if (running) return; running = true; last = performance.now(); raf = requestAnimationFrame(tick); };
       api.destroy = () => { api.pause(); io.disconnect(); shadow.innerHTML = ""; delete host.__ptscFootball; };
     }
@@ -3167,7 +3260,7 @@
   function mountAll(selector = ".ptsc-football, [data-ptsc-football]") {
     return Array.from(document.querySelectorAll(selector)).map(el => mount(el));
   }
-  window.PTSCFootball = { mount, mountAll };
+  window.PTSCFootball = { mount, mountAll, rules: { challengeOutcome, kickProfile } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => mountAll());
   else mountAll();
 })();

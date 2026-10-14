@@ -224,6 +224,7 @@ const server = http.createServer((req, res) => {
     assert(possessionSlot, "Kickoff should leave a human carrier");
     const shotsBefore = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().shots);
     await page.keyboard.press(possessionSlot === "A" ? "g" : "m");
+    await page.waitForFunction(shots => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().shots > shots, shotsBefore);
     const shotsAfter = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().shots);
     assert.equal(shotsAfter, shotsBefore + 1, "Shoot key must shoot");
     console.log("PASS human shooting key");
@@ -255,6 +256,122 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides), beforeButton + 1);
     assert.equal(await page.evaluate(() => document.activeElement.className), "arena");
     console.log("PASS visible slide button and keyboard focus restoration");
+
+    const mechanics = await page.evaluate(() => {
+      const counts = { foul: 0, win: 0, yellow: 0, red: 0 };
+      for (let i = 0; i < 100; i++) counts[PTSCFootball.rules.challengeOutcome((i + .5) / 100)]++;
+      function fixture(seed) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none" });
+        for (let i = 0; i < 700 && !api.status().players.some(p => p.hasBall && p.ready); i++) api.__step(.05);
+        return { api, host, destroy() { api.destroy(); host.remove(); } };
+      }
+      const kicks = [];
+      for (const action of ["pass", "shoot"]) for (const hold of [.1, .75]) {
+        const f = fixture(7), owner = f.api.status().players.find(p => p.hasBall && p.ready);
+        const started = f.api.beginCharge(owner.slot, action); f.api.__step(hold);
+        const charging = f.api.status().players.find(p => p.slot === owner.slot).charge;
+        const barVisible = Number(f.host.shadowRoot.querySelector(`[data-id="power-${owner.slot}"]`).getAttribute("opacity"));
+        const released = f.api.releaseCharge(owner.slot), kick = f.api.__state().kick;
+        kicks.push({ action, hold, started, charging, barVisible, released, kick }); f.destroy();
+      }
+      const special = fixture(7), shooter = special.api.status().players.find(p => p.hasBall && p.ready);
+      const beforeEnergy = shooter.energy;
+      special.api.beginCharge(shooter.slot, "shoot");
+      const specialAccepted = special.api.releaseCharge(shooter.slot, { special: true, power: .6 });
+      const specialState = special.api.status().players.find(p => p.slot === shooter.slot), specialKick = special.api.__state().kick;
+      special.destroy();
+      const outcomes = [], pressSamples = [];
+      for (let seed = 1; seed <= 128; seed++) {
+        const f = fixture(seed); let attempted = false, actor = null;
+        const first = f.api.status(), owner = first.players.find(p => p.hasBall), defender = first.players.find(p => !p.hasBall);
+        if (!owner || !defender) { f.destroy(); continue; }
+        const distance = (a,b) => Math.hypot((a.position[0]-b.position[0])*45,(a.position[1]-b.position[1])*30);
+        const initialDistance = distance(owner, defender), foulsBefore = f.api.__stats().challenges ?? 0;
+        f.api.setInput(defender.slot, { pressing: true }); f.api.__step(.5);
+        const later = f.api.status();
+        pressSamples.push({ initialDistance, distance: distance(later.players.find(p=>p.slot===owner.slot),later.players.find(p=>p.slot===defender.slot)), noChallenge: (f.api.__stats().challenges ?? 0) === foulsBefore });
+        for (let i = 0; i < 500 && !attempted; i++) {
+          const state = f.api.status(), holder = state.players.find(p => p.hasBall && p.role !== "GK");
+          const d = state.players.find(p => holder && p.team !== holder.team);
+          if (d) { f.api.setInput(d.slot, { pressing: true }); if (d.ready) { attempted = f.api.action(d.slot, "challenge"); actor = d; } }
+          f.api.__step(.05);
+        }
+        if (attempted) {
+          f.api.__step(1.05);
+          const stats = f.api.__stats(), results = stats.challengeResults;
+          if (results) {
+            const outcome = Object.keys(results).find(key => results[key] > 0);
+            const cards = [...f.host.shadowRoot.querySelectorAll('[data-id^="yellow-"]')].filter(n => Number(n.getAttribute('opacity')) === 1).length;
+            outcomes.push({ seed, outcome, yellows: stats.yellows, reds: stats.reds, cards });
+          }
+        }
+        f.destroy();
+        if (seed >= 32 && ["foul", "win", "yellow", "red"].every(kind => outcomes.some(p => p.outcome === kind))) break;
+      }
+      return { counts, kicks, pressSamples, outcomes, specialAccepted, beforeEnergy, specialState, specialKick };
+    });
+    assert.deepEqual(mechanics.counts, { foul: 30, win: 50, yellow: 15, red: 5 });
+    for (const action of ["pass", "shoot"]) {
+      const [low, high] = mechanics.kicks.filter(k => k.action === action);
+      assert(low.started && high.started && low.released && high.released);
+      assert(low.barVisible > 0 && high.barVisible > 0);
+      assert(high.kick.power > low.kick.power && high.kick.arc > low.kick.arc);
+      if (action === "shoot") assert(high.kick.height > low.kick.height);
+    }
+    assert(mechanics.specialAccepted && mechanics.specialKick.special);
+    assert(mechanics.beforeEnergy - mechanics.specialState.energy >= .179);
+    assert(mechanics.pressSamples.every(p => p.noChallenge), "Holding press must not trigger advanced challenges");
+    assert(mechanics.pressSamples.some(p => p.distance < p.initialDistance - .5), "Pressing must automatically close distance");
+    assert(mechanics.outcomes.some(p => p.outcome === "yellow" && p.yellows > 0 && p.cards > 0), "Yellow card must appear above a genuinely booked player");
+    assert(mechanics.outcomes.some(p => p.outcome === "red" && p.reds > 0), "Red challenge must actually send off the player: " + JSON.stringify(mechanics.outcomes));
+    assert(mechanics.outcomes.filter(p => p.outcome === "foul").every(p => p.yellows === 0 && p.reds === 0), "Foul-only category must never add a card");
+    console.log("PASS charged low/high passes and shots, special shot stamina, hold pressing, exact probability thresholds, actual yellow/red cards and overhead indicators");
+
+    await page.locator("#panel-local .fullscreen").click();
+    await page.waitForFunction(() => document.fullscreenElement || document.querySelector('#panel-local .arena').classList.contains('fullscreen-fallback'));
+    assert.equal(await page.locator("#panel-local .arena-hints").evaluate(el => getComputedStyle(el).opacity), "0.3");
+    assert(!/×2|thần sầu|30%|nhấn hai/i.test(await page.locator("#panel-local .arena-hints").textContent()), "In-pitch guide must only show basic controls");
+    await page.screenshot({ path: path.join(artifacts, "fullscreen.png") });
+    await page.locator("#panel-local .fullscreen-exit").focus(); await page.keyboard.press("Space");
+    await page.waitForFunction(() => !document.fullscreenElement && !document.querySelector('#panel-local .arena').classList.contains('fullscreen-fallback'));
+    console.log("PASS fullscreen, 30% opacity basic guide, advanced instructions outside pitch");
+
+    await page.locator("#panel-local .start").click();
+    const readyForSkill = await page.evaluate(() => {
+      const api = document.querySelector("#panel-local .match-host").__ptscFootball;
+      api.pause();
+      for (let i = 0; i < 500 && !api.status().players.some(p => p.hasBall && p.ready); i++) api.__step(.05);
+      return api.status().players.find(p => p.hasBall && p.ready);
+    });
+    const shootKey = readyForSkill.slot === "A" ? "g" : "m";
+    await page.keyboard.press(shootKey); await page.keyboard.press(shootKey);
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().specialShots), 1);
+    console.log("PASS two quick shoot taps trigger exactly one advanced special shot");
+
+    await page.locator("#panel-local .start").click();
+    const pressingSlot = await page.evaluate(() => {
+      const api = document.querySelector("#panel-local .match-host").__ptscFootball; api.pause();
+      for (let i = 0; i < 500 && !api.status().players.some(p => p.hasBall && p.ready); i++) api.__step(.05);
+      return api.status().players.find(p => !p.hasBall).slot;
+    });
+    const pressKey = pressingSlot === "A" ? "h" : ",";
+    await page.keyboard.down(pressKey);
+    const heldPress = await page.evaluate(slot => {
+      const api = document.querySelector("#panel-local .match-host").__ptscFootball;
+      const metres = (a,b) => Math.hypot((a.position[0]-b.position[0])*45,(a.position[1]-b.position[1])*30);
+      const initial = api.status().players, before = metres(initial[0],initial[1]);
+      for (let i = 0; i < 140 && metres(...api.status().players) > 2.3; i++) api.__step(.05);
+      return { before, after: metres(...api.status().players), state: api.status(), challenges: api.__stats().challenges ?? 0 };
+    }, pressingSlot);
+    await page.keyboard.up(pressKey); await page.waitForTimeout(350);
+    assert(heldPress.after < heldPress.before && heldPress.challenges === 0);
+    await page.keyboard.press(pressKey); await page.keyboard.press(pressKey);
+    const doublePress = await page.evaluate(() => {
+      const api = document.querySelector("#panel-local .match-host").__ptscFootball; api.__step(.2); return api.__stats();
+    });
+    assert.equal(doublePress.challenges, 1);
+    console.log("PASS hold-to-press and two quick pressing taps trigger one challenge");
 
     const halftime = await page.evaluate(() => {
       const api = document.querySelector("#panel-local .match-host").__ptscFootball;
@@ -317,6 +434,6 @@ const server = http.createServer((req, res) => {
     await page.screenshot({ path: path.join(artifacts, "mobile.png"), fullPage: true });
     assert.deepEqual(errors, [], "No browser runtime errors");
     console.log("PASS mode lifecycle, new match, mobile layout, no runtime errors");
-    fs.writeFileSync(path.join(artifacts, "results.json"), JSON.stringify({ passed: true, narrativeSides, watchResults, cpu: cpu.stats }, null, 2));
+    fs.writeFileSync(path.join(artifacts, "results.json"), JSON.stringify({ passed: true, narrativeSides, watchResults, cpu: cpu.stats, mechanics }, null, 2));
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

@@ -7,10 +7,11 @@
   const names = { R: "Đỏ", B: "Xanh" };
   const opposite = team => team === "R" ? "B" : "R";
   const bindings = {
-    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", actions: { KeyF: "pass", KeyG: "shoot", KeyH: "tackle", KeyJ: "slide", KeyQ: "switch" } },
-    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", actions: { KeyN: "pass", KeyM: "shoot", Comma: "tackle", Period: "slide", KeyL: "switch" } }
+    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "ShiftLeft", press: "KeyH", actions: { KeyF: "pass", KeyG: "shoot", KeyH: "press", KeyJ: "slide", KeyQ: "switch" } },
+    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "ShiftRight", press: "Comma", actions: { KeyN: "pass", KeyM: "shoot", Comma: "press", Period: "slide", KeyL: "switch" } }
   };
   const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, ...Object.keys(b.actions)])]);
+  const pendingShots = new Map(), chargeStarts = new Map(), lastPress = new Map();
   let activeMode = "watch";
   let watcher = document.getElementById("watch-match").__ptscFootball;
 
@@ -19,14 +20,17 @@
     for (const [slot, b] of Object.entries(bindings)) {
       session.api.setInput(slot, session.paused ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
-        y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint)
+        y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint), pressing: keys.has(b.press)
       });
     }
   }
   function releaseKeys() {
     keys.clear();
+    for (const pending of pendingShots.values()) clearTimeout(pending.timer);
+    pendingShots.clear(); chargeStarts.clear(); lastPress.clear();
     for (const session of sessions.values()) {
       session.api.setInput("A"); session.api.setInput("B");
+      session.api.cancelCharge("A"); session.api.cancelCharge("B");
     }
   }
   function setPaused(session, paused) {
@@ -93,7 +97,9 @@
       const percent = document.createElement("span"); percent.className = "percent";
       const meter = document.createElement("meter"); meter.min = 0; meter.max = 1; meter.low = .35; meter.high = .6; meter.optimum = 1;
       meter.setAttribute("aria-label", `Thể lực người ${player.slot}`);
-      label.append(energyLabel, percent); card.append(title, label, meter); cards.append(card);
+      const power = document.createElement("div"); power.className = "charge-hud";
+      power.innerHTML = '<span class="charge-text">Giữ phím chuyền/sút để nạp lực</span><progress max="1" value="0" aria-label="Lực chuyền hoặc sút"></progress>';
+      label.append(energyLabel, percent); card.append(title, label, meter, power); cards.append(card);
     }
   }
   function updateHud(session) {
@@ -102,7 +108,7 @@
     const pause = session.panel.querySelector(".pause");
     if (state.ended) {
       const result = state.winner ? `Đội ${names[state.winner]} thắng` : "Hai đội hòa";
-      status.textContent = `Hết giờ · ${result} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
+      status.textContent = state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${result} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
       pause.disabled = true;
       session.api.setInput("A"); session.api.setInput("B");
     } else {
@@ -119,11 +125,30 @@
       card.querySelector("strong").textContent = `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`;
       card.querySelector("meter").value = player.energy;
       card.querySelector(".percent").textContent = Math.round(player.energy * 100) + "%";
+      card.querySelector("progress").value = player.charge?.power ?? 0;
+      card.querySelector(".charge-text").textContent = player.charge ? `${player.charge.action === "pass" ? "Lực chuyền" : "Lực sút"}: ${Math.round(player.charge.power * 100)}%` : player.pressing ? "Đang pressing · áp sát" : "Giữ phím chuyền/sút để nạp lực";
     }
   }
   for (const panel of document.querySelectorAll(".game-panel")) {
     const form = panel.querySelector("form");
     const arena = panel.querySelector(".arena");
+    const fullscreen = panel.querySelector(".fullscreen");
+    async function toggleFullscreen() {
+      releaseKeys();
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (arena.classList.contains("fullscreen-fallback")) { arena.classList.remove("fullscreen-fallback"); document.body.classList.remove("has-fullscreen"); }
+      else if (arena.requestFullscreen) {
+        try { await arena.requestFullscreen(); } catch { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
+      } else { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
+      arena.focus({ preventScroll: true });
+    }
+    fullscreen.addEventListener("click", toggleFullscreen);
+    panel.querySelector(".fullscreen-exit").addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", () => {
+      fullscreen.textContent = document.fullscreenElement === arena ? "Thu nhỏ" : "Toàn màn hình";
+      releaseKeys();
+      if (activeMode === panel.dataset.mode) arena.focus({ preventScroll: true });
+    });
     form.addEventListener("change", () => setupSummary(panel));
     setupSummary(panel);
     panel.querySelector(".support").addEventListener("change", event => {
@@ -163,8 +188,13 @@
   document.addEventListener("keydown", event => {
     const session = sessions.get(activeMode);
     if (!session || !session.panel.querySelector(".arena").contains(document.activeElement) || !handledKeys.has(event.code)) return;
+    if (event.code === "Escape" && document.fullscreenElement) { releaseKeys(); return; }
+    if (event.code !== "Escape" && document.activeElement.matches("button, input, select, textarea")) return;
     event.preventDefault();
     if (event.code === "Space" || event.code === "Escape") {
+      if (event.code === "Escape" && session.panel.querySelector(".arena").classList.contains("fullscreen-fallback")) {
+        session.panel.querySelector(".fullscreen-exit").click(); return;
+      }
       if (!event.repeat && !session.api.status().ended) setPaused(session, event.code === "Escape" ? true : !session.paused);
       return;
     }
@@ -172,11 +202,44 @@
     keys.add(event.code); applyKeys(session);
     if (!event.repeat) for (const [slot, binding] of Object.entries(bindings)) {
       const action = binding.actions[event.code];
-      if (action) session.api.action(slot, action);
+      if (action === "pass" || action === "shoot") {
+        const pending = pendingShots.get(slot);
+        if (action === "shoot" && pending?.session === session) {
+          clearTimeout(pending.timer); pendingShots.delete(slot);
+          session.api.releaseCharge(slot, { special: true, power: Math.max(.55, pending.power) });
+        } else {
+          if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
+          if (session.api.beginCharge(slot, action)) chargeStarts.set(slot, performance.now());
+        }
+      } else if (action === "press") {
+        const now = performance.now(), previous = lastPress.get(slot);
+        if (previous != null && now - previous < 300) { session.api.action(slot, "challenge"); lastPress.delete(slot); }
+        else lastPress.set(slot, now);
+      } else if (action) session.api.action(slot, action);
     }
   });
   document.addEventListener("keyup", event => {
     keys.delete(event.code); applyKeys();
+    const session = sessions.get(activeMode);
+    if (!session || session.paused || !session.panel.querySelector(".arena").contains(document.activeElement)) return;
+    for (const [slot, binding] of Object.entries(bindings)) {
+      const action = binding.actions[event.code];
+      if (!["pass", "shoot"].includes(action) || !chargeStarts.has(slot)) continue;
+      const elapsed = performance.now() - chargeStarts.get(slot); chargeStarts.delete(slot);
+      const charge = session.api.status().players.find(p => p.slot === slot)?.charge;
+      if (!charge || charge.action !== action) continue;
+      if (action === "shoot" && elapsed < 220) {
+        session.api.freezeCharge(slot);
+        const pending = { session, power: charge.power, timer: null };
+        pending.timer = setTimeout(() => {
+          if (pendingShots.get(slot) !== pending) return;
+          pendingShots.delete(slot);
+          if (!session.paused && sessions.get(activeMode) === session) session.api.releaseCharge(slot);
+          else session.api.cancelCharge(slot);
+        }, 230);
+        pendingShots.set(slot, pending);
+      } else session.api.releaseCharge(slot);
+    }
   });
   function suspend() {
     releaseKeys(); watcher?.pause();

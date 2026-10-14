@@ -28,13 +28,18 @@
       <button class="primary start" type="submit">Bắt đầu trận</button>
     </form>
     <div class="arena" tabindex="0" role="group" aria-label="Sân đấu với máy; dùng bàn phím để chơi">
+      <div class="arena-surface">
       <div class="match-host"><div class="placeholder">Chọn màu áo rồi bắt đầu trận.</div></div>
+      <div class="arena-hints">WASD di chuyển · Giữ F chuyền / G sút · Giữ H pressing<br>J xoạc · Q đổi người · Shift chạy · Space tạm dừng</div>
+      <button type="button" class="fullscreen-exit">Thu nhỏ</button>
+      </div>
     </div>
     <label class="support-toggle"><input type="checkbox" class="support" checked>Hỗ trợ ngắm · chuyền đến đồng đội, sút trúng khung thành</label>
-    <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><button class="secondary pause" disabled>Tạm dừng</button></div>
+    <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><div class="match-actions"><button class="secondary fullscreen">Toàn màn hình</button><button class="secondary pause" disabled>Tạm dừng</button></div></div>
     <div class="player-status"></div>
-    <div class="controls"><article><h2>Bạn · A</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển theo màn hình</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng <kbd>J</kbd> Xoạc</p><p><kbd>Q</kbd> Đổi cầu thủ khi phòng ngự <kbd>Shift trái</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="A" disabled>Xoạc · J</button></article></div>
-    <p class="hint">Mũi tên dưới chân giữ hướng cuối cùng khi thả phím. Tắt hỗ trợ để chuyền/sút tự do theo mũi tên. Hỗ trợ ngắm không ngăn thủ môn cứu thua. Tự chọn người cầm bóng, kể cả thủ môn; xoạc tốn thể lực và có thể bị phạt.</p>
+    <div class="controls"><article><h2>Bạn · A</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển theo màn hình</p><p>Giữ <kbd>F</kbd> Chuyền / <kbd>G</kbd> Sút để nạp lực · thả để đá</p><p>Giữ <kbd>H</kbd> Pressing <kbd>J</kbd> Xoạc</p><p><kbd>Q</kbd> Đổi cầu thủ khi phòng ngự <kbd>Shift trái</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="A" disabled>Xoạc · J</button></article></div>
+    <details class="advanced"><summary>Thao tác nâng cao</summary><p><kbd>G</kbd> ×2 nhanh: sút thần sầu, cần tối thiểu 23% thể lực, tiêu hao 18% và lấy đà lâu hơn.</p><p><kbd>H</kbd> ×2 nhanh khi đủ gần: tranh bóng — 30% phạm lỗi, 50% cướp bóng, 15% thẻ vàng, 5% thẻ đỏ.</p><p>Hai thẻ vàng vẫn thành thẻ đỏ. Nhấn hai lần trong khoảng 0,3 giây; giữ pressing không tự tranh bóng.</p></details>
+    <p class="hint">Lực thấp: bóng thấp; lực mạnh: bóng cao. Thanh dưới chân là lực đang nạp. Tam giác xanh chọn người đang cầm bóng; mũi nhỏ dưới chân giữ hướng ngắm. Thẻ vàng luôn hiển thị trên đầu người đã nhận thẻ. Xoạc có rủi ro thẻ cao.</p>
   </section>
   <section id="panel-local" class="game-panel" role="tabpanel" aria-labelledby="tab-local" data-mode="local" hidden>
     <form class="setup">
@@ -50,16 +55,21 @@
       <button class="primary start" type="submit">Bắt đầu trận</button>
     </form>
     <div class="arena" tabindex="0" role="group" aria-label="Sân đấu hai người; dùng chung bàn phím để chơi">
+      <div class="arena-surface">
       <div class="match-host"><div class="placeholder">Chọn màu áo và sân rồi bắt đầu trận.</div></div>
+      <div class="arena-hints">A: WASD · Giữ F chuyền / G sút · Giữ H pressing · J xoạc · Q đổi người<br>B: ↑←↓→ · Giữ N chuyền / M sút · Giữ , pressing · . xoạc · L đổi người<br>Shift chạy · Space tạm dừng</div>
+      <button type="button" class="fullscreen-exit">Thu nhỏ</button>
+      </div>
     </div>
     <label class="support-toggle"><input type="checkbox" class="support" checked>Hỗ trợ ngắm cho A/B · chuyền đến đồng đội, sút trúng khung thành</label>
-    <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><button class="secondary pause" disabled>Tạm dừng</button></div>
+    <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><div class="match-actions"><button class="secondary fullscreen">Toàn màn hình</button><button class="secondary pause" disabled>Tạm dừng</button></div></div>
     <div class="player-status"></div>
     <div class="controls">
-      <article><h2>Người A · vòng vàng</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển</p><p><kbd>F</kbd> Chuyền <kbd>G</kbd> Sút <kbd>H</kbd> Tranh bóng <kbd>J</kbd> Xoạc</p><p><kbd>Q</kbd> Đổi cầu thủ <kbd>Shift trái</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="A" disabled>Xoạc A · J</button></article>
-      <article><h2>Người B · vòng trắng</h2><p><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Di chuyển</p><p><kbd>N</kbd> Chuyền <kbd>M</kbd> Sút <kbd>,</kbd> Tranh bóng <kbd>.</kbd> Xoạc</p><p><kbd>L</kbd> Đổi cầu thủ <kbd>Shift phải</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="B" disabled>Xoạc B · .</button></article>
+      <article><h2>Người A · tam giác xanh</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Di chuyển</p><p>Giữ <kbd>F</kbd> Chuyền / <kbd>G</kbd> Sút để nạp lực</p><p>Giữ <kbd>H</kbd> Pressing <kbd>J</kbd> Xoạc</p><p><kbd>Q</kbd> Đổi cầu thủ <kbd>Shift trái</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="A" disabled>Xoạc A · J</button></article>
+      <article><h2>Người B · tam giác xanh lam</h2><p><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Di chuyển</p><p>Giữ <kbd>N</kbd> Chuyền / <kbd>M</kbd> Sút để nạp lực</p><p>Giữ <kbd>,</kbd> Pressing <kbd>.</kbd> Xoạc</p><p><kbd>L</kbd> Đổi cầu thủ <kbd>Shift phải</kbd> Chạy nhanh</p><button class="secondary slide-action" data-slot="B" disabled>Xoạc B · .</button></article>
     </div>
-    <p class="hint">Mũi tên dưới chân là hướng chuyền/sút và xoạc, giữ nguyên khi thả phím. Hỗ trợ ngắm tự chọn đích; thủ môn vẫn cứu thua được. Người đang cầm bóng luôn được chọn. Xoạc tốn thể lực, có thể bị phạt. Hai đội đổi sân sau hiệp 1.</p>
+    <details class="advanced"><summary>Thao tác nâng cao</summary><p>A: <kbd>G</kbd> ×2 / B: <kbd>M</kbd> ×2 nhanh để sút thần sầu — tốn 18% thể lực, cần tối thiểu 23%, lấy đà lâu hơn.</p><p>A: <kbd>H</kbd> ×2 / B: <kbd>,</kbd> ×2 khi đủ gần để tranh bóng — 30% phạm lỗi, 50% cướp bóng, 15% thẻ vàng, 5% thẻ đỏ.</p><p>Hai thẻ vàng vẫn thành thẻ đỏ. Giữ pressing chỉ áp sát; không tự tranh bóng.</p></details>
+    <p class="hint">Thả phím chuyền/sút để đá: lực thấp đi thấp, lực mạnh đi cao. Tam giác trên đầu và vòng dưới chân chọn người; thẻ vàng theo đúng cầu thủ sau thay người. Hỗ trợ ngắm vẫn cho phép thủ môn cứu thua.</p>
   </section>
 </main>
 <script src="ptsc-football.js" defer></script>
