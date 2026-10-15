@@ -3,57 +3,106 @@
   const tabs = [...document.querySelectorAll("[role=tab]")];
   const panels = [...document.querySelectorAll("[role=tabpanel]")];
   const sessions = new Map();
+  // Physical keys held down. Tracked while paused too, so a direction held through Space keeps working.
   const keys = new Set();
   const switchRepeats = new Map();
   const names = { R: "Đỏ", B: "Xanh" };
   const opposite = team => team === "R" ? "B" : "R";
-  const bindings = {
-    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "KeyT", press: "KeyV", actions: { KeyR: "switch", KeyF: "pass", KeyG: "shoot", KeyB: "challenge", KeyE: "special" } },
-    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "KeyI", press: "KeyN", actions: { KeyU: "switch", KeyJ: "pass", KeyK: "shoot", KeyM: "challenge", KeyO: "special" } }
-  };
+  const keymap = window.PTSCKeymap, label = keymap.label;
+  const MOVE_ACTIONS = new Set(["up", "down", "left", "right", "sprint", "press"]);
+  const GUIDE_ACTIONS = ["switch", "sprint", "pass", "shoot", "press", "challenge"];
+  const GUIDE_LABELS = ["Đổi người", "Chạy nhanh", "Chuyền", "Sút / xoạc", "Áp sát", "Tranh bóng"];
+  const GUIDE_GESTURES = ["Bấm", "Giữ", "Giữ → thả", "Giữ → thả / bấm", "Giữ", "Bấm"];
+  const CORNER_ACTIONS = ["pass", "shoot", "press", "challenge"];
+  const PENALTY_ACTIONS = { left: "left", down: "center", right: "right" };
   const gameData = window.PTSCFootball.data;
   const defaultSkillIcon = gameData.skills.freeKick.icon;
+  // Per mode: the key sets in use and a code → { slot, action } lookup.
+  const controls = new Map();
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const kbd = code => `<kbd>${escapeHtml(label(code))}</kbd>`;
   function skillBadge(kind, icon, id) {
     const role = gameData.skills[kind]?.role ?? "MF", color = gameData.skillRules.colors[role];
     return `<defs><radialGradient id="${id}"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#123a62"/></radialGradient></defs><circle cx="12" cy="12" r="11.2" fill="#16456b" stroke="#2b92da" stroke-width="1.4"/><circle cx="12" cy="12" r="9.2" fill="url(#${id})" stroke="#8dd1fb" stroke-width="1"/><path d="M5 7Q12 1 19 7" fill="none" stroke="#d2f0ff" stroke-width="1" opacity=".7"/><path d="M3 16Q12 23 21 16" fill="none" stroke="#4bbcf5" stroke-width="1.3"/><g transform="translate(4,4) scale(.66)" fill="none" stroke="${role === "DF" ? "#acffbd" : role === "GK" ? "#ffe3d4" : "#fff1b0"}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${icon || defaultSkillIcon}</g>`;
   }
-  for (const guide of document.querySelectorAll(".pad-help")) {
-    const slot = guide.dataset.slot, b = bindings[slot];
-    const labels = slot === "A" ? { up: "W", left: "A", down: "S", right: "D" } : { up: "↑", left: "←", down: "↓", right: "→" };
-    const actionKeys = slot === "A" ? ["R", "T", "F", "G", "V", "B"] : ["U", "I", "J", "K", "N", "M"];
-    const actions = ["Đổi người", "Chạy nhanh", "Chuyền", "Sút / xoạc", "Áp sát", "Tranh bóng"];
-    const gestures = ["Bấm", "Giữ", "Giữ → thả", "Giữ → thả / bấm", "Giữ", "Bấm"];
-    guide.innerHTML = `<div class="movement-help"><strong>NGƯỜI ${slot}</strong><div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${Object.entries(labels).map(([direction, label]) => `<span class="pad-key pad-${direction}" data-code="${b[direction]}">${label}</span>`).join("")}</div></div><div class="action-grid">${actionKeys.map((key, i) => {
-      const clickable = (i === 0 || i === 3) && !!guide.closest(".controls"), tag = clickable ? "button" : "div";
-      return `<${tag} class="action-key${clickable ? i === 0 ? " switch-action" : " slide-action" : ""}" data-code="Key${key}" data-action="${["switch", "sprint", "pass", "shoot", "press", "challenge"][i]}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}><kbd>${key}</kbd><span><span class="action-label">${actions[i]}</span><small>${gestures[i]}</small></span></${tag}>`;
+  function refreshControls(mode) {
+    const bindings = keymap.bindings(mode), codes = new Map();
+    for (const [slot, set] of Object.entries(bindings)) for (const [action, code] of Object.entries(set)) if (!codes.has(code)) codes.set(code, { slot, action });
+    controls.set(mode, { bindings, codes });
+  }
+  const bindingsOf = mode => controls.get(mode)?.bindings ?? {};
+  const lookup = (mode, code) => controls.get(mode)?.codes.get(code) ?? null;
+  function renderGuide(guide, set) {
+    const slot = guide.dataset.slot, clickableArea = !!guide.closest(".controls");
+    guide.innerHTML = `<div class="movement-help"><strong>NGƯỜI ${slot}</strong><div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${["up", "left", "down", "right"].map(direction => `<span class="pad-key pad-${direction}" data-code="${escapeHtml(set[direction])}">${escapeHtml(label(set[direction]))}</span>`).join("")}</div></div><div class="action-grid">${GUIDE_ACTIONS.map((action, i) => {
+      const clickable = clickableArea && (action === "switch" || action === "shoot"), tag = clickable ? "button" : "div";
+      return `<${tag} class="action-key${clickable ? action === "switch" ? " switch-action" : " slide-action" : ""}" data-code="${escapeHtml(set[action])}" data-action="${action}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}>${kbd(set[action])}<span><span class="action-label">${GUIDE_LABELS[i]}</span><small>${GUIDE_GESTURES[i]}</small></span></${tag}>`;
     }).join("")}</div>`;
   }
-  const cornerKeys = { A: ["KeyF", "KeyG", "KeyV", "KeyB"], B: ["KeyJ", "KeyK", "KeyN", "KeyM"] };
-  const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press, ...Object.keys(b.actions)])]);
-  const movementKeys = new Set(Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press]));
-  const pressSlots = new Map(Object.entries(bindings).map(([slot, b]) => [b.press, slot]));
-  const padKeys = [...document.querySelectorAll(".pad-key, .action-key")];
+  function renderAdvanced(details, set) {
+    const slot = details.dataset.slot;
+    details.innerHTML = `<summary>Người ${slot} · thao tác nâng cao</summary><p>${kbd(set.special)}: skill theo tình huống, tốn 40%, chung một lượt/cầu thủ/trận; penalty dùng trước khi chốt hướng.</p><p>${kbd(set.shoot)} ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ ${kbd(set.pass)}/${kbd(set.shoot)} rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ ${kbd(set.press)} áp sát; bấm ${kbd(set.challenge)} khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p>${kbd(set.shoot)} khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p><p>Penalty/luân lưu: ${kbd(set.left)} trái · ${kbd(set.down)} giữa · ${kbd(set.right)} phải.</p>`;
+  }
+  /** A legend of every skill pictogram, its one-word label and full name. */
+  function renderSkillLegend(panel) {
+    const legend = document.createElement("details"); legend.className = "advanced skill-legend"; legend.open = true;
+    const groups = { FW: "Tiền đạo", MF: "Tiền vệ", DF: "Hậu vệ", GK: "Thủ môn" };
+    const items = Object.entries(gameData.skills).map(([kind, skill]) => {
+      const context = skill.auto ? "Tự kích hoạt · 5 phút" : skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
+      const badge = skillBadge(kind, skill.icon, `legend-${panel.dataset.mode}-${kind}`);
+      return `<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">${badge}</svg><span><b>${escapeHtml(skill.short)}</b><small>${escapeHtml(skill.name)} · ${skill.roles.map(r => groups[r]).join(", ")} · ${escapeHtml(context)}</small></span></div>`;
+    });
+    legend.innerHTML = `<summary>Bảng skill · nhìn icon là hiểu</summary><div class="skill-legend-grid">${items.join("")}</div>`;
+    panel.querySelector(".advanced-grid").after(legend);
+    // Playing styles: what each one does on the pitch.
+    const styles = document.createElement("details"); styles.className = "advanced style-legend";
+    const styleItems = Object.values(gameData.playstyles).map(style => `<div class="style-legend-item"><b>${escapeHtml(style.name)} <span>${escapeHtml(style.en)} · ${style.roles.map(r => groups[r]).join(", ")}</span></b><small>${escapeHtml(style.desc)}</small></div>`);
+    styles.innerHTML = `<summary>Bảng lối chơi (playstyle) · quyết định cách cầu thủ di chuyển</summary><div class="style-legend-grid">${styleItems.join("")}</div>`;
+    legend.after(styles);
+  }
+  /** Redraws every key hint in a panel from the layouts its players use. */
+  function renderPanelKeys(panel) {
+    const mode = panel.dataset.mode;
+    refreshControls(mode);
+    const bindings = bindingsOf(mode);
+    for (const guide of panel.querySelectorAll(".pad-help")) if (bindings[guide.dataset.slot]) renderGuide(guide, bindings[guide.dataset.slot]);
+    for (const details of panel.querySelectorAll(".advanced")) if (bindings[details.dataset.slot]) renderAdvanced(details, bindings[details.dataset.slot]);
+    for (const special of panel.querySelectorAll(".special-button kbd")) {
+      const slot = special.closest("[data-slot]").dataset.slot;
+      if (bindings[slot]) special.textContent = label(bindings[slot].special);
+    }
+    const session = sessions.get(mode);
+    if (session) { session.hudNodes = null; session.restartHints = null; updateHud(session); }
+    highlightPads();
+  }
   const writeText = (node, value) => { const text = String(value); if (node.textContent !== text) node.textContent = text; };
   const pendingShots = new Map(), chargeStarts = new Map();
   let activeMode = "watch";
   let watcher = document.getElementById("watch-match").__ptscFootball;
 
+  function acceptsKeys(session) {
+    const focused = document.activeElement;
+    return !!session && !session.paused && session === sessions.get(activeMode) && session.arena.contains(focused) && !focused.matches("button, input, select, textarea");
+  }
+  /** Sends held directions to the engine. The engine decides whether the current phase lets anyone move. */
   function applyKeys(session = sessions.get(activeMode)) {
     if (!session) return;
-    const arena = session.arena;
-    const acceptsInput = !session.paused && session.api.acceptsMovement() && session === sessions.get(activeMode) && document.activeElement === arena;
-    for (const [slot, b] of Object.entries(bindings)) {
-      session.api.setInput(slot, !acceptsInput ? {} : {
+    const live = acceptsKeys(session);
+    for (const [slot, b] of Object.entries(bindingsOf(session.options.mode))) {
+      session.api.setInput(slot, !live ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
         y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint),
-        pressing: keys.has(b.press)
+        pressing: keys.has(b.press) && session.api.cornerSlot() !== slot
       });
     }
   }
-  function releaseKeys() {
-    keys.clear();
+  function stopSwitchRepeats() {
     for (const repeat of switchRepeats.values()) clearTimeout(repeat.timer);
     switchRepeats.clear();
+  }
+  function releaseKeys() {
+    keys.clear();
+    stopSwitchRepeats();
     highlightPads();
     cancelKicks();
     for (const session of sessions.values()) {
@@ -66,7 +115,7 @@
     for (const session of sessions.values()) { session.api.cancelCharge("A"); session.api.cancelCharge("B"); }
   }
   function highlightPads() {
-    for (const key of padKeys) key.classList.toggle("is-held", keys.has(key.dataset.code));
+    for (const key of document.querySelectorAll(".pad-key, .action-key")) key.classList.toggle("is-held", keys.has(key.dataset.code));
   }
   function repeatSwitch(session, code, slot) {
     const previous = switchRepeats.get(code);
@@ -74,9 +123,8 @@
     const repeat = { timer: null };
     switchRepeats.set(code, repeat);
     const advance = () => {
-      const arena = session.panel.querySelector(".arena");
       if (switchRepeats.get(code) !== repeat) return;
-      if (!keys.has(code) || sessions.get(activeMode) !== session || !arena.contains(document.activeElement) || session.api.status().ended) {
+      if (!keys.has(code) || !acceptsKeys(session) || session.api.status().ended) {
         switchRepeats.delete(code); return;
       }
       session.api.action(slot, "switch"); updateHud(session);
@@ -90,8 +138,10 @@
     const overlay = session.panel.querySelector(".start-overlay");
     overlay.hidden = !paused;
     overlay.querySelector("span").innerHTML = session.awaitingStart ? 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu' : 'Nhấn <kbd>Space</kbd> để tiếp tục trận đấu';
-    releaseKeys();
+    // Kicks and switch repeats stop, but directions still held carry on as soon as play resumes.
+    stopSwitchRepeats(); cancelKicks();
     if (paused) session.api.pause(); else session.api.play();
+    applyKeys(session); highlightPads();
     session.panel.querySelector(".pause").textContent = session.awaitingStart ? "Bắt đầu" : paused ? "Tiếp tục" : "Tạm dừng";
     updateHud(session);
   }
@@ -153,15 +203,16 @@
       const card = document.createElement("article");
       card.className = "player-card"; card.dataset.slot = player.slot; card.dataset.team = player.team;
       const title = document.createElement("strong");
-      const label = document.createElement("div"); label.className = "energy-label";
-      const energyLabel = document.createElement("span"); energyLabel.textContent = "Thể lực";
+      const energyLabel = document.createElement("div"); energyLabel.className = "energy-label";
+      const energyText = document.createElement("span"); energyText.textContent = "Thể lực";
       const percent = document.createElement("span"); percent.className = "percent";
       const meter = document.createElement("meter"); meter.min = 0; meter.max = 1; meter.low = .35; meter.high = .6; meter.optimum = 1;
       meter.setAttribute("aria-label", `Thể lực người ${player.slot}`);
       const power = document.createElement("div"); power.className = "charge-hud";
       power.innerHTML = '<span class="charge-text">Giữ phím chuyền/sút để nạp lực</span><progress max="1" value="0" aria-label="Lực chuyền hoặc sút"></progress>';
       const skillInfo = document.createElement("p"); skillInfo.className = "skill-description";
-      label.append(energyLabel, percent); card.append(title, label, meter, power, skillInfo); cards.append(card);
+      const styleInfo = document.createElement("p"); styleInfo.className = "style-description";
+      energyLabel.append(energyText, percent); card.append(title, energyLabel, meter, power, skillInfo, styleInfo); cards.append(card);
     }
   }
   function updateHud(session) {
@@ -170,7 +221,7 @@
       if (!session.hudNodes.has(selector)) session.hudNodes.set(selector, session.panel.querySelector(selector));
       return session.hudNodes.get(selector);
     };
-    const state = session.api.status();
+    const state = session.api.status(), bindings = bindingsOf(session.options.mode);
     if (!!state.refBreak !== !!session.refStopped) {
       session.refStopped = !!state.refBreak;
       // A referee stoppage cancels kicks but preserves held movement keys.
@@ -179,20 +230,24 @@
       }
       chargeStarts.clear(); session.api.cancelCharge("A"); session.api.cancelCharge("B");
     }
+    // Phases that block movement (celebrations, penalties) end without a key event; re-send held keys each tick.
+    const accepts = session.api.acceptsMovement();
+    if (accepts !== session.acceptedMovement) { session.acceptedMovement = accepts; applyKeys(session); }
     session.penaltyView.update(state, session.paused);
     q(".arena-hints").hidden = !!state.penalty || state.ended;
     const restartChoice = q(".restart-choice"), corner = state.corner, kickoff = state.kickoff, freeKick = state.freeKick;
-    restartChoice.hidden = state.ended || !(corner?.slot || kickoff?.slot || freeKick?.slot);
+    restartChoice.hidden = state.ended || !!state.penalty || !(corner?.slot || kickoff?.slot || freeKick?.slot);
     const restartSlot = corner?.slot ?? kickoff?.slot ?? freeKick?.slot;
     for (const guide of q(".arena-hints").querySelectorAll(".pad-help")) guide.hidden = !restartChoice.hidden && guide.dataset.slot === restartSlot;
     if (!restartChoice.hidden) {
-      const restart = corner ?? kickoff ?? freeKick;
+      const restart = corner ?? kickoff ?? freeKick, set = bindings[restart.slot];
       restartChoice.dataset.slot = restart.slot;
-      const label = state.refBreak ? "Chờ trọng tài quay lại" : `${corner ? "Phạt góc" : freeKick ? "Đá phạt" : "Giao bóng"} · ${restart.name}${restart.ready ? "" : " · đang vào vị trí"}`;
-      writeText(restartChoice.querySelector(".restart-label"), label);
-      const hints = corner ? gameData.corners.map((c, i) => `<span><kbd>${cornerKeys[restart.slot][i].slice(3)}</kbd> ${c.name}</span>`).join("") : freeKick ? `<span>Giữ/thả <kbd>${restart.slot === "A" ? "F" : "J"}</kbd> chuyền</span><span><kbd>${restart.slot === "A" ? "G" : "K"}</kbd> sút</span>` : `<span><kbd>${restart.slot === "A" ? "F" : "J"}</kbd> Chuyền giao bóng</span>`;
+      const text = state.refBreak ? "Chờ trọng tài quay lại" : `${corner ? "Phạt góc" : freeKick ? "Đá phạt" : "Giao bóng"} · ${restart.name}${restart.ready ? "" : " · đang vào vị trí"}`;
+      writeText(restartChoice.querySelector(".restart-label"), text);
+      const hints = !set ? "" : corner ? gameData.corners.map((c, i) => `<span>${kbd(set[CORNER_ACTIONS[i]])} ${c.name}</span>`).join("")
+        : freeKick ? `<span>Giữ/thả ${kbd(set.pass)} chuyền</span><span>${kbd(set.shoot)} sút</span>` : `<span>${kbd(set.pass)} Chuyền giao bóng</span>`;
       const hintNode = restartChoice.querySelector(".restart-keys");
-      if (hintNode.innerHTML !== hints) hintNode.innerHTML = hints;
+      if (session.restartHints !== hints) { hintNode.innerHTML = hints; session.restartHints = hints; }
       restartChoice.classList.toggle("is-preparing", !restart.ready || !!state.refBreak);
     }
     const result = q(".arena-result");
@@ -204,8 +259,8 @@
     const status = q(".match-status");
     const pause = q(".pause");
     if (state.ended) {
-      const result = state.winner ? `Đội ${names[state.winner]} thắng` : "Hai đội hòa";
-      status.textContent = state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${result} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
+      const outcome = state.winner ? `Đội ${names[state.winner]} thắng` : "Hai đội hòa";
+      status.textContent = state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${outcome} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
       pause.disabled = true;
       session.api.setInput("A"); session.api.setInput("B");
     } else {
@@ -214,7 +269,9 @@
       status.textContent = session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
     }
     for (const player of state.players) {
-      q(`.switch-action[data-slot="${player.slot}"]`).disabled = false;
+      const set = bindings[player.slot];
+      const switchButton = q(`.switch-action[data-slot="${player.slot}"]`);
+      if (switchButton) switchButton.disabled = false;
       const onField = q(`.arena-energy [data-slot="${player.slot}"]`);
       const percent = Math.round(player.energy * 100);
       onField.dataset.team = player.team; onField.classList.toggle("is-low", player.energy < .35);
@@ -226,8 +283,9 @@
         skillButton.dataset.kind = skill.kind ?? "";
         skillButton.querySelector("svg").innerHTML = skillBadge(skill.kind, skill.icon, `skill-${session.options.mode}-${player.slot}`);
       }
-      const skillState = (session.paused && !session.awaitingStart) ? "Tạm dừng" : skill.active ? `${Math.ceil(skill.remaining)}s` : skill.label;
+      const skillState = (session.paused && !session.awaitingStart) ? "Tạm dừng" : skill.active ? skill.auto ? `${skill.minutesLeft}' còn lại` : `${Math.ceil(skill.remaining)}s` : skill.label;
       writeText(skillButton.querySelector(".skill-state"), skillState);
+      writeText(skillButton.querySelector(".skill-short"), skill.short || skill.name);
       skillButton.classList.toggle("is-active", skill.active);
       skillButton.classList.toggle("is-used", skill.used && !skill.active);
       skillButton.classList.toggle("is-unavailable", (session.paused && !session.awaitingStart) || state.ended || !skill.ready);
@@ -241,13 +299,14 @@
       }
       const card = q(`.player-card[data-slot="${player.slot}"]`);
       if (!card) continue;
-      writeText(card.querySelector(".skill-description"), `${player.slot === "A" ? "E" : "O"} · ${skill.name} · ${category} · ${skillState}`);
+      writeText(card.querySelector(".style-description"), player.style ? `Lối chơi: ${player.style.name} (${player.style.en}) · ${player.style.desc}` : "");
+      writeText(card.querySelector(".skill-description"), `${set ? label(set.special) : ""} · ${skill.name} · ${category} · ${skillState}`);
       const side = state.leftTeam === player.team ? "trái" : "phải";
       writeText(card.querySelector("strong"), `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`);
       card.querySelector("meter").value = player.energy;
       writeText(card.querySelector(".percent"), percent + "%");
       card.querySelector("progress").value = player.charge?.power ?? 0;
-      card.querySelector(".charge-text").textContent = player.charge ? `${player.charge.action === "pass" ? "Lực chuyền" : "Lực sút"}: ${Math.round(player.charge.power * 100)}%` : player.pressing ? "Đang pressing · áp sát" : "Giữ phím chuyền/sút để nạp lực";
+      writeText(card.querySelector(".charge-text"), player.charge ? `${player.charge.action === "pass" ? "Lực chuyền" : "Lực sút"}: ${Math.round(player.charge.power * 100)}%` : player.pressing ? "Đang pressing · áp sát" : "Giữ phím chuyền/sút để nạp lực");
     }
   }
   for (const arena of document.querySelectorAll(".arena")) {
@@ -281,6 +340,133 @@
       applyKeys();
     });
   }
+
+  /* ------------------------------ key layouts ------------------------------ */
+  let capture = null;
+  function setupKeymap(panel) {
+    const mode = panel.dataset.mode, slots = mode === "local" ? ["A", "B"] : ["A"];
+    const form = panel.querySelector("form");
+    const assign = document.createElement("fieldset"); assign.className = "keymap-assign";
+    assign.innerHTML = `<legend>Bố trí phím</legend><div class="keymap-assign-row">${slots.map(slot => `<label>${mode === "cpu" ? "Bạn" : "Người " + slot} <select data-slot="${slot}" aria-label="Bố trí phím người ${slot}"></select></label>`).join("")}<button type="button" class="link-button keymap-open">Tùy chỉnh phím…</button></div>`;
+    form.insertBefore(assign, form.querySelector(".setup-summary"));
+    const editor = document.createElement("details"); editor.className = "keymap";
+    editor.innerHTML = `<summary>Tùy chỉnh phím · lưu trong trình duyệt này</summary>
+      <div class="keymap-head"><label>Layout đang sửa <select class="keymap-edit" aria-label="Chọn layout để sửa"></select></label><label>Tên <input class="keymap-name" maxlength="40" autocomplete="off"></label></div>
+      <p class="keymap-help">Bấm vào ô phím rồi nhấn phím mới. <kbd>Esc</kbd> để hủy. Không dùng được Space, Esc, Tab, Ctrl/Alt và F1–F12. Trùng phím trong layout sẽ được hoán đổi.</p>
+      <div class="keymap-grid">${keymap.ACTIONS.map(action => `<div class="keymap-row"><span>${keymap.LABELS[action]}</span><button type="button" class="keymap-key" data-action="${action}"></button></div>`).join("")}</div>
+      <p class="keymap-status" role="status"></p>
+      <div class="keymap-actions"><button type="button" class="secondary keymap-save">Ghi đè layout</button><button type="button" class="secondary keymap-save-new">Lưu thành layout mới</button>${slots.map(slot => `<button type="button" class="secondary keymap-use" data-slot="${slot}">Dùng cho ${mode === "cpu" ? "bạn" : "người " + slot}</button>`).join("")}<button type="button" class="secondary keymap-restore">Khôi phục gốc</button><button type="button" class="secondary keymap-delete">Xóa layout</button></div>`;
+    panel.querySelector(".controls").after(editor);
+    const editSelect = editor.querySelector(".keymap-edit"), nameInput = editor.querySelector(".keymap-name"), status = editor.querySelector(".keymap-status");
+    let editingId = keymap.assigned(mode, "A").id, draft = null, dirty = false;
+    const say = (message, tone = "") => { status.textContent = message; status.dataset.tone = tone; };
+    function loadDraft(id) {
+      const layout = keymap.get(id) ?? keymap.assigned(mode, "A");
+      editingId = layout.id; draft = { ...layout.keys }; dirty = false; nameInput.value = layout.name;
+    }
+    function fillSelect(select, value) {
+      const options = keymap.list().map(layout => { const option = new Option(layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : ""), layout.id); return option; });
+      select.replaceChildren(...options); select.value = value;
+    }
+    function render() {
+      for (const select of assign.querySelectorAll("select")) fillSelect(select, keymap.assigned(mode, select.dataset.slot).id);
+      if (!keymap.get(editingId)) loadDraft(keymap.assigned(mode, "A").id);
+      fillSelect(editSelect, editingId);
+      for (const button of editor.querySelectorAll(".keymap-key")) {
+        const listening = capture?.button === button;
+        button.classList.toggle("is-listening", listening);
+        button.innerHTML = listening ? "Nhấn phím…" : kbd(draft[button.dataset.action]);
+      }
+      const layout = keymap.get(editingId);
+      editor.querySelector(".keymap-delete").hidden = layout.builtIn;
+      editor.querySelector(".keymap-restore").hidden = !layout.builtIn;
+      editor.querySelector(".keymap-restore").disabled = keymap.isOriginal(editingId) && !dirty;
+      editor.querySelector(".keymap-save").textContent = dirty ? "Ghi đè layout *" : "Ghi đè layout";
+      for (const use of editor.querySelectorAll(".keymap-use")) use.classList.toggle("is-current", keymap.assigned(mode, use.dataset.slot).id === editingId);
+    }
+    loadDraft(editingId);
+    panel.keymapRender = render;
+    assign.querySelector(".keymap-open").addEventListener("click", () => { editor.open = true; editor.scrollIntoView({ behavior: "smooth", block: "start" }); });
+    for (const select of assign.querySelectorAll("select")) select.addEventListener("change", () => {
+      const result = keymap.assign(mode, select.dataset.slot, select.value);
+      if (!result.ok) {
+        select.value = keymap.assigned(mode, select.dataset.slot).id;
+        say(`Không dùng được: trùng phím ${result.clash.map(label).join(", ")} với người còn lại. Hãy sửa một layout trước.`, "error");
+        editor.open = true;
+      } else say(`Người ${select.dataset.slot} dùng “${keymap.get(select.value).name}”.${result.stored ? "" : " Trình duyệt không cho lưu; chỉ áp dụng trong lần mở này."}`);
+    });
+    editSelect.addEventListener("change", () => {
+      if (dirty && !confirm("Bỏ các thay đổi chưa lưu của layout đang sửa?")) { editSelect.value = editingId; return; }
+      loadDraft(editSelect.value); say(""); render();
+    });
+    nameInput.addEventListener("input", () => { dirty = true; render(); });
+    for (const button of editor.querySelectorAll(".keymap-key")) button.addEventListener("click", () => {
+      capture = capture?.button === button ? null : { button, assign: code => {
+        const action = button.dataset.action, previous = draft[action];
+        const other = keymap.ACTIONS.find(a => a !== action && draft[a] === code);
+        draft[action] = code;
+        if (other) draft[other] = previous;
+        dirty = true;
+        say(other ? `Đã hoán đổi: ${keymap.LABELS[action]} = ${label(code)}, ${keymap.LABELS[other]} = ${label(previous)}.` : `${keymap.LABELS[action]} = ${label(code)}. Nhớ bấm “Ghi đè layout” để lưu.`);
+      } };
+      render();
+    });
+    function store(id) {
+      const result = keymap.save(id, nameInput.value, draft);
+      if (!result.ok) {
+        say(result.error === "clash" ? `Chưa lưu: layout này đang dùng cho chế độ hai người và sẽ trùng phím ${result.clash.map(label).join(", ")} với người còn lại.` : "Chưa lưu: layout không hợp lệ.", "error");
+        return;
+      }
+      editingId = result.id; dirty = false; render();
+      say(`${id ? "Đã ghi đè" : "Đã lưu mới"} “${keymap.get(result.id).name}”.${result.stored ? " Lưu trong trình duyệt này." : " Trình duyệt không cho lưu; chỉ áp dụng trong lần mở này."}`, "ok");
+    }
+    editor.querySelector(".keymap-save").addEventListener("click", () => store(editingId));
+    editor.querySelector(".keymap-save-new").addEventListener("click", () => {
+      const base = nameInput.value.trim() || "Layout của tôi";
+      if (keymap.list().some(layout => layout.name === base)) nameInput.value = `${base} (${keymap.list().length})`;
+      store(null);
+    });
+    for (const use of editor.querySelectorAll(".keymap-use")) use.addEventListener("click", () => {
+      if (dirty) store(editingId);
+      if (dirty) return;
+      const result = keymap.assign(mode, use.dataset.slot, editingId);
+      say(result.ok ? `Người ${use.dataset.slot} dùng “${keymap.get(editingId).name}”.` : `Không dùng được: trùng phím ${result.clash.map(label).join(", ")} với người còn lại.`, result.ok ? "ok" : "error");
+    });
+    editor.querySelector(".keymap-restore").addEventListener("click", () => {
+      const result = keymap.restore(editingId);
+      if (result.ok) { loadDraft(editingId); say("Đã khôi phục phím gốc.", "ok"); render(); }
+      else say(`Chưa khôi phục: trùng phím ${result.clash?.map(label).join(", ")} với người còn lại.`, "error");
+    });
+    editor.querySelector(".keymap-delete").addEventListener("click", () => {
+      const layout = keymap.get(editingId);
+      if (!layout || layout.builtIn || !confirm(`Xóa layout “${layout.name}”?`)) return;
+      keymap.remove(editingId); loadDraft(keymap.assigned(mode, "A").id); say(`Đã xóa “${layout.name}”.`, "ok"); render();
+    });
+    render();
+  }
+  // While a key cell is listening, the next key press is the new binding and nothing else sees it.
+  window.addEventListener("keydown", event => {
+    if (!capture) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    const pending = capture;
+    if (event.code === "Escape") { capture = null; for (const panel of document.querySelectorAll(".game-panel")) panel.keymapRender?.(); return; }
+    if (keymap.reserved(event.code)) {
+      pending.button.closest(".keymap").querySelector(".keymap-status").textContent = `Phím ${event.key === " " ? "Space" : event.code || event.key} được dành cho trình duyệt/tạm dừng, hãy chọn phím khác.`;
+      return;
+    }
+    capture = null; pending.assign(event.code);
+    for (const panel of document.querySelectorAll(".game-panel")) panel.keymapRender?.();
+    pending.button.focus();
+  }, true);
+  document.addEventListener("pointerdown", event => {
+    if (capture && !event.target.closest(".keymap-key")) { capture = null; for (const panel of document.querySelectorAll(".game-panel")) panel.keymapRender?.(); }
+  });
+  keymap.onChange(() => {
+    releaseKeys();
+    for (const panel of document.querySelectorAll(".game-panel")) { renderPanelKeys(panel); panel.keymapRender?.(); }
+  });
+  window.addEventListener("storage", event => { if (event.key === null || event.key?.startsWith("ptsc-football.key-layouts")) keymap.reload(); });
+
   for (const panel of document.querySelectorAll(".game-panel")) {
     const form = panel.querySelector("form");
     const arena = panel.querySelector(".arena");
@@ -296,7 +482,7 @@
     restartChoice.innerHTML = '<span class="restart-label"></span><div class="restart-keys"></div>';
     arena.querySelector(".arena-surface").append(restartChoice);
     const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
-    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><div class="special-button is-unavailable" data-slot="${slot}" role="img"><svg viewBox="0 0 24 24" aria-hidden="true">${defaultSkillIcon}</svg><kbd>${slot === "A" ? "E" : "O"}</kbd><span class="skill-state">Sẵn sàng</span></div></div>`).join("");
+    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><div class="special-button is-unavailable" data-slot="${slot}" role="img"><svg viewBox="0 0 24 24" aria-hidden="true">${defaultSkillIcon}</svg><kbd></kbd><span class="skill-short"></span><span class="skill-state">Sẵn sàng</span></div></div>`).join("");
     arena.querySelector(".arena-surface").append(energy);
     const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
     result.innerHTML = '<strong></strong><span></span>';
@@ -306,29 +492,28 @@
     restart.innerHTML = '<span aria-hidden="true">↻</span> Trận mới';
     arena.querySelector(".arena-surface").append(restart);
     restart.addEventListener("click", () => form.requestSubmit());
-    form.addEventListener("change", () => setupSummary(panel));
+    setupKeymap(panel);
+    renderPanelKeys(panel);
+    renderSkillLegend(panel);
+    form.addEventListener("change", event => { if (!event.target.closest(".keymap-assign")) setupSummary(panel); });
     setupSummary(panel);
     panel.querySelector(".support").addEventListener("change", event => {
       const session = sessions.get(panel.dataset.mode);
       session?.api.setSupport(event.target.checked);
       if (session && !session.paused) arena.focus({ preventScroll: true });
     });
-    for (const button of panel.querySelectorAll(".slide-action")) {
-      button.addEventListener("click", () => {
-        const session = sessions.get(panel.dataset.mode);
-        if (session && !session.paused) {
-          const player = session.api.status().players.find(p => p.slot === button.dataset.slot);
-          session.api.action(button.dataset.slot, player?.hasBall ? "shoot" : "slide"); arena.focus({ preventScroll: true }); updateHud(session);
-        }
-      });
-    }
-    for (const button of panel.querySelectorAll(".switch-action")) {
-      button.addEventListener("click", () => {
-        const session = sessions.get(panel.dataset.mode);
-        if (!session) return;
-        session.api.action(button.dataset.slot, "switch"); updateHud(session); arena.focus({ preventScroll: true });
-      });
-    }
+    // Guides are redrawn when layouts change, so their buttons are handled by delegation.
+    panel.querySelector(".controls").addEventListener("click", event => {
+      const button = event.target.closest(".slide-action, .switch-action");
+      const session = sessions.get(panel.dataset.mode);
+      if (!button || !session) return;
+      if (button.classList.contains("switch-action")) session.api.action(button.dataset.slot, "switch");
+      else if (!session.paused) {
+        const player = session.api.status().players.find(p => p.slot === button.dataset.slot);
+        session.api.action(button.dataset.slot, player?.hasBall ? "shoot" : "slide");
+      }
+      arena.focus({ preventScroll: true }); updateHud(session);
+    });
     form.addEventListener("submit", event => {
       event.preventDefault(); releaseKeys();
       const mode = panel.dataset.mode;
@@ -337,8 +522,12 @@
       const host = panel.querySelector(".match-host"); host.replaceChildren();
       const api = window.PTSCFootball.mount(host, options);
       api.pause();
+      const penaltyKeys = slot => {
+        const set = bindingsOf(mode)[slot] ?? {};
+        return { left: label(set.left), center: label(set.down), right: label(set.right), special: label(set.special) };
+      };
       const session = { panel, arena, api, options, paused: true, awaitingStart: true,
-        penaltyView: new window.PTSCPenaltyView(penaltyHost, api) };
+        penaltyView: new window.PTSCPenaltyView(penaltyHost, api, { keys: penaltyKeys }) };
       sessions.set(mode, session);
       energy.hidden = false;
       form.querySelector(".start").textContent = "Bắt đầu trận mới";
@@ -355,82 +544,82 @@
       if (!session.paused) arena.focus({ preventScroll: true });
     });
     arena.addEventListener("pointerdown", () => { if (sessions.has(panel.dataset.mode)) arena.focus({ preventScroll: true }); });
-    arena.addEventListener("focusout", event => { if (!arena.contains(event.relatedTarget)) releaseKeys(); });
+    // Leaving the pitch for another control stops movement; keys are still tracked until they are released.
+    arena.addEventListener("focusout", event => { if (!arena.contains(event.relatedTarget)) { stopSwitchRepeats(); cancelKicks(); applyKeys(); } });
+    arena.addEventListener("focusin", () => applyKeys());
   }
   window.addEventListener("keydown", event => {
     const session = sessions.get(activeMode);
-    if (!session || !session.panel.querySelector(".arena").contains(document.activeElement) || !handledKeys.has(event.code)) return;
+    if (!session || !session.arena.contains(document.activeElement)) return;
+    const mode = session.options.mode, bound = lookup(mode, event.code);
+    if (!bound && event.code !== "Space" && event.code !== "Escape") return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.code === "Escape" && document.fullscreenElement) { releaseKeys(); return; }
     if (event.code !== "Escape" && document.activeElement.matches("button, input, select, textarea")) return;
     event.preventDefault();
-    const cornerPress = pressSlots.has(event.code) && session.api.cornerSlot() === pressSlots.get(event.code);
-    if (movementKeys.has(event.code) && !cornerPress && session.api.acceptsMovement()) {
-      if (!session.paused && !keys.has(event.code)) {
-        keys.add(event.code); applyKeys(session); highlightPads();
-      }
-      return;
-    }
     if (event.code === "Space" || event.code === "Escape") {
-      if (event.code === "Escape" && session.panel.querySelector(".arena").classList.contains("fullscreen-fallback")) {
+      if (event.code === "Escape" && session.arena.classList.contains("fullscreen-fallback")) {
         session.panel.querySelector(".fullscreen").click(); return;
       }
       if (!event.repeat && !session.api.status().ended) setPaused(session, event.code === "Escape" ? true : !session.paused);
       return;
     }
-    const switchBinding = Object.entries(bindings).find(([, binding]) => binding.actions[event.code] === "switch");
-    if (switchBinding) {
+    const { slot, action } = bound, state = session.api.status();
+    if (state.phase === "penalties" && PENALTY_ACTIONS[action]) {
+      if (!event.repeat && !session.paused && !state.ended) { session.api.choosePenalty(slot, PENALTY_ACTIONS[action]); updateHud(session); }
+      return;
+    }
+    const cornerPress = action === "press" && session.api.cornerSlot() === slot;
+    if (MOVE_ACTIONS.has(action) && !cornerPress) {
+      // Held keys are recorded even while paused, and re-sent on every press so a lost input recovers.
+      keys.add(event.code); applyKeys(session); highlightPads();
+      return;
+    }
+    if (action === "switch") {
       // Every physical press is accepted immediately; held repeats use our timer, independent of the OS delay.
       if (!event.repeat) {
-        const slot = switchBinding[0];
         keys.add(event.code); session.api.action(slot, "switch"); updateHud(session); highlightPads();
         repeatSwitch(session, event.code, slot);
       }
       return;
     }
-    const specialBinding = Object.entries(bindings).find(([, binding]) => binding.actions[event.code] === "special");
-    if (specialBinding && !event.repeat && (!session.paused || session.awaitingStart)) {
-      const pending = pendingShots.get(specialBinding[0]);
-      if (pending) { clearTimeout(pending.timer); pendingShots.delete(specialBinding[0]); }
-      chargeStarts.delete(specialBinding[0]); session.api.cancelCharge(specialBinding[0]);
-      session.api.action(specialBinding[0], "special"); updateHud(session); return;
-    }
-    if (session.paused || session.api.status().ended) return;
-    if (event.repeat && !keys.has(event.code)) return;
-    const state = session.api.status();
-    if (state.phase === "penalties") {
-      if (!event.repeat) for (const [slot, b] of Object.entries(bindings)) {
-        const direction = event.code === b.left ? "left" : event.code === b.right ? "right" : event.code === b.down ? "center" : null;
-        if (direction) session.api.choosePenalty(slot, direction);
+    if (action === "special") {
+      if (!event.repeat && (!session.paused || session.awaitingStart)) {
+        const pending = pendingShots.get(slot);
+        if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); }
+        chargeStarts.delete(slot); session.api.cancelCharge(slot);
+        session.api.action(slot, "special"); updateHud(session);
       }
-      updateHud(session); return;
+      return;
     }
-    if (state.corner?.slot) {
-      const slot = state.corner.slot, index = cornerKeys[slot].indexOf(event.code);
+    if (session.paused || state.ended) return;
+    if (event.repeat && !keys.has(event.code)) return;
+    if (state.corner?.slot === slot) {
+      const index = CORNER_ACTIONS.indexOf(action);
       if (index !== -1) {
         if (!event.repeat && state.corner.ready) session.api.takeCorner(slot, gameData.corners[index].id);
         updateHud(session); return;
       }
     }
-    keys.add(event.code); applyKeys(session);
-    if (!event.repeat) for (const [slot, binding] of Object.entries(bindings)) {
-      const player = session.api.status().players.find(p => p.slot === slot);
-      const bound = binding.actions[event.code];
-      const action = bound === "shoot" && !player?.hasBall && session.api.status().freeKick?.slot !== slot ? "slide" : bound;
-      if (action === "pass" || action === "shoot") {
+    keys.add(event.code);
+    if (!event.repeat) {
+      const player = state.players.find(p => p.slot === slot);
+      const act = action === "shoot" && !player?.hasBall && state.freeKick?.slot !== slot ? "slide" : action;
+      if (act === "pass" || act === "shoot") {
         const pending = pendingShots.get(slot);
-        if (action === "shoot" && pending?.session === session) {
+        if (act === "shoot" && pending?.session === session) {
           clearTimeout(pending.timer); pendingShots.delete(slot);
           session.api.releaseCharge(slot, { special: true, power: Math.max(.55, pending.power) });
         } else {
           if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
-          if (session.api.beginCharge(slot, action)) chargeStarts.set(slot, performance.now());
+          if (session.api.beginCharge(slot, act)) chargeStarts.set(slot, performance.now());
         }
-      } else if (action === "challenge" || action === "slide" || action === "special") {
+      } else if (act === "challenge" || act === "slide") {
         const pending = pendingShots.get(slot);
         if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
         chargeStarts.delete(slot);
-        session.api.action(slot, action);
-      } else if (action) session.api.action(slot, action);
+        session.api.action(slot, act);
+      }
     }
     updateHud(session);
     highlightPads();
@@ -441,25 +630,24 @@
     keys.delete(event.code); applyKeys();
     highlightPads();
     const session = sessions.get(activeMode);
-    if (!session || session.paused || !session.panel.querySelector(".arena").contains(document.activeElement)) return;
-    for (const [slot, binding] of Object.entries(bindings)) {
-      const action = binding.actions[event.code];
-      if (!["pass", "shoot"].includes(action) || !chargeStarts.has(slot)) continue;
-      const elapsed = performance.now() - chargeStarts.get(slot); chargeStarts.delete(slot);
-      const charge = session.api.status().players.find(p => p.slot === slot)?.charge;
-      if (!charge || charge.action !== action) continue;
-      if (action === "shoot" && elapsed < 220) {
-        session.api.freezeCharge(slot);
-        const pending = { session, power: charge.power, timer: null };
-        pending.timer = setTimeout(() => {
-          if (pendingShots.get(slot) !== pending) return;
-          pendingShots.delete(slot);
-          if (!session.paused && sessions.get(activeMode) === session) session.api.releaseCharge(slot);
-          else session.api.cancelCharge(slot);
-        }, 230);
-        pendingShots.set(slot, pending);
-      } else session.api.releaseCharge(slot);
-    }
+    if (!session || session.paused || !session.arena.contains(document.activeElement)) return;
+    const bound = lookup(session.options.mode, event.code);
+    if (!bound || !["pass", "shoot"].includes(bound.action) || !chargeStarts.has(bound.slot)) return;
+    const { slot, action } = bound;
+    const elapsed = performance.now() - chargeStarts.get(slot); chargeStarts.delete(slot);
+    const charge = session.api.status().players.find(p => p.slot === slot)?.charge;
+    if (!charge || charge.action !== action) return;
+    if (action === "shoot" && elapsed < 220) {
+      session.api.freezeCharge(slot);
+      const pending = { session, power: charge.power, timer: null };
+      pending.timer = setTimeout(() => {
+        if (pendingShots.get(slot) !== pending) return;
+        pendingShots.delete(slot);
+        if (!session.paused && sessions.get(activeMode) === session) session.api.releaseCharge(slot);
+        else session.api.cancelCharge(slot);
+      }, 230);
+      pendingShots.set(slot, pending);
+    } else session.api.releaseCharge(slot);
   }, true);
   function suspend() {
     releaseKeys(); watcher?.pause();

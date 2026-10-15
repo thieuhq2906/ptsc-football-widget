@@ -24,25 +24,25 @@
   const GAME_DATA = {
     controls: { switchSequenceMs: 1000, switchRepeatMs: 45, switchHoldDelayMs: 140 },
     rendering: { crowdFps: 20, cullMargin: 120 },
-    speech: { scale: .8, humanInterval: 2.3, lines: { receive: ["Có bóng rồi!", "Để tôi triển khai!", "Lên nào anh em!"], pass: ["Nhận bóng nhé!", "Chạy chỗ đi!", "Chuyền đây!"], shoot: ["Sút đây!", "Có cơ hội rồi!", "Thử cú này!"], press: ["Tôi áp sát!", "Bám người đi!", "Không cho qua!"], sprint: ["Tăng tốc nào!", "Mở đường giúp tôi!"], switch: ["Để tôi!", "Tôi bọc lót!", "Có tôi đây!"], win: ["Lấy bóng rồi!", "Phản công nào!"] } },
+    speech: { scale: .56, humanInterval: 2.3, lines: { receive: ["Có bóng rồi!", "Để tôi triển khai!", "Lên nào anh em!"], pass: ["Nhận bóng nhé!", "Chạy chỗ đi!", "Chuyền đây!"], shoot: ["Sút đây!", "Có cơ hội rồi!", "Thử cú này!"], press: ["Tôi áp sát!", "Bám người đi!", "Không cho qua!"], sprint: ["Tăng tốc nào!", "Mở đường giúp tôi!"], switch: ["Để tôi!", "Tôi bọc lót!", "Có tôi đây!"], win: ["Lấy bóng rồi!", "Phản công nào!"] } },
     skills: {
-      burst: { name: "Bứt tốc bất khả cản", role: "FW", effect: "shield", speed: 9.8, icon: '<path d="m14 2-9 11h6l-1 9 9-12h-6z"/>' },
-      finisher: { name: "Sát thủ vòng cấm", role: "FW", effect: "shot", icon: '<circle cx="12" cy="12" r="7"/><path d="M12 1v6m0 10v6M1 12h6m10 0h6"/>' },
-      phantom: { name: "Bóng ma sân cỏ", role: "FW", effect: "shield", speed: 8.4, icon: '<path d="M5 21V10a7 7 0 0 1 14 0v11l-4-3-3 3-3-3zM9 10h1m4 0h1"/>' },
-      freeKick: { name: "Vua đá phạt", role: "MF", effect: "shot", contexts: ["directFreeKick"], icon: '<circle cx="9" cy="15" r="6"/><path d="m17 2 2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1z"/>' },
-      maestro: { name: "Nhạc trưởng", role: "MF", effect: "shield", speed: 7.8, icon: '<path d="M7 18V5l11-3v13M7 8l11-3"/><circle cx="4" cy="18" r="3"/><circle cx="15" cy="15" r="3"/>' },
-      laserPass: { name: "Chuyền xuyên tuyến", role: "MF", effect: "pass", icon: '<path d="M2 7h12m-8 5h15m-19 5h12m2-10 5 5-5 5"/>' },
-      wall: { name: "Tường thép", role: "DF", effect: "steal", range: 5.5, icon: '<path d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6zM7 12l3 3 7-7"/>' },
-      superDefense: { name: "Siêu phòng thủ", role: "DF", effect: "teamDefense", range: 7, icon: '<path d="m12 5 6 3v4c0 4-6 7-6 7s-6-3-6-7V8zM3 4l3-2m12 0 3 2M2 11v5m20-5v5M5 20l3 2m8 0 3-2"/>' },
-      interceptor: { name: "Máy quét", role: "DF", effect: "steal", range: 7, icon: '<path d="M4 3v9a8 8 0 0 0 16 0V3h-5v9a3 3 0 0 1-6 0V3zM4 7h5m6 0h5"/>' },
-      keeperHands: { name: "Bàn tay thép", role: "GK", effect: "keeper", icon: '<path d="m8 21-4-6-2-5 3-1 2 3V4h3v7-9h3v9-8h3v9-6h3v10l-3 5z"/>' },
-      sweeper: { name: "Thủ môn quét", role: "GK", effect: "keeper", rush: true, icon: '<path d="M3 17h18v4H3zM5 17V7h7v5l8 3v2M15 2l-3 5h5l-3 5"/>' },
-      reflex: { name: "Phản xạ chớp nhoáng", role: "GK", effect: "keeper", icon: '<path d="m14 1-5 8h5l-4 8m-6-6-2 4 3 6h13l3-6-2-4M7 16h10"/>' },
-      deadBallCannon: { name: "Đại bác bóng chết", role: "FW", effect: "shot", contexts: ["directFreeKick"], icon: '<circle cx="6" cy="17" r="4"/><path d="m8 14 11-9 3 4-11 9M14 3l2-2m5 13 2 1M4 10l-2-2"/>' },
-      cornerCurve: { name: "Đường cong góc cờ", roles: ["MF", "FW"], effect: "corner", contexts: ["cornerAttack"], icon: '<path d="M3 22V2l9 3-9 3M8 20c10 0 13-7 10-13m-3 1 3-3 3 3"/>' },
-      aerialFort: { name: "Lá chắn không chiến", role: "DF", effect: "cornerBlock", contexts: ["cornerDefense"], icon: '<path d="m12 9 8 3v5l-8 5-8-5v-5zM5 6l3-3m8 0 3 3M12 1v5"/>' },
-      penaltyFinisher: { name: "Bản lĩnh chấm phạt", roles: ["FW", "MF", "DF"], effect: "penaltyShot", contexts: ["penaltyAttack"], icon: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5"/>' },
-      penaltySaver: { name: "Người hùng bắt pen", role: "GK", effect: "penaltySave", contexts: ["penaltyDefense"], icon: '<path d="M2 20V3h20v17M5 7l7 4 7-4M12 11v9m-6 0 6-5 6 5"/>' }
+      burst: { name: "Bứt tốc bất khả cản", role: "FW", effect: "shield", speed: 9.8, short: "Bứt tốc", icon: '<path d="M2 8h5M1 12h6M2 16h5"/><path d="m10 6 6 6-6 6M15 6l6 6-6 6"/>' },
+      finisher: { name: "Sát thủ vòng cấm", role: "FW", effect: "shot", short: "Dứt điểm", icon: '<path d="M2 19V5h20v14"/><path d="M7 5v14M12 5v14M17 5v14M2 10h20M2 15h20" stroke-width="1" opacity=".5"/><circle cx="15.5" cy="13.5" r="3.6" fill="#fff"/>' },
+      phantom: { name: "Bóng ma sân cỏ", role: "FW", effect: "shield", speed: 8.4, short: "Lách người", icon: '<path d="M7 21V11a5 5 0 0 1 10 0v10l-1.7-1.7L13.6 21l-1.6-1.7-1.6 1.7-1.7-1.7z"/><path d="M10 11h.01M14 11h.01M1.5 9h3M1 13h3.5M1.5 17h3"/>' },
+      freeKick: { name: "Vua đá phạt", role: "MF", effect: "shot", contexts: ["directFreeKick"], short: "Đá phạt", icon: '<path d="m5 10-1-6 4 3 4-4 4 4 4-3-1 6z"/><circle cx="12" cy="17" r="4.6" fill="#fff"/>' },
+      maestro: { name: "Nhạc trưởng", role: "MF", effect: "shield", speed: 7.8, short: "Cầm nhịp", icon: '<path d="M9 18V6l10-2.5V16"/><path d="M9 9.5l10-2.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>' },
+      laserPass: { name: "Chuyền xuyên tuyến", role: "MF", effect: "pass", short: "Chọc khe", icon: '<circle cx="11" cy="4.5" r="2.5"/><circle cx="11" cy="19.5" r="2.5"/><path d="M1.5 12h19m-4-4 4 4-4 4" stroke-dasharray="3 2.2"/>' },
+      wall: { name: "Tường thép", role: "DF", effect: "steal", range: 5.5, short: "Chặn đứng", icon: '<path d="M3 5h18v15H3zM3 10h18M3 15h18M9 5v5M15 5v5M6 10v5M12 10v5M18 10v5M9 15v5M15 15v5"/>' },
+      superDefense: { name: "Siêu phòng thủ", role: "DF", effect: "teamDefense", range: 7, short: "Tổng thủ", icon: '<path d="M12 2 20 5v6c0 6-8 11-8 11S4 17 4 11V5z"/><circle cx="9.3" cy="10" r="1.8"/><circle cx="14.7" cy="10" r="1.8"/><path d="M6.8 15.6c.8-1.8 4.2-1.8 5.2 0 1-1.8 4.4-1.8 5.2 0"/>' },
+      interceptor: { name: "Máy quét", role: "DF", effect: "steal", range: 7, short: "Cắt bóng", icon: '<path d="M3 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3zM3 7h4m4 0h4"/><path d="m16.5 15.5 2 1M17 12l2.3-.2" stroke-width="1.4"/><circle cx="20.5" cy="19.5" r="2.6" fill="#fff"/>' },
+      keeperHands: { name: "Bàn tay thép", role: "GK", effect: "keeper", auto: true, save: .4, hold: true, short: "Bắt dính", icon: '<path d="M7 22v-4.5L3.5 12l1.8-1.2L9 14.5V4.5h2.5v7-9H14v9-8h2.5v8-6H19V15c0 4-2.5 7-5 7z"/>' },
+      sweeper: { name: "Thủ môn quét", role: "GK", effect: "keeper", auto: true, save: .2, rush: true, short: "Lao ra", icon: '<path d="M8 3.5H3v17h5"/><path d="M10 12h11m-4.5-4.5L21 12l-4.5 4.5"/><path d="M11.5 6.5h4M11.5 17.5h4" stroke-width="1.5"/>' },
+      reflex: { name: "Phản xạ chớp nhoáng", role: "GK", effect: "keeper", auto: true, save: .45, quick: true, short: "Phản xạ", icon: '<path d="M1.5 13S5.5 7 12 7s10.5 6 10.5 6-4 6-10.5 6S1.5 13 1.5 13z"/><circle cx="12" cy="13" r="2.8"/><path d="M12 1.5v2.5M4.5 3.5l1.7 1.7M19.5 3.5l-1.7 1.7"/>' },
+      deadBallCannon: { name: "Đại bác bóng chết", role: "FW", effect: "shot", contexts: ["directFreeKick"], short: "Đại bác", icon: '<circle cx="7" cy="17.5" r="3.5"/><path d="M5.5 13.5 16 5.5l3.2 4.4L9.7 17"/><path d="M3 21h8"/><circle cx="21.2" cy="3.5" r="2" fill="#fff"/>' },
+      cornerCurve: { name: "Đường cong góc cờ", roles: ["MF", "FW"], effect: "corner", contexts: ["cornerAttack"], short: "Phạt góc", icon: '<path d="M4 22V2.5l8 3.2-8 3.2"/><path d="M4 20.5c8.5 0 14-4 15-11.5"/><path d="m15.6 11.2 3.4-2.6 2.6 3.4"/>' },
+      aerialFort: { name: "Lá chắn không chiến", role: "DF", effect: "cornerBlock", contexts: ["cornerDefense"], short: "Không chiến", icon: '<circle cx="12" cy="14.5" r="3.8"/><path d="M5 22.5c1.2-2.4 3.7-3.5 7-3.5s5.8 1.1 7 3.5M5.5 7.5 3.5 6.5M18.5 7.5l2-1"/><circle cx="12" cy="5" r="2.8" fill="#fff"/>' },
+      penaltyFinisher: { name: "Bản lĩnh chấm phạt", roles: ["FW", "MF", "DF"], effect: "penaltyShot", contexts: ["penaltyAttack"], short: "Sút pen", icon: '<path d="M2 17V4h20v13"/><circle cx="12" cy="10.5" r="3.4"/><path d="M12 5.5v2M12 13.5v2M7 10.5h2M15 10.5h2M12 21.5h.01"/>' },
+      penaltySaver: { name: "Người hùng bắt pen", role: "GK", effect: "penaltySave", contexts: ["penaltyDefense"], short: "Bắt pen", icon: '<path d="M2 20V4h20v16"/><path d="M9.2 18v-6.6h1.6V8.6h1.6v3V7.7H14v3.9V9h1.6v6c0 1.9-1.2 3-3 3z"/>' }
     },
     skillContexts: {
       attack: { label: "Tấn công", unavailable: "Chỉ tấn công" },
@@ -53,12 +53,46 @@
       penaltyAttack: { label: "Sút penalty", unavailable: "Chỉ sút pen" },
       penaltyDefense: { label: "Bắt penalty", unavailable: "Chỉ bắt pen" }
     },
-    skillRules: { cost: .4, success: .7, duration: 2, usesPerMatch: 1, colors: { FW: "#f7a42c", MF: "#edcf49", DF: "#39d88c", GK: "#ed5353" } },
+    skillRules: { cost: .4, success: .7, duration: 2, usesPerMatch: 1, keeperAuto: { minutes: 5, chancePerMinute: .07 }, colors: { FW: "#f7a42c", MF: "#edcf49", DF: "#39d88c", GK: "#ed5353" } },
     restarts: { kickoff: { action: "pass", takerRange: 1.4 }, corner: { takerRange: 1.4 }, freeKick: { takerRange: 1.4 }, penalty: { distance: 6 } },
     corners: [{ id: "cross", name: "Tạt bổng" }, { id: "short", name: "Chuyền ngắn" }, { id: "oneTwo", name: "Đập nhả" }, { id: "edge", name: "Trả tuyến hai" }],
+    /**
+     * Playing styles after eFootball's, one per player identity, chosen by position. They steer the AI: where he
+     * stands with and without the ball (push/drop, width, roam, how far a defender may go), what he does on the
+     * ball (shot range, dribbling, crossing, combinations, long balls), which passes are looked for to him and how
+     * eagerly he presses. A human-controlled player moves where he is steered; the style shapes everything else.
+     */
+    playstyles: {
+      goalPoacher: { name: "Săn bàn", en: "Goal Poacher", roles: ["FW"], desc: "Luôn bám vai hậu vệ cuối, chờ bóng sau lưng, dứt điểm ngay.", push: .1, drop: .1, width: .55, shoot: .06, target: { through: 1 } },
+      foxInTheBox: { name: "Cáo vòng cấm", en: "Fox in the Box", roles: ["FW"], desc: "Đứng trong vòng cấm, chờ tạt và bóng bật ra.", push: .12, drop: .05, width: .35, shoot: .02, target: { box: 1.2 }, header: .25 },
+      targetMan: { name: "Mục tiêu", en: "Target Man", roles: ["FW"], desc: "Làm tường, nhận bóng dài, mạnh không chiến.", push: .05, drop: .02, width: .45, target: { long: 1.3 }, header: .3, dribble: -.1 },
+      deepLyingForward: { name: "Hộ công lùi sâu", en: "Deep-Lying Forward", roles: ["FW"], desc: "Lùi về nhận bóng, phối hợp rồi mới lên.", push: -.1, drop: -.04, width: .6, combo: 1.8, target: { short: .6 } },
+      dummyRunner: { name: "Chạy chỗ nghi binh", en: "Dummy Runner", roles: ["FW"], desc: "Chạy rộng kéo giãn hàng thủ, ít khi nhận bóng.", push: .09, drop: .03, roam: 3, target: { all: -.6 } },
+      prolificWinger: { name: "Cánh săn bàn", en: "Prolific Winger", roles: ["FW"], desc: "Dạt cánh rồi bó vào trong dứt điểm.", width: 1.35, push: .04, dribble: .3, shoot: .04 },
+      roamingFlank: { name: "Cánh tự do", en: "Roaming Flank", roles: ["FW"], desc: "Di chuyển tự do giữa cánh và trung lộ.", width: 1.15, roam: 2.5, combo: 1.3 },
+      crossSpecialist: { name: "Chuyên tạt", en: "Cross Specialist", roles: ["FW"], desc: "Bám biên, tạt bóng vào vòng cấm.", width: 1.5, push: .03, cross: .7 },
+      classicNo10: { name: "Số 10 cổ điển", en: "Classic No. 10", roles: ["MF"], desc: "Đứng sau tiền đạo, ít lui về, đi bóng và sút xa.", push: .06, drop: .08, width: .4, dribble: .2, shoot: .05, target: { short: .5 } },
+      creativePlaymaker: { name: "Kiến tạo", en: "Creative Playmaker", roles: ["MF"], desc: "Tìm khoảng trống, khởi xướng phối hợp.", push: .04, roam: 2, combo: 1.7, chain: 1.6 },
+      holePlayer: { name: "Xâm nhập", en: "Hole Player", roles: ["MF"], desc: "Băng lên muộn vào vòng cấm để dứt điểm.", push: .14, shoot: .05, target: { through: .5 } },
+      boxToBox: { name: "Con thoi", en: "Box-to-Box", roles: ["MF"], desc: "Lên công về thủ, áp sát liên tục.", push: .08, drop: -.08, press: .4 },
+      orchestrator: { name: "Điều phối", en: "Orchestrator", roles: ["MF"], desc: "Lùi sâu cầm nhịp, phát động bằng chuyền dài.", push: -.06, drop: -.02, long: .5, target: { short: .4 } },
+      anchorMan: { name: "Mỏ neo", en: "Anchor Man", roles: ["MF"], desc: "Đứng trước hàng thủ, không dâng cao, không đuổi bóng xa.", push: -.12, drop: -.06, width: .3, press: -.5 },
+      buildUp: { name: "Phát động", en: "Build Up", roles: ["DF"], desc: "Trung vệ phát động tấn công bằng chuyền dài.", long: .5 },
+      extraFrontman: { name: "Trung vệ dâng cao", en: "Extra Frontman", roles: ["DF"], desc: "Dâng lên hỗ trợ tấn công khi có bóng.", push: .1, cap: .14, dribble: .25 },
+      destroyer: { name: "Đánh chặn", en: "Destroyer", roles: ["DF"], desc: "Lao vào tranh chấp, cắt bóng quyết liệt.", drop: .02, press: .6 },
+      offensiveFullback: { name: "Hậu vệ cánh công", en: "Offensive Full-back", roles: ["DF"], desc: "Băng lên dọc biên và tạt bóng.", width: 1.25, push: .1, cap: .12, cross: .5 },
+      defensiveFullback: { name: "Hậu vệ cánh thủ", en: "Defensive Full-back", roles: ["DF"], desc: "Ở lại phòng ngự, giữ chặt cánh.", width: 1.1, push: -.06, drop: -.02 },
+      fullbackFinisher: { name: "Hậu vệ xâm nhập", en: "Full-back Finisher", roles: ["DF"], desc: "Từ cánh bó vào trung lộ, có thể tự dứt điểm.", push: .09, cap: .15, width: .85, shoot: .03 },
+      offensiveGoalkeeper: { name: "Thủ môn dâng cao", en: "Offensive Goalkeeper", roles: ["GK"], desc: "Đứng cao, lao ra sớm, phát bóng dài.", line: .035, rush: 3, confidence: .15 },
+      defensiveGoalkeeper: { name: "Thủ môn giữ khung", en: "Defensive Goalkeeper", roles: ["GK"], desc: "Bám vạch vôi, chọn vị trí chuẩn để cứu thua.", line: -.01, rush: -2.5, save: .04 }
+    },
     goalkeeper: { claimHeight: 1.6, rushRange: 6.5, claimRange: 1.25, speed: 7.2, decisionInterval: .7, confidence: .7 },
     celebrations: { fist: "Vung nắm đấm", mate: "Đập tay, ôm đồng đội", arms: "Dang tay", airplane: "Máy bay", pointMate: "Chỉ tay cảm ơn đồng đội", badge: "Chỉ huy hiệu áo", dance: "Nhảy múa", kneeSlide: "Trượt gối", shush: "Suỵt", siu: "SIUU", sky: "Chỉ lên trời", hurry: "Ôm bóng về giữa sân khi vẫn bị dẫn", groupHug: "Ôm cả nhóm", kneelBrief: "Quỳ giơ tay" }
   };
+  for (const style of Object.values(GAME_DATA.playstyles)) {
+    Object.assign(style, { push: 0, drop: 0, width: 1, roam: 1, cap: 0, shoot: 0, dribble: 0, cross: 0, combo: 1, chain: 1, long: 0, press: 0, header: 0, line: 0, rush: 0, confidence: 0, save: 0, ...style });
+    style.target = { through: 0, long: 0, short: 0, box: 0, all: 0, ...style.target };
+  }
   for (const skill of Object.values(GAME_DATA.skills)) {
     skill.roles ??= [skill.role];
     skill.role ??= skill.roles[0];
@@ -171,7 +205,8 @@
     const toW = (team, [d, w]) => (team === "R") !== SWAP ? [d, w] : [1 - d, 1 - w];
     const toT = toW;
     const GOAL_V = [0.4, 0.6], GOAL_H = 2.0, GOAL_DEPTH = 0.035;
-    const S = 0.62;           // drawing scale of every person
+    const S = 0.558;          // drawing scale of every person (10% under the original 0.62, for a wider view)
+    const BALL_SCALE = 0.9;   // the ball shrinks with the people
     const VW = 640, VH = 360; // camera viewport
     
     /* ---------------------------------- seeded randomness ---------------------------------- */
@@ -186,6 +221,7 @@
     const disciplineRng = mulberry32(SEED ^ 0x30ca4d);
     const abilityRng = mulberry32(SEED ^ 0x70ab1117);
     const keeperRng = mulberry32(SEED ^ 0x61ee9a);
+    const styleRng = mulberry32(SEED ^ 0x5717e5);
     const pick = list => list[Math.floor(rng() * list.length)];
     
     /* ---------------------------------- poses and rig ---------------------------------- */
@@ -292,6 +328,11 @@
       stumble: P({ hF: 30, kF: 20, hB: -10, kB: 30, aF: -60, eF: -20, aB: 200, eB: 0, L: -22 }),
       chestOut: P({ hF: 12, kF: 6, hB: -12, kB: 6, aF: 120, eF: 20, aB: 60, eB: -20, L: -10 }),
       separate: P({ hF: 14, kF: 10, hB: -14, kB: 10, aF: 0, eF: 0, aB: 180, eB: 0, L: 2 }),
+      // Back from hospital, watching from the touchline: on a crutch with the bad leg held up, or an arm in a sling.
+      crutch: P({ hF: 8, kF: 6, hB: -16, kB: 80, aF: 84, eF: -4, aB: 100, eB: -20, L: 4 }),
+      crutchCheer: P({ hF: 8, kF: 6, hB: -16, kB: 80, aF: 84, eF: -4, aB: -112, eB: 12, L: 2 }),
+      sling: P({ hF: 9, kF: 6, hB: -9, kB: 6, aF: 35, eF: -100, aB: 100, eB: -15, L: 0 }),
+      slingCheer: P({ hF: 9, kF: 10, hB: -9, kB: 10, aF: 35, eF: -100, aB: -115, eB: 10, L: -2 }),
     };
     /** Running legs swing with a stride phase that advances with distance covered. */
     const STRIDES = new Set(["run", "carryRun", "dribble", "dribbleLow", "airplane", "walkSad"]);
@@ -447,21 +488,30 @@
       people.push(m);
       return m;
     });
-    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince"];
+    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "styleId"];
     function assignSpecial(p) {
       const choices = Object.keys(GAME_DATA.skills).filter(id => GAME_DATA.skills[id].roles.includes(p.role));
       const draw = pool => pool.length ? pool[Math.floor(abilityRng() * pool.length)] : null;
       p.specialId = draw(choices.filter(id => GAME_DATA.skills[id].contexts.some(c => ["attack", "defense"].includes(c))));
       p.specialSituations = Object.fromEntries(Object.keys(GAME_DATA.skillContexts).filter(c => !["attack", "defense"].includes(c)).map(c => [c, draw(choices.filter(id => GAME_DATA.skills[id].contexts.includes(c)))]));
     }
+    /** A playing style for his position; a man who comes on in another position gets one that suits it. */
+    function ensureStyle(p) {
+      if (!p.team || p.role === "SUB") return;
+      if (GAME_DATA.playstyles[p.styleId]?.roles.includes(p.role)) return;
+      const pool = Object.keys(GAME_DATA.playstyles).filter(id => GAME_DATA.playstyles[id].roles.includes(p.role));
+      p.styleId = pool[Math.floor(styleRng() * pool.length)];
+    }
+    const NO_STYLE = { push: 0, drop: 0, width: 1, roam: 1, cap: 0, shoot: 0, dribble: 0, cross: 0, combo: 1, chain: 1, long: 0, press: 0, header: 0, line: 0, rush: 0, confidence: 0, save: 0, target: { through: 0, long: 0, short: 0, box: 0, all: 0 } };
+    const styleOf = p => GAME_DATA.playstyles[p?.styleId] ?? NO_STYLE;
     /** How long he stays on before the coach rotates him: about 20 minutes, staggered so they do not all go at once. */
     const newStint = () => 17 + rng() * 6;
     function setIdent(p, [name, head, skin, num, star]) {
       // Stamina differs from man to man (and from day to day): some are blowing after half an hour, some last.
       // Key men are the fittest: they are expected to last the whole match.
       Object.assign(p, { name, head, skin, num, star: star ?? 0, pillar: PILLARS.has(name), yellows: 0, energy: 1, stamina: PILLARS.has(name) ? 1.2 + rng() * 0.25 : 0.8 + rng() * 0.45,
-        injured: false, tiredSaid: false, lastSkill: null, specialUsed: false, specialPrimed: false, specialPrimedId: null, specialActiveId: null, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
-      assignSpecial(p); p.abilityCheckAt = 0;
+        injured: false, bandage: null, tiredSaid: false, lastSkill: null, specialUsed: false, specialPrimed: false, specialPrimedId: null, specialActiveId: null, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
+      assignSpecial(p); p.abilityCheckAt = 0; p.styleId = null; ensureStyle(p);
       if (p.sprite) restyle(p);
     }
     /** A fresh line-up: the usual six on the pitch and one to three of the others on the bench. */
@@ -572,6 +622,7 @@
       if (p.injured) return { ready: false, label: "Chấn thương" };
       if (p.specialPrimed) return { ready: false, label: "Đã bật" };
       if (p.specialUsed) return { ready: false, label: "Đã dùng" };
+      if (skill.auto) return { ready: false, label: specialActive(p) ? "Đang bật" : "Tự kích hoạt" };
       if (p.energy < GAME_DATA.skillRules.cost) return { ready: false, label: "Thiếu lực" };
       if (["fulltime", "ceremony", "draw"].includes(game.mode)) return { ready: false, label: "Hết trận" };
       const context = skillContext(p);
@@ -639,6 +690,24 @@
       say(p, skill.name.toUpperCase(), "var(--art-gold)", 1.5);
       return true;
     }
+    /**
+     * Keeper skills switch themselves on now and then while the other side attacks: once a match each, for five
+     * minutes of match clock (the clock, and so the effect, pauses while the ball is dead).
+     */
+    function autoKeeperSkills() {
+      const rules = GAME_DATA.skillRules.keeperAuto;
+      for (const gk of [GK.R, GK.B]) {
+        const skill = GAME_DATA.skills[gk.specialId];
+        if (!skill?.auto || gk.specialUsed || !on(gk) || !defendingTeam(gk.team) || toT(gk.team, ballUV())[0] > .5) continue;
+        const minuteNow = minute();
+        if (gk.keeperRollMinute === minuteNow) continue;
+        gk.keeperRollMinute = minuteNow;
+        if (abilityRng() >= rules.chancePerMinute) continue;
+        gk.specialUsed = true; gk.specialActiveId = gk.specialId; gk.specialUntil = game.clock + rules.minutes / PACE;
+        game.stats.keeperAutoSkills = (game.stats.keeperAutoSkills ?? 0) + 1;
+        say(gk, skill.name.toUpperCase(), "var(--art-gold)", 1.5);
+      }
+    }
     function clearInactiveSpecials() {
       for (const p of players) {
         if (p.specialPrimed && !GAME_DATA.skills[p.specialPrimedId]?.contexts.includes(skillContext(p))) { p.specialPrimed = false; p.specialPrimedId = null; }
@@ -660,8 +729,9 @@
         }
         return;
       }
+      autoKeeperSkills();
       for (const p of players) {
-        if (humanFor(p) || p.specialUsed || game.clock < (p.abilityCheckAt ?? 0)) continue;
+        if (humanFor(p) || p.specialUsed || specialData(p)?.auto || game.clock < (p.abilityCheckAt ?? 0)) continue;
         p.abilityCheckAt = game.clock + .7;
         const skill = specialData(p);
         const relevant = skill?.effect === "keeper" ? ball.kind === "shot" || toT(p.team, ballUV())[0] < .22 : true;
@@ -890,14 +960,19 @@
       duration, extraTime: !!game.extraTime, clockStopped: game.mode !== "play" || game.stoppage || !!game.pendingSubs?.length,
       refBreak: game.refBreak ? { phase: game.refBreak.phase, remaining: Math.max(0, Math.ceil(15 - game.refBreak.elapsed)) } : null,
       penalty: game.penalty ? { kind: game.penalty.kind ?? "shootout", score: { ...game.penalty.score }, history: { R: [...game.penalty.history.R], B: [...game.penalty.history.B] }, attack: game.penalty.attack, phase: game.penalty.phase, turn: game.penalty.turn, last: game.penalty.phase === "choose" ? null : game.penalty.last, winner: game.penalty.winner,
+        actors: Object.fromEntries(["taker", "keeper"].map(role => {
+          const p = game.penalty.actors?.[role === "taker" ? game.penalty.attack : otherTeam(game.penalty.attack)];
+          return [role, p ? { id: p.id, name: p.name, number: p.num ?? null, team: p.team } : null];
+        })),
         players: humans.map(h => ({ slot: h.slot, team: h.team, role: h.team === game.penalty.attack ? "attack" : "defend", locked: !!game.penalty.choices[h.team] })) } : null,
       ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
       players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
-        special: { kind: specialKind(h.selected), icon: specialData(h.selected)?.icon ?? "", name: specialName(h.selected), contexts: specialData(h.selected)?.contexts ?? [], context: skillContext(h.selected), used: !!h.selected?.specialUsed, primed: !!h.selected?.specialPrimed, opening: openingSkills(), defenseOnly: defensiveSkill(h.selected), defending: defendingTeam(h.team), ...specialAvailability(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) },
+        special: { kind: specialKind(h.selected), icon: specialData(h.selected)?.icon ?? "", name: specialName(h.selected), contexts: specialData(h.selected)?.contexts ?? [], context: skillContext(h.selected), used: !!h.selected?.specialUsed, primed: !!h.selected?.specialPrimed, opening: openingSkills(), defenseOnly: defensiveSkill(h.selected), defending: defendingTeam(h.team), ...specialAvailability(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock), auto: !!specialData(h.selected)?.auto, minutesLeft: Math.ceil(Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) * PACE), short: specialData(h.selected)?.short ?? "" },
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
         pressing: !!h.pressing && defendingTeam(h.team), yellows: h.selected?.yellows ?? 0,
+        style: h.selected?.styleId ? { id: h.selected.styleId, name: styleOf(h.selected).name, en: styleOf(h.selected).en, desc: styleOf(h.selected).desc } : null,
         charge: h.charge ? { action: h.charge.action, power: chargePower(h) } : null,
         aim: aimFor(h).screen, role: h.selected?.role ?? null,
         position: h.selected ? [...h.selected.pos] : null })) });
@@ -1007,6 +1082,8 @@
     function setNote(text) { game.note = text; game.dirty = true; }
     function resumePlay() {
       const stopped = game.stoppage; game.stoppage = false;
+      // Restart callbacks scheduled before this point belong to an earlier stoppage and must not fire later.
+      game.playSerial = (game.playSerial ?? 0) + 1;
       game.refWait = null; game.deadBallReason = null; game.restartTaker = null;
       if (stopped) { say(ref, "Tiếp tục!", "var(--color-card)", 1.5); ref.keys.push([T, T + .5, "whistle"]); }
     }
@@ -1052,9 +1129,10 @@
       if (!["play", "reset", "celebrate"].includes(game.mode) || game.refBreak || (game.fight?.until ?? 0) > T) return;
       if (game.callouts.some(c => c.who === ref && T - c.t < c.life)) return;
       if (game.callouts.filter(c => T - c.t < c.life).length >= 2) return;
-      const available = bench[t].filter(b => !b.off && !b.injured && !b.subbing && !b.script);
+      const available = bench[t].filter(b => !b.off && (!b.injured || b.bandage) && !b.subbing && !b.script);
       if (!available.length) return;
       const b = available[Math.floor(benchRng() * available.length)], lines = BENCH_LINES[event];
+      if (b.bandage && event !== "criticism") game.benchCheer = { who: b, until: T + 2 };
       say(b, `Dự bị: ${lines[Math.floor(benchRng() * lines.length)]}`, event === "criticism" ? "var(--color-coral)" : "var(--color-card)", 2);
       game.benchTalkAt = T + 6 + benchRng() * 5;
     }
@@ -1121,7 +1199,7 @@
     }
     /** Ball flight from where it is now. `curve` bends it sideways (px), `wobble` makes a knuckleball dance. */
     function fly(b, dur, arc, opts = {}) {
-      ball.mode = "fly"; ball.owner = null;
+      ball.mode = "fly"; ball.owner = null; ball.flight = (ball.flight ?? 0) + 1;
       ball.seg = { t0: T, t1: T + dur, a: { g: [...ball.g], h: ball.h }, b, arc, roll: !!opts.roll, onEnd: opts.onEnd, kind: opts.kind ?? "pass", curve: opts.curve ?? 0, wobble: opts.wobble ?? 0 };
       ball.kind = ball.seg.kind;
     }
@@ -1246,12 +1324,17 @@
         if (rng() < 0.65 && pass(c, { forwardOnly: true, toFwd: true, long: d < 0.45 })) return;
         return dribble(c, { direct: true });
       }
+      // His playing style: how far out he shoots, whether he takes men on, crosses or looks for a long ball.
+      const st = styleOf(c), w = toT(c.team, c.pos)[1], wide = Math.abs(w - 0.5) > 0.22;
+      if (st.cross && wide && d > 0.6 && rng() < st.cross && pass(c, { toBox: true })) return;
+      if (st.dribble > 0 && opp.d > 2 && d > 0.35 && d < 0.8 && rng() < st.dribble) { c.dribStyle = "dribble"; return dribble(c, { direct: true }); }
+      if (st.long && d < 0.5 && rng() < st.long && pass(c, { long: true, forwardOnly: true, toFwd: true })) return;
       // Close to goal: shoot, or now and then square it to a team-mate who is even closer and freer. Never out wide or back.
-      if (d > 0.74) {
+      if (d > 0.74 - st.shoot) {
         if (rng() < 0.15 && pass(c, { closerOnly: true })) { game.stats.squares = (game.stats.squares ?? 0) + 1; return; }
         return shoot(c);
       }
-      if (d > (c.team === mom ? 0.6 : 0.66) && rng() < (c.team === mom ? 0.55 : 0.42)) return shoot(c);
+      if (d > (c.team === mom ? 0.6 : 0.66) - st.shoot && rng() < (c.team === mom ? 0.55 : 0.42)) return shoot(c);
       // When this side's goal is overdue they take the game to the other side: shots from the edge of the box, and
       // passing moves into it (beyond the usual couple a match).
       const next = game.story.goals[game.storyIdx];
@@ -1263,9 +1346,9 @@
       if (due >= 2 && d <= 0.55 && rng() < 0.7 && pass(c, { forwardOnly: true, toFwd: true, long: d < 0.4 })) return;
       if (due >= 3 && d >= 0.6) return dribble(c, { direct: true });
       // Now and then a flowing move: three or four players passing one-touch into the box (a couple a match at most).
-      if (d > 0.3 && d < 0.72 && game.chainsUsed[c.team] < 2 && rng() < (c.team === mom ? 0.12 : 0.04) && chain(c)) return;
+      if (d > 0.3 && d < 0.72 && game.chainsUsed[c.team] < 2 && rng() < (c.team === mom ? 0.12 : 0.04) * st.chain && chain(c)) return;
       // One-twos and triangles.
-      if (d > 0.28 && d < 0.7 && rng() < (c.team === mom ? 0.3 : mom ? 0.08 : 0.18) && combo(c)) return;
+      if (d > 0.28 && d < 0.7 && rng() < Math.min(.7, (c.team === mom ? 0.3 : mom ? 0.08 : 0.18) * st.combo) && combo(c)) return;
       // A trick only when a defender is right on him, and not often.
       const trick = c.star ? 0.2 : 0.06;
       if (opp.p && opp.d < 3.5 && rng() < trick) { game.stats.tricks++; return skill(c, opp.p); }
@@ -1287,7 +1370,9 @@
         const goalUV = toW(c.team, [1, 0.5]), nearer = mdist(c.pos, goalUV) - mdist(tgt, goalUV);
         if (o.closerOnly && (nearer < 2 || nearest(opponents(c.team), tgt).d < 3)) continue;
         const open = nearest(opponents(c.team), tgt).d;
-        const s = (tT[0] - cT[0]) * (o.backOk ? -1 : 2) + rng() * 0.6 + Math.min(open, 8) * 0.05 - (open < 2.5 ? 0.5 : 0) + (m.star ? 0.3 : 0)
+        const ms = styleOf(m).target, lofted = o.long || dist > 18;
+        const styled = ms.all + (lofted ? ms.long : ms.short * 0.5) + ((o.forwardOnly || o.toFwd) && tT[0] > cT[0] + 0.08 ? ms.through : 0) + (tT[0] > 0.72 ? ms.box * (o.toBox ? 1.5 : 0.6) : 0) + (o.toBox && tT[0] > 0.72 ? 1 : 0);
+        const s = (tT[0] - cT[0]) * (o.backOk ? -1 : 2) + rng() * 0.6 + Math.min(open, 8) * 0.05 - (open < 2.5 ? 0.5 : 0) + (m.star ? 0.3 : 0) + styled
           + (o.toFwd && shapeSlot(m, SHAPES[game.shape[c.team]]).line === "FW" ? 1.2 : 0)
           - (!o.backOk && cT[0] > 0.6 && tT[0] < cT[0] - 0.03 ? 1.2 : 0)
           // In the final third, a pass that takes the ball further from goal (out to the flank) is a last resort.
@@ -1316,7 +1401,7 @@
       // Headers only happen close in, in front of the posts; a low cross gets a first-time volley; an overhead kick is rare.
       const [td, tw] = toT(c.team, tgt);
       const aerial = cross && td >= 0.85 && tw > 0.3 && tw < 0.7 && rng() < 0.8
-        ? (m.star && rng() < 0.05 ? "bicycle" : rng() < 0.6 ? "header" : "volley") : null;
+        ? (m.star && rng() < 0.05 ? "bicycle" : rng() < 0.6 + styleOf(m).header ? "header" : "volley") : null;
       // A defender may read a ground pass. The side whose goal is due gets the better of it, within reason.
       let thief = null;
       const f = 0.55, mom = game.momentum, next = game.story.goals[game.storyIdx], overdue = game.golden ? 8 : next ? Math.max(0, minute() - next[1]) : 0;
@@ -1367,7 +1452,7 @@
     }
     
     function receive(p, aerial, options = {}) {
-      if (game.mode !== "play") return;
+      if (game.mode !== "play" || game.stoppage) return;
       if (manual(p) && mdist(p.pos, ballUV()) > 3) {
         // The user can leave a receiving route; a pass arriving there must not teleport to his feet.
         return looseBall(inPitch(ballUV()), { exclude: p, maxArc: .15 });
@@ -1438,7 +1523,8 @@
       mkScript(who, [T, who.pos], [T + runDur, spot]);
       fly({ g: add(ground(...spot), [ATT[who.team] * 6, 1]), h: 0 }, ballDur, arc, { onEnd: () => {
         if (runDur <= ballDur + 0.05) return receive(who);
-        at(t0 + runDur, () => { if (game.mode === "play" && ball.mode === "dead" && !ball.owner) receive(who); });
+        const flight = ball.flight;
+        at(t0 + runDur, () => { if (game.mode === "play" && !game.stoppage && ball.flight === flight && ball.mode === "dead" && !ball.owner) receive(who); });
       } });
     }
     
@@ -1469,8 +1555,9 @@
         mkScript(taker, [T, taker.pos], [T + dur, stand], [T + dur + 0.5, stand]);
         taker.busyUntil = Infinity;
         at(T + dur, () => lockFace(taker, T + 1.2, Math.sign(ground(0.5, 0.5)[0] - taker.g[0]) || ATT[t]));
+        const serial = game.playSerial;
         at(T + dur + 0.5, () => {
-          if (game.mode !== "play") return;
+          if (game.mode !== "play" || !game.stoppage || game.playSerial !== serial) return;
           carry(taker); game.carrier = taker; game.poss = t; resumePlay(); clearRestartNote(); game.restart = "kickIn"; taker.busyUntil = T; game.dirty = true;
         });
         });
@@ -2032,8 +2119,9 @@
       holdStill(c, Tt, Tt + 2.5);
       c.keys.push([Tt, Tt + 1.2, "fall"], [Tt + 1.2, Tt + 1.8, "sitUp"]);
       at(Tt + 0.1, () => say(c, line("ouch"), "var(--color-card)", 0.8));
-      // The free kick is taken where the foul happened.
+      // The free kick is taken where the foul happened; the other side backs off from the ball at once.
       const spot = inPitch([...c.pos]);
+      game.fk = { spot: [...spot], att: c.team, until: T };
       fly({ g: ground(...spot), h: 0 }, 0.4, 0.05, { roll: true });
       ref.keys.push([Tt + 0.15, Tt + 0.8, "whistle"]); at(Tt + 0.2, () => say(ref, "Dừng lại! Phạm lỗi!", "var(--color-card)", 1.6));
       if (options.forcedCard != null) {
@@ -2189,7 +2277,7 @@
       if (insideKeeperArea(otherTeam(c.team), spot)) return awardPenalty(c, prepared);
       if (!prepared) {
         game.stoppage = true; game.carrier = null;
-        game.deadBallReason = "freeKick";
+        game.deadBallReason = "freeKick"; game.fk = { spot: [...spot], att: c.team, until: T };
         ball.mode = "dead"; ball.owner = null; ball.seg = null; ball.g = ground(...spot); ball.h = 0; ball.show = true;
         setNote(`Đá phạt · ${TEAM_NAME[c.team]}`);
         return prepareRestart(() => setPiece(c, spot, true));
@@ -2338,7 +2426,9 @@
       const roll = o.goalProbability != null ? abilityRng() : rng();
       let gc = o.goalProbability ?? clamp(goalChance(c, style) - keeperBonus + (o.special ? .24 : 0), 0, .95);
       if (o.goalProbability != null && roll < gc) game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
-      if (specialActive(gk) && o.goalProbability == null) { gc = 0; o.onTarget = true; gk.specialUntil = 0; }
+      const keeperSkill = specialActive(gk) ? activeSpecialData(gk) : null;
+      if (keeperSkill?.auto && o.goalProbability == null) gc *= 1 - keeperSkill.save;
+      if (o.goalProbability == null) gc = Math.max(0, gc - styleOf(gk).save);
       // Misses: mostly saved or off target; the woodwork is rare (and at most twice a match per side).
       let outcome = roll < gc ? "goal" : roll < gc + (1 - gc) * 0.55 ? "save" : roll < gc + (1 - gc) * 0.6 ? "post" : "wide";
       if (o.onTarget) outcome = roll < gc ? "goal" : "save";
@@ -2389,12 +2479,12 @@
           const r = rig(POSES[kind]), hands = lerp(r.handF, r.handB, 0.5), gD = ground(...dest);
           const hs = [gD[0] + (hands[0] + 4) * S * faceDir, gD[1] + (hands[1] - 2) * S], hEnd = (gD[1] + 1 - hs[1]) / K;
           const arc = Math.max(Math.min(spec.arc, 0.5), wallArc(hEnd)), flight = Math.max(0.3, dist / spec.speed, gravFlight(arc)), tc = T + flight;
-          mkScript(gk, [T + 0.18, gk.pos], [tc - 0.03, dest], [tc + 1.3, dest]);
+          mkScript(gk, [T + (keeperSkill?.quick ? 0.06 : 0.18), gk.pos], [tc - 0.03, dest], [tc + 1.3, dest]);
           gk.keys.push([tc - 0.3, tc + 0.35, kind]);
           if (kind === "dive") gk.keys.push([tc + 0.35, tc + 1.0, "diveLand"], [tc + 1.0, tc + 1.4, "sitUp"]);
           lockFace(gk, tc + 1.3, faceDir);
           // Diving and hard shots are mostly palmed away; ones at his body are held.
-          const parry = flight < 0.45 || rng() < ({ dive: 0.7, gkHigh: 0.4, gkLow: 0.25, gkChest: 0.15 }[kind] + (flight < 0.5 ? 0.2 : 0) - .05 * fit(gk));
+          const parry = !keeperSkill?.hold && (flight < 0.45 || rng() < ({ dive: 0.7, gkHigh: 0.4, gkLow: 0.25, gkChest: 0.15 }[kind] + (flight < 0.5 ? 0.2 : 0) - .05 * fit(gk)));
           fly({ g: [hs[0], gD[1] + 1], h: hEnd }, flight, arc, { kind: "shot", curve: curveFor(0.6), onEnd: () => keeperSaves(gk, c, parry, kind) });
           gk.busyUntil = tc + 1.5;
           return;
@@ -2712,16 +2802,19 @@
     const kickoffSpot = p => p === kickoffTaker(game.kickoffTeam) ? toW(p.team, [0.487, 0.5]) : toW(p.team, (p.team === game.kickoffTeam ? KICKOFF : KICKOFF_DEF)[p.i]);
     function formation(p) {
       const t = p.team, [bd, bw] = toT(t, ballUV()), poss = game.poss === t, sh = SHAPES[game.shape[t]];
-      if (p.role === "GK") return toW(t, [0.03 + (bd < 0.3 ? (0.3 - bd) * 0.12 : 0), 0.5 + (bw - 0.5) * 0.3]);
+      const st = styleOf(p);
+      if (p.role === "GK") return toW(t, [clamp(0.03 + st.line + (bd < 0.3 ? (0.3 - bd) * 0.12 : 0), .015, .12), 0.5 + (bw - 0.5) * 0.3]);
       // A side sitting in 3-1-1 springs back into 2-1-2 the moment it has the ball, further still on the counter.
       const shape = sh.sit && poss ? SHAPES[sh.withBall] : sh;
       const counter = game.counter && game.counter.team === t && T < game.counter.until;
       const { home: [hd, hw], line } = shapeSlot(p, shape);
-      let d = hd * 0.55 + bd * 0.45 + (poss ? 0.08 : -0.07) + shape.push + (counter && line !== "DF" ? 0.08 : 0);
-      let w = poss ? 0.5 + (hw - 0.5) * 1.2 + (bw - 0.5) * 0.25 : 0.5 + (hw - 0.5) * 0.8 + (bw - 0.5) * 0.4;
-      if (line === "DF") d = Math.min(d, poss ? 0.56 + shape.push : Math.max(0.08, bd - 0.05));
+      let d = hd * 0.55 + bd * 0.45 + (poss ? 0.08 + st.push : -0.07 + st.drop) + shape.push + (counter && line !== "DF" ? 0.08 : 0);
+      // Width: a winger hugs the touchline, a central striker or a full-back who cuts inside comes in.
+      const hwStyled = 0.5 + (hw - 0.5) * st.width + (hw === 0.5 && st.width > 1 ? (p.n % 2 ? .1 : -.1) * (st.width - 1) * 2 : 0);
+      let w = poss ? 0.5 + (hwStyled - 0.5) * 1.2 + (bw - 0.5) * 0.25 : 0.5 + (hwStyled - 0.5) * 0.8 + (bw - 0.5) * 0.4;
+      if (line === "DF") d = Math.min(d, poss ? 0.56 + shape.push + st.cap : Math.max(0.08, bd - 0.05 + Math.max(0, st.drop)));
       if (line === "FW") d = Math.max(d, poss ? 0.4 : sh.sit ? 0.45 : 0.3);
-      d += 0.012 * Math.sin(T * 0.6 + p.n * 1.7); w += 0.016 * Math.sin(T * 0.5 + p.n * 2.3);
+      d += 0.012 * st.roam * Math.sin(T * 0.6 + p.n * 1.7); w += 0.016 * st.roam * Math.sin(T * 0.5 + p.n * 2.3);
       return toW(t, [clamp(d, 0.06, 0.9), clamp(w, 0.06, 0.94)]);
     }
     /**
@@ -2741,8 +2834,12 @@
     }
     /** At a free kick or corner the other side keeps about five metres from the ball (the wall is scripted). */
     function targetFor(p) {
-      const t = baseTarget(p), fk = game.fk;
-      if (!fk || T >= fk.until || !p.team || p.bench || p.team === fk.att || game.mode !== "play") return t;
+      return keepOffBall(p, baseTarget(p));
+    }
+    /** Defenders keep 5 m from a free kick or corner for as long as the dead ball waits, however long a human takes. */
+    function keepOffBall(p, t) {
+      const fk = game.fk, waiting = game.stoppage && ["foul", "freeKick", "corner"].includes(game.deadBallReason);
+      if (!fk || (T >= fk.until && !waiting) || !p.team || p.bench || p.team === fk.att || game.mode !== "play") return t;
       const d = mdist(t, fk.spot);
       if (d >= 5) return t;
       const away = d > 0.1 ? t : toW(p.team, [0, 0.5]);
@@ -2824,7 +2921,7 @@
       // At the end the winners jog over to their captain; the beaten side walks.
       if (m === "ceremony" || m === "fulltime") return p.team === game.winner ? 3.0 : 2.1;
       if (game.counter && game.counter.team === p.team && T < game.counter.until) return 6.0;
-      if (game.press[p.team] === p) return 5.5;
+      if (game.press[p.team] === p) return 5.5 + Math.max(0, styleOf(p).press);
       // Off the ball: a jog over short distances, a run when there is ground to make up.
       return dist > 8 ? 4.8 : 3.2;
     }
@@ -2834,7 +2931,13 @@
       for (const t of TEAMS) {
         game.press[t] = null;
         if (game.mode !== "play" || game.stoppage || game.poss === t) continue;
-        game.press[t] = nearest(outfield(team[t]).filter(p => !p.script), ballUV()).p;
+        // The nearest man presses; an eager presser (a destroyer, a box-to-box runner) takes over from a few metres further.
+        let best = null, bestScore = Infinity;
+        for (const p of outfield(team[t]).filter(p => !p.script)) {
+          const s = mdist(p.pos, ballUV()) - styleOf(p).press * 6;
+          if (s < bestScore) { best = p; bestScore = s; }
+        }
+        game.press[t] = best;
       }
     }
     
@@ -2845,6 +2948,14 @@
       const m = game.mode, near = mdist(p.pos, ballUV()), moving = speed > 2.2 ? "run" : speed > 0.9 ? "walkSad" : null;
       if (p.medic) return moving ?? "ready";
       if (p.bench) {
+        if (p.bandage) {
+          // Standing by the touchline: he can only cheer, with whatever is not strapped up.
+          const happy = (m === "celebrate" && game.scorer?.team === p.team) || ((m === "fulltime" || m === "ceremony") && game.winner === p.team);
+          const cheering = happy || (game.benchCheer?.who === p && T < game.benchCheer.until);
+          if (p.bandage === "leg") return cheering ? "crutchCheer" : "crutch";
+          if (p.bandage === "arm") return cheering ? "slingCheer" : "sling";
+          return cheering ? joy(p, T - game.modeT) : moving ?? "ready";
+        }
         if (moving) return moving;
         if (p.injured) return "sitSad";
         const s = T - game.modeT;
@@ -2884,7 +2995,9 @@
       // Held movement takes over ordinary AI routes every step; physical kicks/slides and the restart taker stay protected.
       if (selectedHuman && !lockedRestart) takeManualMovement(p, selectedHuman);
       if (!waiting) p.waitMovement = false;
-      const h = !lockedRestart && selectedHuman && (!waiting || p.waitMovement) ? selectedHuman : null;
+      // Before a kick-off the selected man walks back on his own unless the player is steering him right now.
+      const resetting = game.mode === "reset", steering = !!(selectedHuman && (selectedHuman.x || selectedHuman.y));
+      const h = !lockedRestart && selectedHuman && (!waiting || (p.waitMovement && (!resetting || steering))) ? selectedHuman : null;
       if (p.script) {
         if (T >= p.script.keys[0][0]) {
           p.pos = scriptPos(p, T);
@@ -2900,8 +3013,12 @@
         const direction = h ? courtUV(chase ?? [h.x, h.y]) : null;
         const directionLength = direction ? Math.hypot(direction[0] * LEN, direction[1] * WID) : 0;
         const advance = pressing ? Math.max(0, Math.min(4, mdist(p.pos, game.carrier.pos) - 0.85)) : 4;
-        const constrain = game.stoppage && game.restartTaker === p ? uv => [clamp(uv[0], .005, .995), clamp(uv[1], .005, .995)] : inPitch;
+        // Waiting for a kick-off nobody may step into the other half.
+        const ownHalf = uv => { const [d, w] = toT(p.team, uv); return d > .48 ? toW(p.team, [.48, w]) : uv; };
+        const constrain = game.stoppage && game.restartTaker === p ? uv => [clamp(uv[0], .005, .995), clamp(uv[1], .005, .995)] : game.mode === "reset" ? uv => ownHalf(inPitch(uv)) : inPitch;
         let tgt = h ? constrain([p.pos[0] + (directionLength ? direction[0] / directionLength * advance : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * advance : 0)]) : targetFor(p);
+        // A human defender may move around a waiting free kick, but not walk up to the ball.
+        if (h && game.stoppage && directionLength) tgt = keepOffBall(p, tgt);
         const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
         const top = (speedSkillActive(p) ? activeSpecialData(p).speed : defenseActive(p.team) && p.role === "DF" ? 7.8 : p.keeperRush ? GAME_DATA.goalkeeper.speed : h ? pressing ? 6.8 : h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
@@ -2968,7 +3085,7 @@
       for (const m of medics) { m.off = false; m.treatmentAt = null; m.pos = [...m.post]; m.g = ground(...m.pos); }
       for (const p of players) if (p.off || p.sentOff) { p.off = p.sentOff = false; p.script = null; p.pos = toW(p.team, KICKOFF_DEF[p.i]); }
       for (const p of players) { p.endPose = null; p.stayDown = false; p.sulking = false; p.near = null; p.subbing = false; }
-      pickSquads(); game.injured = false; game.subsUntil = 0;
+      pickSquads(); game.injured = false; game.subsUntil = 0; ambulance.keys = null; game.benchCheer = null;
       game.lastGoalMinute = 0;
       game.story = newStory(); game.storyIdx = 0; game.extra = false; game.shapeAt = { R: -99, B: -99 }; game.chainsUsed = { R: 0, B: 0 }; game.posts = { R: 0, B: 0 }; game.scuffled = false; game.trailed = { R: 0, B: 0 }; game.momentum = null; game.counter = null; game.chain = null;
       game.pullAt = -99;
@@ -2992,9 +3109,11 @@
         const taker = kickoffTaker(game.kickoffTeam);
         if (game.restartTaker !== taker) pointRestart(taker);
         if (!taker) return fullTime(otherTeam(game.kickoffTeam));
-        const lined = players.filter(on).every(p => (manual(p) && p.waitMovement) || (!p.script && mdist(p.pos, kickoffSpot(p)) < 1.6));
+        // Both sides must be back in their own half; a player still steering his man may stand anywhere in it.
+        const ownHalf = p => toT(p.team, p.pos)[0] <= .505, field = players.filter(on);
+        const lined = field.every(p => ownHalf(p) && ((manual(p) && p.waitMovement && humanFor(p) && (humanFor(p).x || humanFor(p).y)) || (!p.script && mdist(p.pos, kickoffSpot(p)) < 1.6)));
         const subbing = T < (game.subsUntil ?? 0), since = T - Math.max(game.modeT, game.subsUntil ?? 0);
-        if (!subbing && !game.pendingSubs?.length && ((s > .3 && lined && ball.show) || since > 8)) {
+        if (!subbing && !game.pendingSubs?.length && ((s > .3 && lined && ball.show) || (since > 8 && field.every(ownHalf)) || since > 20)) {
           game.mode = "play"; game.stoppage = true; game.restart = "kickoff";
           game.deadBallReason = "kickoff"; game.halfBreak = false; game.newMatch = false; game.afterGoal = false; game.ballFetched = false; game.poss = game.kickoffTeam; game.kickoffPass = true; game.dirty = true;
           taker.pos = toW(taker.team, [0.487, 0.5]); taker.g = ground(...taker.pos);
@@ -3036,7 +3155,7 @@
         for (const p of team[otherTeam(game.winner)]) at(T + 4.5, () => lockFace(p, T + 6, Math.sign(ground(...WINNERS_AT)[0] - p.g[0]) || 1));
       } else if (m === "ceremony" && s > CEREMONY && !interactive) startMatch();
     }
-    const TUNNEL = [0.32, -0.11];
+    const TUNNEL = [0.32, -0.11], AMB_V = 1.075;
     function kickoffReady() {
       const p = game.restartTaker;
       return game.restart === "kickoff" && game.mode === "play" && game.stoppage && !game.refBreak && !!p && on(p) && !p.script && !game.pendingSubs?.length && T >= (game.subsUntil ?? 0) && mdist(p.pos, [.5, .5]) <= GAME_DATA.restarts.kickoff.takerRange;
@@ -3061,6 +3180,7 @@
     function swapPlaces(p, b) {
       for (const k of IDENT) [p[k], b[k]] = [b[k], p[k]];
       if (!p.specialUsed && !GAME_DATA.skills[p.specialId]?.roles.includes(p.role)) assignSpecial(p);
+      ensureStyle(p);
       p.keeperRush = null; p.rushCheckAt = 0;
       for (const k of ["pos", "g", "vel", "face", "faceDir", "pose", "poseName", "stride", "keys", "faceLock", "script"]) [p[k], b[k]] = [b[k], p[k]];
       // The man coming on starts a new stint; the man going off starts his rest.
@@ -3115,7 +3235,8 @@
     function prepareRestart(resume) {
       if (game.mode !== "play" || !game.stoppage) return;
       for (const t of TEAMS) planSubs(t, 0);
-      waitForSubs(resume);
+      const serial = game.playSerial;
+      waitForSubs(() => { if (game.playSerial === serial && game.stoppage) resume(); });
     }
     /** Keep the ball dead until both substitutions and the players' entry onto the pitch finish. */
     function waitForSubs(resume) {
@@ -3142,15 +3263,15 @@
       const serious = mates.length < 2 || rng() < 0.5;
       // A stretcher goes off on the bench side and down the tunnel, where the medics came from; a man helped off
       // leaves by the nearest touchline (on the near side he sits down on the grass beyond it).
-      const exitFar = serious || far;
-      const exit = [clamp(X[0], 0.08, 0.92), exitFar ? -0.015 : 1.015], beyond = serious ? TUNNEL : [exit[0], exitFar ? -0.075 : 1.05];
+      // Every injured man leaves by the near touchline, where an ambulance pulls up to take him to hospital.
+      const exit = [clamp(X[0], 0.1, 0.9), 1.015], beyond = [exit[0], 1.06];
       let tOut, tEnd;
       if (serious) {
         // The medics run on with the stretcher, see to him, lift him and carry him off at a walk.
         game.stats.stretchers = (game.stats.stretchers ?? 0) + 1;
         const tGo = Tt + 2.8, tArr = tGo + Math.max(...medics.map((m, k) => mdist(m.pos, side(X, k ? 1 : -1)))) / 5;
         const tLift = tArr + 1.4;
-        tOut = tLift + Math.max(1.2, mdist(X, exit) / 2.4); tEnd = tOut + Math.max(1.2, mdist(exit, beyond) / 2.4);
+        tOut = tLift + Math.max(1.2, mdist(X, exit) / 2.4); tEnd = tOut + Math.max(0.7, mdist(exit, beyond) / 2.4);
         c.keys.push([Tt + 0.9, tLift, "hurt"], [tLift, tEnd + 0.2, "onStretcher"]);
         mkScript(c, [Tt, X], [tLift, X], [tOut, exit], [tEnd, beyond]);
         medics.forEach((m, k) => {
@@ -3168,15 +3289,15 @@
           });
         });
         at(tArr + 0.2, () => say(medics[0], pick(["Để chúng tôi xem!", "Nằm yên nhé!"]), "var(--color-card)", 1.1));
-        setNote(`Chấn thương · ${c.name} (${TEAM_NAME[c.team]}) · cáng ra ngoài`);
+        setNote(`Chấn thương · ${c.name} (${TEAM_NAME[c.team]}) · cáng ra xe cấp cứu`);
       } else {
         // A knock: two team-mates go over, get him up and help him off with his arms over their shoulders.
         game.stats.helpedOff = (game.stats.helpedOff ?? 0) + 1;
         const helpers = mates.slice(0, 2), tGo = Tt + 2.2;
         const tArr = tGo + Math.max(...helpers.map((h, k) => mdist(h.pos, side(X, k ? 1 : -1)))) / 3.5, tUp = tArr + 0.9;
-        tOut = tUp + Math.max(1.5, mdist(X, exit) / 1.8); tEnd = tOut;
-        c.keys.push([Tt + 0.9, tArr + 0.3, "hurt"], [tArr + 0.3, tUp, "sitUp"], [tUp, tOut + 0.6, "limp"]);
-        mkScript(c, [Tt, X], [tUp, X], [tOut, exit]);
+        tOut = tUp + Math.max(1.5, mdist(X, exit) / 1.8); tEnd = tOut + Math.max(0.9, mdist(exit, beyond) / 1.5);
+        c.keys.push([Tt + 0.9, tArr + 0.3, "hurt"], [tArr + 0.3, tUp, "sitUp"], [tUp, tEnd + 0.2, "limp"]);
+        mkScript(c, [Tt, X], [tUp, X], [tOut, exit], [tEnd, beyond]);
         helpers.forEach((h, k) => {
           const sgn = k ? 1 : -1;
           mkScript(h, [tGo, h.pos], [tArr, side(X, sgn * 0.55)], [tUp, side(X, sgn * 0.55)], [tOut, side(exit, sgn * 0.55)], [tOut + 0.3, side(exit, sgn * 0.55)]);
@@ -3190,6 +3311,7 @@
       }
       // The referee waves them on from a few metres away, then gets out of their path.
       game.refFocus = { uv: inPitch([X[0] + 0.12, X[1] + (far ? 0.15 : -0.15)]), until: Tt + 4 };
+      const { leave } = planAmbulance(beyond[0], tEnd);
       const sub = benchReady(c.team, 0.3, 0).sort((a, b) => b.energy - a.energy)[0];
       if (sub) {
         sub.subbing = true;
@@ -3200,15 +3322,23 @@
           // script: carried down the tunnel, or he hobbles to the bench, or off behind the near touchline.)
           const hurt = { name: c.name, num: c.num };
           swapPlaces(c, sub);
-          if (serious) at(tEnd, () => { sub.off = true; });
-          else if (!far) sub.exitTo = beyond;
+          // Into the ambulance and away; he takes no further part, but now and then he is back later, strapped up.
+          at(tEnd, () => { sub.off = true; });
+          if (game.forceInjuryReturn || benchRng() < .5) at(leave + (game.forceInjuryReturn ? 1 : 18 + benchRng() * 20), () => {
+            if (!sub.injured || !sub.off || !["play", "reset", "celebrate", "halftime"].includes(game.mode)) return;
+            sub.bandage = game.forceBandage ?? ["leg", "arm", "head"][Math.floor(benchRng() * 3)];
+            sub.off = false; sub.keys = []; sub.script = null; sub.drawPoseKey = null;
+            sub.pos = [...TUNNEL]; sub.g = ground(...sub.pos); sub.exitTo = [seatUV(sub)[0] + .012, -.022];
+            game.stats.injuredReturns = (game.stats.injuredReturns ?? 0) + 1;
+            at(T + 2.5, () => { if (!sub.off) say(sub, pick(["Tôi ổn rồi, cố lên anh em!", "Đá thay phần tôi nhé!", "Cố lên! Tôi cổ vũ đây!"]), "var(--color-card)", 1.6); });
+          });
           game.stats.subs++;
           setNote(`Thay người · ${TEAM_NAME[c.team]}: ${c.name} #${c.num} vào thay ${hurt.name} #${hurt.num}`);
         });
       } else {
         // Nobody left on the bench: a man short.
         c.sentOff = true;
-        at(serious ? tEnd : tOut + 0.1, () => { c.off = true; game.dirty = true; setNote(`${TEAM_NAME[c.team]} hết người dự bị · đá thiếu người`); });
+        at(tEnd, () => { c.off = true; game.dirty = true; setNote(`${TEAM_NAME[c.team]} hết người dự bị · đá thiếu người`); });
       }
       game.subsUntil = Math.max(game.subsUntil ?? 0, tOut + 0.5);
       return tOut + 0.4;
@@ -3601,7 +3731,8 @@
       } else if (ball.mode === "carried") {
         if (protectedBall(ball.owner) || mdist(p.pos, target) > 2.2) return null;
       } else if (ball.mode !== "dead") return null;
-      if (!insideKeeperArea(p.team, target) || mdist(p.pos, target) > rules.rushRange) return null;
+      const rushRange = rules.rushRange + styleOf(p).rush + (specialActive(p) && activeSpecialData(p)?.rush ? 3 : 0);
+      if (!insideKeeperArea(p.team, target) || mdist(p.pos, target) > rushRange) return null;
       const opponent = nearest(outfield(opponents(p.team)), target);
       const keeperArrival = mdist(p.pos, target) / rules.speed;
       if (ball.mode !== "carried" && opponent.p && keeperArrival + .1 >= opponent.d / (5.5 * (.7 + .3 * fit(opponent.p)))) return null;
@@ -3614,7 +3745,7 @@
         if (p.keeperRush) { p.keeperRush.target = decision.target; continue; }
         if (game.clock < (p.rushCheckAt ?? 0)) continue;
         p.rushCheckAt = game.clock + GAME_DATA.goalkeeper.decisionInterval;
-        const confidence = GAME_DATA.goalkeeper.confidence + (specialActive(p) && specialData(p)?.rush ? .2 : 0);
+        const confidence = GAME_DATA.goalkeeper.confidence + styleOf(p).confidence + (specialActive(p) && specialData(p)?.rush ? .2 : 0);
         if (keeperRng() < confidence) {
           p.keeperRush = decision;
           say(p, "Để tôi bắt!", "var(--color-sky-soft)", 1);
@@ -3788,15 +3919,18 @@
         keyBox: G(back, 0.5)[1], keyMouth: G(end, 0.5)[1],
       };
     }
+    // The far netting (back, far side) and the near netting (near side, roof) are separate depth items, so a ball in
+    // the net is drawn behind the near side, the roof and the posts instead of in front of them.
     const goals = [0, 1].map(end => {
-      const box = el("g", {}), mouth = el("g", {}), parts = {};
+      const box = el("g", {}), near = el("g", {}), mouth = el("g", {}), parts = {};
       for (const k of ["back", "sideL", "sideR", "top"]) {
-        parts[k] = el("polygon", { fill: "url(#" + UID + "-net)", stroke: "var(--color-card)", "stroke-width": 1.4, opacity: 0.95 }, box);
-        parts[k + "Tint"] = el("polygon", { fill: "var(--color-card)", "fill-opacity": 0.14, stroke: "none" }, box);
+        const parent = k === "sideR" || k === "top" ? near : box;
+        parts[k] = el("polygon", { fill: "url(#" + UID + "-net)", stroke: "var(--color-card)", "stroke-width": 1.4, opacity: 0.95 }, parent);
+        parts[k + "Tint"] = el("polygon", { fill: "var(--color-card)", "fill-opacity": 0.14, stroke: "none" }, parent);
       }
       parts.mouthInk = el("polyline", { "stroke-width": 7 }, mouth);
       parts.mouth = el("polyline", { stroke: "var(--color-card)", "stroke-width": 4 }, mouth);
-      return { end, box, mouth, parts, bulge: -1, keyBox: 0, keyMouth: 0 };
+      return { end, box, near, mouth, parts, bulge: -1, keyBox: 0, keyMouth: 0 };
     });
     function drawGoal(g, bulge) {
       if (Math.abs(bulge - g.bulge) < 0.05) return;
@@ -3873,6 +4007,13 @@
       q.mouth = q.head.querySelector("[data-mouth]"); q.whistle = q.head.querySelector("[data-whistle]");
       q.armFInk = el("path", { "stroke-width": 8 }, root); q.armF = el("path", { stroke: skin, "stroke-width": 4.6 }, root);
       if (p.role === "GK") { q.gloveF = el("circle", { r: 4, fill: "var(--color-card)", "stroke-width": 1.8 }, root); q.gloveB = el("circle", { r: 4, fill: "var(--color-card)", "stroke-width": 1.8 }); root.insertBefore(q.gloveB, q.armB.nextSibling); }
+      if (p.team) {
+        q.legWrap = el("path", { stroke: "var(--color-card)", "stroke-width": 5.5, opacity: 0 }, root);
+        q.sling = el("path", { fill: "var(--color-card)", "stroke-width": 1.8, opacity: 0 }, root);
+        q.headBand = el("path", { d: "M-15.5 -5 Q0 -12 15.5 -5 L15.5 1 Q0 -6 -15.5 1 Z M-16 -2 l-5 -4 m5 4 l-4 3", fill: "var(--color-card)", "stroke-width": 1.8, opacity: 0 }, root);
+        q.crutch = el("path", { "stroke-width": 3.2, opacity: 0 }, root);
+        q.crutchFill = el("path", { stroke: "var(--art-gold-deep)", "stroke-width": 1.4, opacity: 0 }, root);
+      }
       if (p === ref) { q.card = el("g", { opacity: 0 }, root); q.cardRect = el("rect", { x: -4.5, y: -15, width: 9, height: 13, rx: 1.5, fill: "var(--art-card-yellow)", "stroke-width": 1.8 }, q.card); }
       p.sprite = { root, shadow, q };
     }
@@ -3887,7 +4028,40 @@
       if (q.num) q.num.textContent = p.num;
     }
     pickSquads();
-    
+    // The back of a head for camera angles behind a player: hair over the crown, one ear, no face.
+    const BACK_HEADS = {
+      curly: `<g fill="HAIR" stroke-width="1.8"><circle cx="-9" cy="-8" r="7" /><circle cx="0" cy="-12" r="7" /><circle cx="8" cy="-8" r="6" /><circle cx="-12" cy="2" r="6" /><circle cx="-4" cy="5" r="6" /></g>`,
+      default: `<path d="M-15 2 Q-17 -16 -1 -16 Q14 -16 14 -4 Q12 7 4 11 Q-9 13 -15 2 Z" fill="HAIR" stroke-width="2" />`,
+    };
+    /** A standalone figure in the same rig, ink and kit as the match, for other camera angles (the penalty scene). */
+    function figureMarkup(p, name, { back = false, phase = 0 } = {}) {
+      const r = rig(poseOf(name, phase) ?? POSES.ready), skin = p.skin === 2 ? "var(--art-skin-2)" : "var(--art-skin)";
+      const kit = { shirt: p.role === "GK" ? KIT[p.team].gk : KIT[p.team].shirt, shorts: KIT[p.team].shorts, socks: KIT[p.team].socks };
+      const path = (d, attrs) => `<path d="${d}" ${attrs} />`, parts = [];
+      parts.push(path(seg(r.top, r.elbowB, r.handB), 'stroke-width="8"'), path(seg(r.top, r.elbowB, r.handB), `stroke="${skin}" stroke-width="4.6"`));
+      if (p.role === "GK") parts.push(`<circle cx="${r.handB[0].toFixed(1)}" cy="${r.handB[1].toFixed(1)}" r="4" fill="var(--color-card)" stroke-width="1.8" />`);
+      for (const s of ["B", "F"]) {
+        const knee = r["knee" + s], foot = r["foot" + s], shin = Math.atan2(foot[1] - knee[1], foot[0] - knee[0]) * 180 / Math.PI - 90;
+        parts.push(path(seg(r.hip, knee, foot), 'stroke-width="9"'), path(seg(r.hip, knee), `stroke="${skin}" stroke-width="5.5"`),
+          path(seg(lerp(knee, foot, 0.3), foot), `stroke="${kit.socks}" stroke-width="5.5"`),
+          `<ellipse cx="${(foot[0] + 2).toFixed(1)}" cy="${foot[1].toFixed(1)}" rx="7" ry="3.6" fill="var(--art-shorts)" stroke-width="1.8" transform="rotate(${shin.toFixed(0)} ${pt(foot)})" />`);
+      }
+      parts.push(path(seg(r.hip, r.waist), 'stroke-width="23"'), path(seg(r.hip, r.waist), `stroke="${kit.shorts}" stroke-width="18.5"`));
+      parts.push(path(seg(r.waist, r.top), 'stroke-width="26"'), path(seg(r.waist, r.top), `stroke="${kit.shirt}" stroke-width="21.5"`));
+      if (p.num != null) {
+        const mid = lerp(r.waist, r.top, back ? 0.5 : 0.55);
+        parts.push(`<text text-anchor="middle" font-family="var(--font-mono)" font-size="${back ? 14 : 11}" font-weight="700" fill="${p.role === "GK" ? "var(--color-ink)" : "var(--color-card)"}" stroke="none" transform="translate(${pt(mid)}) rotate(${(r.lean + r.rot).toFixed(0)}) translate(0 ${back ? 5 : 4})">${p.num}</text>`);
+      }
+      const hair = ["sidepart", "beard"].includes(p.head) ? "var(--art-hair-brown)" : "var(--art-hair)";
+      const mouth = MOUTH[name] ?? SMILE;
+      const head = back ? `<circle r="14.5" fill="${skin}" stroke-width="2.5" />${(BACK_HEADS[p.head] ?? BACK_HEADS.default).replaceAll("HAIR", hair)}<ellipse cx="12" cy="3" rx="2.6" ry="3.8" fill="${skin}" stroke-width="1.6" />`
+        : HEADS[p.head].replaceAll("SKIN", skin).replace("BROWS", BROWS).replace("EYES", EYES).replace('data-mouth=""', `data-mouth="" d="${mouth}" fill="${mouth.endsWith("Z") ? "var(--color-card)" : "none"}"`);
+      parts.push(`<g transform="translate(${pt(r.head)}) rotate(${(r.lean * 0.4 + r.rot).toFixed(1)})">${head}</g>`);
+      parts.push(path(seg(r.top, r.elbowF, r.handF), 'stroke-width="8"'), path(seg(r.top, r.elbowF, r.handF), `stroke="${skin}" stroke-width="4.6"`));
+      if (p.role === "GK") parts.push(`<circle cx="${r.handF[0].toFixed(1)}" cy="${r.handF[1].toFixed(1)}" r="4" fill="var(--color-card)" stroke-width="1.8" />`);
+      return parts.join("");
+    }
+
     function drawPerson(p) {
       const { q, root, shadow } = p.sprite, name = p.poseName;
       const [screenX, screenY] = toScreen(p.g), margin = GAME_DATA.rendering.cullMargin * cam.z;
@@ -3928,6 +4102,15 @@
       const mouth = MOUTH[name];
       set(q.mouth, { d: mouth ?? SMILE, fill: mouth?.endsWith("Z") ? "var(--color-card)" : "none" });
       if (q.whistle) set(q.whistle, { opacity: name === "whistle" ? 1 : 0 });
+      if (q.legWrap) {
+        const b = p.bandage;
+        set(q.legWrap, { d: seg(lerp(r.kneeB, r.footB, 0.15), lerp(r.kneeB, r.footB, 0.75)), opacity: b === "leg" ? 1 : 0 });
+        const crutchTop = [r.handF[0] + 1, r.handF[1] - 9], crutchFoot = [r.footF[0] + 7, r.footF[1] + 3];
+        set(q.crutch, { d: seg(crutchTop, crutchFoot) + ` M${(crutchTop[0] - 4).toFixed(1)} ${crutchTop[1].toFixed(1)} h8`, opacity: b === "leg" ? 1 : 0 });
+        set(q.crutchFill, { d: seg(crutchTop, crutchFoot), opacity: b === "leg" ? 1 : 0 });
+        set(q.sling, { d: `M${pt(r.top)} L${pt(r.elbowF)} L${pt(r.handF)} Z`, opacity: b === "arm" ? 1 : 0 });
+        set(q.headBand, { transform: `translate(${pt(r.head)}) rotate(${(r.lean * 0.4 + r.rot).toFixed(1)})`, opacity: b === "head" ? 1 : 0 });
+      }
       if (q.card) {
         set(q.card, { opacity: name === "card" || name === "cardRed" ? 1 : 0, transform: `translate(${pt(r.handF)})` });
         set(q.cardRect, { fill: name === "cardRed" ? "var(--art-card-red)" : "var(--art-card-yellow)" });
@@ -3946,7 +4129,7 @@
       el("path", { d: "M0 0 L0 -3.6", transform: `rotate(${a}) translate(0 -1.6)`, stroke: "var(--color-ink)", "stroke-width": 0.8 }, ballSpin);
     }
     el("circle", { r: 5.6, "stroke-width": 1.7, fill: "none" }, ballNode);
-    const trail = [0, 1, 2, 3].map(i => el("circle", { r: 5 - i * 0.8, fill: "var(--color-card)", stroke: "none", opacity: 0 }, layer.wfx));
+    const trail = [0, 1, 2, 3].map(i => el("circle", { r: (5 - i * 0.8) * BALL_SCALE, fill: "var(--color-card)", stroke: "none", opacity: 0 }, layer.wfx));
     const trailPts = [];
     const postBurst = el("g", { opacity: 0, stroke: "var(--art-gold)", "stroke-width": 2.5 }, layer.wfx);
     el("path", { d: "M-6 -6 L-12 -12 M6 -6 L12 -12 M8 2 L15 3 M-8 2 L-15 3 M0 -8 V-15" }, postBurst);
@@ -3967,6 +4150,40 @@
     el("rect", { x: -96, y: -19, width: 192, height: 38, rx: 19, fill: "var(--art-gold)", "stroke-width": 2.5 }, banner);
     const bannerText = el("text", { y: 6, "text-anchor": "middle", fill: "var(--color-ink)", stroke: "none", "font-family": "var(--font-display)", "font-size": 17, "font-weight": 800 }, banner);
     
+    /* The ambulance: in along the near touchline, a stop at the pickup point, then away off screen. */
+    const ambulance = { node: el("g", { opacity: 0 }), keys: null, pos: [1.4, AMB_V] };
+    ambulance.node.innerHTML = `<g data-amb="body">
+      <ellipse cx="4" cy="-2" rx="46" ry="6" fill="var(--art-shadow)" stroke="none" opacity=".22" />
+      <path d="M44 -10 V-44 Q44 -48 40 -48 H-14 Q-20 -48 -23 -42 L-36 -24 V-10 Z" fill="var(--color-card)" stroke-width="2.6" />
+      <path d="M-16 -42 L-28 -24 H-16 Z" fill="var(--color-sky-soft)" stroke-width="2" />
+      <path d="M-36 -21 H44" stroke="var(--art-red)" stroke-width="4" stroke-linecap="butt" />
+      <path d="M22 -40 v15 M14.5 -32.5 h15" stroke="var(--art-red)" stroke-width="5" stroke-linecap="butt" />
+      <text x="-2" y="-28" text-anchor="middle" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--color-ink)" stroke="none">115</text>
+      <rect data-light="0" x="-6" y="-55" width="9" height="7" rx="2" fill="var(--art-red)" stroke-width="1.6" />
+      <rect data-light="1" x="3" y="-55" width="9" height="7" rx="2" fill="var(--art-blue)" stroke-width="1.6" />
+      <circle cx="-20" cy="-9" r="7.5" fill="var(--color-ink)" /><circle cx="-20" cy="-9" r="3" fill="var(--color-card)" stroke="none" />
+      <circle cx="28" cy="-9" r="7.5" fill="var(--color-ink)" /><circle cx="28" cy="-9" r="3" fill="var(--color-card)" stroke="none" /></g>`;
+    const ambulanceLights = [...ambulance.node.querySelectorAll("[data-light]")];
+    /** Plans the ambulance to be waiting at `u` before `tLoad`, and to leave just after. Returns when it is gone. */
+    function planAmbulance(u, tLoad) {
+      const stop = clamp(u + .035, .05, .95), speed = 9 / LEN;
+      const arrive = tLoad - .7, start = arrive - (1.35 - stop) / speed, leave = tLoad + .9, gone = leave + (stop + .4) / speed;
+      ambulance.keys = [[start, 1.35], [arrive, stop], [leave, stop], [gone, -.4]];
+      game.stats.ambulances = (game.stats.ambulances ?? 0) + 1;
+      at(arrive + .1, () => say({ g: ground(stop, AMB_V), off: false }, "Xe cấp cứu tới!", "var(--color-card)", 1.2));
+      return { arrive, leave, gone };
+    }
+    function drawAmbulance() {
+      const k = ambulance.keys;
+      if (!k || T < k[0][0] || T > k[3][0]) { if (ambulance.shown !== false) { set(ambulance.node, { opacity: 0 }); ambulance.shown = false; } return; }
+      let u = k[3][1];
+      for (let i = 1; i < k.length; i++) if (T <= k[i][0]) { const f = (T - k[i - 1][0]) / (k[i][0] - k[i - 1][0] || 1), e = i === 1 ? 1 - (1 - f) * (1 - f) : i === 3 ? f * f : f; u = k[i - 1][1] + (k[i][1] - k[i - 1][1]) * e; break; }
+      ambulance.pos = [u, AMB_V]; ambulance.shown = true;
+      const g = ground(...ambulance.pos), dir = mul(A, 1 / Math.hypot(...A)), s = S * 1.15;
+      set(ambulance.node, { opacity: 1, transform: `matrix(${(dir[0] * s).toFixed(4)} ${(dir[1] * s).toFixed(4)} 0 ${s.toFixed(4)} ${g[0].toFixed(1)} ${g[1].toFixed(1)})` });
+      const blink = Math.floor(T * 5) % 2;
+      ambulanceLights.forEach((light, i) => set(light, { opacity: (i === blink) ? 1 : .35 }));
+    }
     const stretcher = el("g", { opacity: 0 });
     const stretcherPole = el("path", { "stroke-width": 7, "stroke-linecap": "round" }, stretcher);
     const stretcherCloth = el("path", { stroke: "var(--color-card)", "stroke-width": 4, "stroke-linecap": "round" }, stretcher);
@@ -3985,10 +4202,19 @@
     const depthItems = [
       ...people.map(p => ({ node: p.sprite.root, depth: () => p.g[1] + (p.poseName === "onStretcher" ? .02 : 0) })),
       { node: stretcher, depth: () => (medics[0].g[1] + medics[1].g[1]) / 2 + .01 },
+      { node: ambulance.node, depth: () => ground(...ambulance.pos)[1] + 2 },
       { node: ballNode, depth: () => ball.g[1] + .5 },
-      ...goals.flatMap(g => [{ node: g.box, depth: () => g.keyBox }, { node: g.mouth, depth: () => g.keyMouth }]),
+      ...goals.flatMap(g => [{ node: g.box, depth: () => g.keyBox },
+        { node: g.near, depth: () => ballInGoal(g) ? ball.g[1] + .51 : g.keyBox + .001 },
+        { node: g.mouth, depth: () => ballInGoal(g) ? Math.max(g.keyMouth, ball.g[1] + .52) : g.keyMouth }]),
       ...flags.map(f => ({ node: f.node, depth: () => f.key }))
     ];
+    /** The ball is behind this goal line, between the posts and under the bar: in the net. */
+    function ballInGoal(g) {
+      if (!ball.show) return false;
+      const [u, v] = ballUV();
+      return (g.end ? u > 1 : u < 0) && Math.abs(u - g.end) < GOAL_DEPTH + .02 && v > GOAL_V[0] - .01 && v < GOAL_V[1] + .01 && ball.h < GOAL_H;
+    }
     function sortDepth() {
       for (const item of depthItems) item.key = item.depth();
       depthItems.sort((a, b) => a.key - b.key);
@@ -4003,7 +4229,7 @@
       controlMarkers.forEach(({ h, ring, label, arrow, pointer, powerBg, powerFill }) => {
         const p = h.selected, visible = !!p && on(p) && ["play", "reset"].includes(game.mode);
         set(ring, { cx: p?.g[0] ?? 0, cy: (p?.g[1] ?? 0) + 2, opacity: visible ? 1 : 0 });
-        set(label, { x: p?.g[0] ?? 0, y: (p?.g[1] ?? 0) - 81, opacity: visible ? 1 : 0 });
+        set(label, { x: p?.g[0] ?? 0, y: (p?.g[1] ?? 0) - 130 * S, opacity: visible ? 1 : 0 });
         setText(label, `${h.slot} · ${p?.name ?? ""}`);
         set(pointer, { transform: `translate(${pt(p?.g ?? [0, 0])})`, opacity: visible ? 1 : 0 });
         const power = chargePower(h), charging = visible && !!h.charge;
@@ -4023,12 +4249,12 @@
       set(layer.world, { transform: `translate(${(VW / 2 + shake).toFixed(1)} ${(VH / 2).toFixed(1)}) scale(${cam.z.toFixed(4)}) translate(${(-cam.x).toFixed(1)} ${(-cam.y).toFixed(1)})` });
       for (const p of people) drawPerson(p);
       drawControlMarkers();
-      yellowMarkers.forEach(({ p, node }) => set(node, { x: p.g[0] + 10, y: p.g[1] - 55, opacity: p.yellows > 0 && !p.off && !p.sentOff ? 1 : 0, "data-player": p.name }));
+      yellowMarkers.forEach(({ p, node }) => set(node, { x: p.g[0] + 16 * S, y: p.g[1] - 89 * S, opacity: p.yellows > 0 && !p.off && !p.sentOff ? 1 : 0, "data-player": p.name }));
       // Ball, shadow and the streak behind a hard shot.
       const bs = [ball.g[0], ball.g[1] - ball.h * K];
-      set(ballNode, { transform: `translate(${pt(bs)})`, opacity: ball.alpha.toFixed(2) });
+      set(ballNode, { transform: `translate(${pt(bs)}) scale(${BALL_SCALE})`, opacity: ball.alpha.toFixed(2) });
       set(ballSpin, { transform: `rotate(${(ball.spin % 360).toFixed(0)})` });
-      set(ballShadow, { cx: ball.g[0].toFixed(1), cy: (ball.g[1] + 1).toFixed(1), rx: Math.max(2.5, 5.5 - ball.h * 1.1).toFixed(1), opacity: (ball.alpha * Math.max(0.1, 0.36 - ball.h * 0.07)).toFixed(2) });
+      set(ballShadow, { cx: ball.g[0].toFixed(1), cy: (ball.g[1] + 1).toFixed(1), rx: (Math.max(2.5, 5.5 - ball.h * 1.1) * BALL_SCALE).toFixed(1), opacity: (ball.alpha * Math.max(0.1, 0.36 - ball.h * 0.07)).toFixed(2) });
       trailPts.unshift(bs); trailPts.length = Math.min(trailPts.length, 8);
       const fast = ball.mode === "fly" && (ball.kind === "shot" || ball.seg?.arc < 0.2);
       trail.forEach((n, i) => { const tp = trailPts[i * 2 + 1] ?? bs; set(n, { transform: `translate(${pt(tp)})`, opacity: fast ? (0.5 - i * 0.11).toFixed(2) : 0 }); });
@@ -4044,6 +4270,7 @@
       drawCeremonyFx();
       drawCallout();
       drawStretcher();
+      drawAmbulance();
       sortDepth();
       if (game.dirty) drawBoard();
     }
@@ -4077,9 +4304,10 @@
         x = clamp(x, visualWidth / 2 + 10, VW - visualWidth / 2 - 10); y = clamp(y, y < 90 && x < 330 ? 104 : 26, VH - 20);
         // Stack bubbles that would overlap.
         for (let k = 0; k < 3; k++) {
-          const hit = placed.find(b => Math.abs(b.x - x) < (b.w + visualWidth) / 2 + 4 && Math.abs(b.y - y) < 24);
+          const gap = 28 * GAME_DATA.speech.scale + 3;
+          const hit = placed.find(b => Math.abs(b.x - x) < (b.w + visualWidth) / 2 + 4 && Math.abs(b.y - y) < gap - 1);
           if (!hit) break;
-          y = hit.y - 25 < 26 ? hit.y + 25 : hit.y - 25;
+          y = hit.y - gap < 26 ? hit.y + gap : hit.y - gap;
         }
         placed.push({ x, y, w: visualWidth });
         set(L.box, { width: w.toFixed(0), x: (-w / 2).toFixed(0), fill: c.fill });
@@ -4113,7 +4341,12 @@
     const boardNodes = new Map();
     api.palette = () => {
       const style = getComputedStyle(root);
-      return Object.fromEntries(["color-ink", "color-card", "color-sky-soft", "color-sun", "art-skin", "art-skin-2", "art-hair", "art-shorts", "art-red", "art-blue", "art-gk-r", "art-gk-b", "art-grass", "art-grass-2", "art-surround", "art-stand", "art-stand-deep", "art-shadow", "font-mono", "font-display"].map(name => ["--" + name, style.getPropertyValue("--" + name).trim()]));
+      return Object.fromEntries(["color-ink", "color-card", "color-sky-soft", "color-sun", "color-pear-soft", "art-skin", "art-skin-2", "art-hair", "art-hair-brown", "art-gold", "art-shorts", "art-red", "art-blue", "art-gk-r", "art-gk-b", "art-grass", "art-grass-2", "art-surround", "art-stand", "art-stand-deep", "art-shadow", "font-mono", "font-display"].map(name => ["--" + name, style.getPropertyValue("--" + name).trim()]));
+    };
+    /** The penalty taker ("taker") or keeper ("keeper") drawn in a pose, as SVG markup in the match style. */
+    api.penaltyFigure = (role, pose = "ready", options = {}) => {
+      const plan = game.penalty, p = plan?.actors?.[role === "keeper" ? otherTeam(plan.attack) : plan.attack];
+      return p ? figureMarkup(p, pose, options) : "";
     };
     const $ = id => {
       if (!boardNodes.has(id)) boardNodes.set(id, root.querySelector('[data-id="' + id + '"]'));
@@ -4150,9 +4383,9 @@
     /* ---------------------------------- run ---------------------------------- */
     drawStadium(); drawPitch();
     const controlMarkers = humans.map(h => ({ h,
-      ring: el("ellipse", { rx: 14, ry: 7, fill: "none", stroke: h.slot === "A" ? "#ffffff" : "#73e9ff", "stroke-width": 2 }, layer.shadows),
+      ring: el("ellipse", { rx: 22 * S, ry: 11 * S, fill: "none", stroke: h.slot === "A" ? "#ffffff" : "#73e9ff", "stroke-width": 2 }, layer.shadows),
       arrow: el("path", { "data-id": `aim-${h.slot}`, fill: h.slot === "A" ? "#6ef5a2" : "#73e9ff", stroke: "#f4fff8", "stroke-width": 1 }, layer.shadows),
-      pointer: el("path", { "data-id": `selected-${h.slot}`, d: "M-6 -73 L6 -73 L0 -59 Z", fill: h.slot === "A" ? "#6ef5a2" : "#73e9ff", stroke: "#163c32", "stroke-width": 1 }, layer.wfx),
+      pointer: el("path", { "data-id": `selected-${h.slot}`, d: `M-6 ${(-118 * S).toFixed(1)} L6 ${(-118 * S).toFixed(1)} L0 ${(-95 * S).toFixed(1)} Z`, fill: h.slot === "A" ? "#6ef5a2" : "#73e9ff", stroke: "#163c32", "stroke-width": 1 }, layer.wfx),
       powerBg: el("rect", { "data-id": `power-${h.slot}`, width: 36, height: 6, rx: 2, fill: "#14281f", stroke: "#fff", "stroke-width": 1 }, layer.wfx),
       powerFill: el("rect", { width: 0, height: 4, rx: 1, fill: "#66ed9d", stroke: "none" }, layer.wfx),
       label: el("text", { "text-anchor": "middle", fill: "#ffffff", stroke: "#1d2340", "stroke-width": 2, "paint-order": "stroke", "font-size": 11, "font-weight": 700 }, layer.wfx) }));
@@ -4172,6 +4405,27 @@
       ball: ball.mode, kind: ball.kind, kick: game.lastKick ? { ...game.lastKick, origin: [...game.lastKick.origin], target: [...game.lastKick.target] } : null,
       owner: ball.owner?.name ?? null, callout: game.callout && T - game.callout.t < game.callout.life ? game.callout.text : null, note: game.note, cam: { z: +cam.z.toFixed(2) } });
     api.__fastForward = (minutes) => { game.clock = (minutes - 1) / PACE; game.dirty = true; };
+    api.__selected = slot => { const p = humans.find(h => h.slot === slot)?.selected; return p ? { name: p.name, pos: [...p.pos], input: (({ x, y, sprint, pressing }) => ({ x, y, sprint, pressing }))(humanFor(p)) } : null; };
+    api.__fkDistance = () => { const fk = game.fk; if (!fk) return null; return Math.min(...players.filter(p => on(p) && p.team !== fk.att).map(p => mdist(p.pos, fk.spot))); };
+    /** Test hook: a Red player shoots from `uv` (court frame) with forced odds. */
+    api.__shotFrom = (uv, options = {}) => {
+      const c = outfield(team.R).find(p => p.role === "FW") ?? outfield(team.R)[0];
+      game.mode = "play"; game.stoppage = false; game.deadBallReason = null; game.restart = null; game.restartTaker = null;
+      for (const p of players) { p.script = null; p.keys = []; p.busyUntil = T; }
+      c.pos = [...uv]; c.g = ground(...uv); carry(c); game.carrier = c; game.poss = c.team;
+      shoot(c, options); render(); return c.name;
+    };
+    /** Test hook: a foul that injures a Red outfield player where he stands. */
+    api.__injure = (forceReturn = false) => {
+      const c = outfield(team.R).find(p => p.role !== "GK"), d = outfield(team.B)[0];
+      game.mode = "play"; game.stoppage = false; carry(c); game.carrier = c;
+      if (forceReturn) { game.forceInjuryReturn = true; game.forceBandage = typeof forceReturn === "string" ? forceReturn : null; }
+      foul(c, d, T, false, { forcedCard: "none", injury: true }); return c.name;
+    };
+    api.__players = () => players.filter(on).map(p => ({ name: p.name, team: p.team, role: p.role, style: p.styleId, d: toT(p.team, p.pos)[0], w: toT(p.team, p.pos)[1], poss: game.poss === p.team, ball: ball.owner === p }));
+    api.__keeperSkills = () => [GK.R, GK.B].map(gk => ({ team: gk.team, kind: gk.specialActiveId, used: !!gk.specialUsed, active: (gk.specialUntil ?? 0) > game.clock && !!GAME_DATA.skills[gk.specialActiveId]?.auto, minutesLeft: Math.ceil(Math.max(0, (gk.specialUntil ?? 0) - game.clock) * PACE) }));
+    api.__bench = () => [...bench.R, ...bench.B].map(b => ({ name: b.name, team: b.team, off: !!b.off, injured: !!b.injured, bandage: b.bandage ?? null }));
+    api.__penalties = () => { startPenalties(); render(); return api.status(); };
     api.__energy = () => Object.fromEntries([...players, ...bench.R, ...bench.B].filter(p => !p.off).map(p => [`${p.team}:${p.name}${p.bench ? "*" : ""}`, +p.energy.toFixed(2)]));
     api.__stats = () => ({ ...game.stats, story: game.story.name, storyGoals: game.story.goals.map(g => [...g]), shape: { ...game.shape }, onPitch: { R: team.R.filter(on).length, B: team.B.filter(on).length } });
     
