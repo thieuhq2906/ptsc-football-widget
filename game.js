@@ -29,8 +29,10 @@
   function applyKeys(session = sessions.get(activeMode)) {
     if (!session) return;
     const state = session.api.status();
+    const arena = session.panel.querySelector(".arena");
+    const acceptsInput = !session.paused && !state.ended && !state.refBreak && session === sessions.get(activeMode) && document.activeElement === arena;
     for (const [slot, b] of Object.entries(bindings)) {
-      session.api.setInput(slot, session.paused ? {} : {
+      session.api.setInput(slot, !acceptsInput ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
         y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint),
         pressing: keys.has(b.press) && !state.players.find(p => p.slot === slot)?.hasBall
@@ -89,6 +91,11 @@
     watcher = window.PTSCFootball.mount(document.getElementById("watch-match"));
     if (activeMode !== "watch") watcher.pause();
   });
+  const watchRestart = document.createElement("button"); watchRestart.type = "button"; watchRestart.className = "arena-restart";
+  watchRestart.setAttribute("aria-label", "Xem trận mới"); watchRestart.title = "Xem trận mới";
+  watchRestart.innerHTML = '<span aria-hidden="true">↻</span> Trận mới';
+  document.querySelector("#panel-watch .arena-surface").append(watchRestart);
+  watchRestart.addEventListener("click", () => document.getElementById("new-watch").click());
 
   function optionsFor(panel) {
     const teamA = panel.querySelector('input[name$="-team"]:checked').value;
@@ -123,10 +130,17 @@
     }
   }
   function updateHud(session) {
-    if (session === sessions.get(activeMode)) applyKeys(session);
     const state = session.api.status();
+    if (!!state.refBreak !== !!session.refStopped) { session.refStopped = !!state.refBreak; releaseKeys(); }
+    if (session === sessions.get(activeMode)) applyKeys(session);
     session.penaltyView.update(state, session.paused);
-    session.panel.querySelector(".arena-hints").hidden = !!state.penalty;
+    session.panel.querySelector(".arena-hints").hidden = !!state.penalty || state.ended;
+    const result = session.panel.querySelector(".arena-result");
+    result.hidden = !state.ended;
+    if (state.ended) {
+      result.querySelector("strong").textContent = state.winner ? `Đội ${names[state.winner]} chiến thắng!` : "Hai đội hòa!";
+      result.querySelector("span").textContent = `Đỏ ${state.score.R}–${state.score.B} Xanh${state.penalty ? ` · PEN ${state.penalty.score.R}–${state.penalty.score.B}` : ""}`;
+    }
     const status = session.panel.querySelector(".match-status");
     const pause = session.panel.querySelector(".pause");
     if (state.ended) {
@@ -140,6 +154,12 @@
       status.textContent = session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
     }
     for (const player of state.players) {
+      const onField = session.panel.querySelector(`.arena-energy [data-slot="${player.slot}"]`);
+      const percent = Math.round(player.energy * 100);
+      onField.dataset.team = player.team; onField.classList.toggle("is-low", player.energy < .35);
+      onField.querySelector(".energy-name").textContent = `${player.slot} · ${player.name || "Chuẩn bị"}`;
+      onField.querySelector("strong").textContent = percent + "%";
+      onField.querySelector("progress").value = player.energy;
       const slideButton = session.panel.querySelector(`.slide-action[data-slot="${player.slot}"]`);
       if (slideButton) {
         slideButton.disabled = session.paused || state.ended || !player.ready || (!player.hasBall && !player.slideReady);
@@ -150,7 +170,7 @@
       const side = state.leftTeam === player.team ? "trái" : "phải";
       card.querySelector("strong").textContent = `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`;
       card.querySelector("meter").value = player.energy;
-      card.querySelector(".percent").textContent = Math.round(player.energy * 100) + "%";
+      card.querySelector(".percent").textContent = percent + "%";
       card.querySelector("progress").value = player.charge?.power ?? 0;
       card.querySelector(".charge-text").textContent = player.charge ? `${player.charge.action === "pass" ? "Lực chuyền" : "Lực sút"}: ${Math.round(player.charge.power * 100)}%` : player.pressing ? "Đang pressing · áp sát" : "Giữ phím chuyền/sút để nạp lực";
     }
@@ -195,6 +215,17 @@
     arena.querySelector(".arena-surface").append(overlay);
     const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
     arena.querySelector(".arena-surface").append(penaltyHost);
+    const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
+    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress></div>`).join("");
+    arena.querySelector(".arena-surface").append(energy);
+    const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
+    result.innerHTML = '<strong></strong><span></span>';
+    arena.querySelector(".arena-surface").append(result);
+    const restart = document.createElement("button"); restart.type = "button"; restart.className = "arena-restart";
+    restart.setAttribute("aria-label", "Bắt đầu trận mới"); restart.title = "Bắt đầu trận mới";
+    restart.innerHTML = '<span aria-hidden="true">↻</span> Trận mới';
+    arena.querySelector(".arena-surface").append(restart);
+    restart.addEventListener("click", () => form.requestSubmit());
     form.addEventListener("change", () => setupSummary(panel));
     setupSummary(panel);
     panel.querySelector(".support").addEventListener("change", event => {
@@ -225,6 +256,7 @@
           if (current === session && !session.paused) { api.choosePenalty(slot, direction); updateHud(session); arena.focus({ preventScroll: true }); }
         }) };
       sessions.set(mode, session);
+      energy.hidden = false;
       form.querySelector(".start").textContent = "Bắt đầu trận mới";
       panel.querySelector(".pause").textContent = "Bắt đầu";
       overlay.hidden = false;
@@ -238,7 +270,7 @@
       if (!session.paused) arena.focus({ preventScroll: true });
     });
     arena.addEventListener("pointerdown", () => { if (sessions.has(panel.dataset.mode)) arena.focus({ preventScroll: true }); });
-    arena.addEventListener("focusout", releaseKeys);
+    arena.addEventListener("focusout", event => { if (!arena.contains(event.relatedTarget)) releaseKeys(); });
   }
   document.addEventListener("keydown", event => {
     const session = sessions.get(activeMode);
@@ -254,6 +286,8 @@
       return;
     }
     if (session.paused || session.api.status().ended) return;
+    if (session.api.status().refBreak) return;
+    if (event.repeat && !keys.has(event.code)) return;
     if (session.api.status().phase === "penalties") {
       if (!event.repeat) for (const [slot, b] of Object.entries(bindings)) {
         const direction = event.code === b.left ? "left" : event.code === b.right ? "right" : event.code === b.down || event.code === b.up ? "center" : null;
@@ -284,7 +318,7 @@
     }
     highlightPads();
   });
-  document.addEventListener("keyup", event => {
+  window.addEventListener("keyup", event => {
     keys.delete(event.code); applyKeys();
     highlightPads();
     const session = sessions.get(activeMode);
@@ -307,12 +341,14 @@
         pendingShots.set(slot, pending);
       } else session.api.releaseCharge(slot);
     }
-  });
+  }, true);
   function suspend() {
     releaseKeys(); watcher?.pause();
     for (const session of sessions.values()) setPaused(session, true);
   }
   window.addEventListener("blur", suspend);
+  window.addEventListener("pagehide", suspend);
+  window.addEventListener("pointercancel", releaseKeys);
   window.addEventListener("focus", () => { if (activeMode === "watch" && !document.hidden) watcher?.play(); });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) suspend();

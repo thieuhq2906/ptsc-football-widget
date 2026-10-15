@@ -11,7 +11,7 @@ Không cần thư viện, không cần build, không cần server riêng.
 - **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh; máy điều khiển đội còn lại.
 - **Hai người:** A chọn áo, B chọn sân trái/phải lúc bắt đầu và nhận màu áo còn lại. Hai đội đổi sân giữa hiệp.
 
-Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người tự động chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong.
+Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người tự động chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong. Cầu thủ ra/vào chạy nhanh gấp đôi; bàn giao và chờ đá tiếp đã được rút ngắn.
 Chế độ chơi không dùng lịch bàn thắng của chế độ xem; tỷ số phụ thuộc vào thao tác, vị trí sút, đối thủ và thể lực. Hết giờ có thể hòa.
 
 Tam giác xanh trên đầu và vòng dưới chân đánh dấu người đang điều khiển, giống mẫu tham chiếu; người B dùng xanh lam.
@@ -33,12 +33,13 @@ Các phím hành động nằm thành cụm hai cột, ba hàng: A **R/T – F/G
 
 Bấm **Bắt đầu trận** hoặc **Bắt đầu trận mới**: sân luôn tạm dừng, phủ nền mờ và hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
 Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn cơ bản nằm riêng góc trái/phải sân, độ mờ 30%.
+Phần trăm và thanh thể lực của người đang điều khiển hiện ngay trong sân: A bên trái, B bên phải, vẫn đọc được khi toàn màn hình; chuyển màu cảnh báo khi dưới 35%.
 Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
 Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không cầm bóng.
-Thủ môn tự đưa bóng trở lại sau tối đa 6 giây giữ bóng nếu người chơi hoặc AI chưa phát bóng, tránh ôm bóng đến hết trận.
-Khi đang giữ bóng (trên tay hoặc dưới chân), thủ môn và bóng luôn nằm trong vòng cấm bán nguyệt của đội mình: giới hạn áp dụng cho điều khiển tay, AI và sau đổi sân. Quán tính di chuyển và va chạm cũng không đẩy thủ môn đang giữ bóng vượt đường biên vòng cấm.
+Thủ môn ôm bóng trên tay tối đa 6 giây trước khi tự phát bóng. Khi đi ra khỏi vòng cấm bán nguyệt, thủ môn tự hạ bóng xuống chân và tiếp tục điều khiển bình thường; không bị ép phá bóng khi bóng đã ở chân. Việc kiểm tra xét cả vị trí bóng trên tay và sân hiện tại sau đổi sân.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
+Sự kiện thả phím được bắt ở mức cửa sổ; mất focus, đổi toàn màn hình, hủy pointer hoặc trọng tài dừng trận sẽ xóa input. Nhả hướng di chuyển thì cầu thủ điều khiển dừng ngay, không tiếp tục trôi do quán tính; các lần lặp phím cũ không tự bật lại input đã xóa.
 Chọn **Tiếp tục** để trở lại. Đổi lựa chọn áo/sân áp dụng ở trận mới. Website chơi cùng máy cần bàn phím.
 
 Lực nạp đầy sau khoảng 0,9 giây, có thanh lực dưới chân và trong bảng cầu thủ. Lực thấp cho đường bóng thấp; lực cao tăng tốc độ, tầm chuyền và độ bổng.
@@ -52,6 +53,14 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 
 **Toàn màn hình** là một nút biểu tượng ở góc dưới phải sân, giống nút của trình phát video, có cả ở chế độ xem. Bấm cùng nút để thu nhỏ, hoặc Escape để thoát. Nếu trình duyệt không cho phép Fullscreen API, sân vẫn được mở phủ cửa sổ.
 Hướng dẫn trong sân chỉ có nút cơ bản; thao tác nhấn hai lần nằm trong mục nâng cao ngoài sân.
+Hướng dẫn nâng cao ở bên dưới, mở sẵn và chia riêng hai cột A/B cho chế độ hai người; mỗi cột chỉ dùng bộ phím của người đó.
+
+### Trọng tài và kết thúc trận
+
+- Trọng tài nói “Đợi tí, thay người!”, “Dừng lại! Phạm lỗi!” và “Tiếp tục!” theo tình huống.
+- Mỗi trận chọn một lần với xác suất 5% cho tình huống trọng tài đi WC, thực hiện khi bóng đã được kiểm soát và không có một pha sút/chuyền đang diễn ra. Ông ấy thổi dừng, chạy đến WC rồi quay lại; toàn bộ lần nghỉ kéo dài 15 giây, không tính vào đồng hồ trận. Cầu thủ, bóng, thể lực và các hành động đang chờ đều tạm dừng; camera vẫn bám bóng. Mỗi trận tối đa một lần, với bộ ngẫu nhiên riêng để không đổi kịch bản bóng đá.
+- Đội thắng ăn mừng, đội thua thất vọng và có cảnh nâng cúp theo logic cũ, kể cả thắng bằng luân lưu. Tỷ số trận và tỷ số PEN được hiển thị riêng.
+- Nút **Trận mới** ngay trong sân cho phép restart kể cả khi toàn màn hình. Trận mới giữ lựa chọn áo/sân/thời gian hiện có và luôn chờ Space để bắt đầu.
 
 ### Thời lượng, hiệp phụ và luân lưu
 

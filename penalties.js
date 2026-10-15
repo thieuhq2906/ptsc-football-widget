@@ -38,8 +38,8 @@
     }
     update(state, paused) {
       const p = state.penalty;
-      this.host.hidden = !p;
-      if (!p) return;
+      this.host.hidden = !p || p.phase === "finished";
+      if (!p || p.phase === "finished") return;
       const scoreHtml = `<small>Trận: Đỏ ${state.score.R}–${state.score.B} Xanh · PEN</small>` + ["R", "B"].map(team => `<div><b style="color:${colors[team]}">${names[team]} ${p.score[team]}</b><span>${p.history[team].map(goal => `<i class="${goal ? "goal" : "saved"}"></i>`).join("")}${"<i></i>".repeat(Math.max(0, 5 - p.history[team].length))}</span></div>`).join("");
       if (this.scoreHtml !== scoreHtml) { this.host.querySelector(".penalty-score").innerHTML = scoreHtml; this.scoreHtml = scoreHtml; }
       const message = p.phase === "finished" ? state.note : paused ? "Đang tạm dừng" : p.phase === "result" ? p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!" : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;

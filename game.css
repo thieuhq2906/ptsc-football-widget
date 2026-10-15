@@ -55,6 +55,24 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .penalty-player[data-slot="B"] { text-align: right; margin-left: auto; }
 .arena { position: relative; border-radius: 22px; }
 .arena-surface { position: relative; width: 100%; }
+.arena-restart { position: absolute; top: 12px; right: 14px; z-index: 3; display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 11px; border: 1px solid #ffffff70; border-radius: 7px; color: #fff; background: #10261fe8; font-size: 12px; }
+.arena-restart span { font-size: 23px; line-height: 1; }
+.arena-restart:hover { background: #1e4630; }
+.arena-result { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 2; padding: 9px 14px; border: 1px solid #f5dd83; border-radius: 10px; background: #10261fed; color: #fff; text-align: center; pointer-events: none; }
+.arena-result strong, .arena-result span { display: block; }
+.arena-result strong { color: #f5dd83; font-size: clamp(12px, 1.8vw, 20px); }
+.arena-result span { margin-top: 3px; font-size: 11px; }
+.arena-energy { position: absolute; bottom: 12px; left: 16px; right: 68px; display: flex; justify-content: space-between; gap: 12px; z-index: 2; pointer-events: none; }
+.energy-player { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 10px; width: 180px; padding: 6px 9px; border-radius: 7px; border-left: 4px solid #e45248; background: #10261fed; color: #fff; font-size: 11px; }
+.energy-player[data-team="B"] { border-left-color: #397eca; }
+.energy-player strong { font-size: 14px; color: #baf399; font-variant-numeric: tabular-nums; }
+.energy-player progress { grid-column: 1 / -1; width: 100%; height: 4px; accent-color: #a1e873; }
+.energy-player.is-low strong { color: #ffc17a; }
+.energy-player.is-low progress { accent-color: #ff986c; }
+.energy-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.advanced-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+.advanced-grid .advanced { margin-top: 0; border-left: 4px solid #147d40; }
+.advanced-grid .advanced[data-slot="B"] { border-left-color: #2378bc; }
 .match-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .charge-hud { margin-top: 9px; font-size: 11px; color: #586072; }
 .charge-hud progress { display: block; width: 100%; height: 7px; margin-top: 5px; accent-color: #619641; }
@@ -138,7 +156,7 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
   .setup .start { width: 100%; }
   .placeholder { min-height: 210px; }
   .controls { grid-template-columns: 1fr; }
-  .arena-hints { left: 6px; right: 6px; bottom: 44px; gap: 6px; font-size: 7px; }
+  .arena-hints { left: 6px; right: 6px; bottom: 52px; gap: 6px; font-size: 7px; }
   .controls article { padding: 12px; }
   .controls .pad-help { gap: 12px; }
   .controls .pad-diagram { width: 74px; height: 74px; }
@@ -154,6 +172,13 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
   .arena-hints .action-key { min-height: 18px; padding: 2px 3px; font-size: 6px; gap: 3px; }
   .arena-hints .action-key kbd { min-width: 12px; min-height: 12px; font-size: 6px; padding: 0 2px; }
   .fullscreen { right: 8px; bottom: 8px; }
+  .arena-restart { top: 6px; right: 6px; min-height: 30px; padding: 4px 7px; font-size: 10px; }
+  .arena-restart span { font-size: 19px; }
+  .arena-result { top: 48px; padding: 5px 9px; }
+  .arena-energy { left: 6px; right: 54px; bottom: 8px; gap: 6px; }
+  .energy-player { width: 130px; padding: 5px 6px; font-size: 9px; gap: 2px 4px; }
+  .energy-player strong { font-size: 12px; }
+  .advanced-grid { grid-template-columns: 1fr; }
   .penalty-choices { bottom: 47px; left: 6px; right: 6px; gap: 6px; }
   .penalty-player { padding: 5px; }
   .penalty-player button { padding: 5px; }
