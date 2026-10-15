@@ -7,8 +7,14 @@
   const names = { R: "Đỏ", B: "Xanh" };
   const opposite = team => team === "R" ? "B" : "R";
   const bindings = {
-    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "KeyT", press: "KeyV", actions: { KeyR: "switch", KeyF: "pass", KeyG: "shoot", KeyB: "challenge" } },
-    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "KeyI", press: "KeyN", actions: { KeyU: "switch", KeyJ: "pass", KeyK: "shoot", KeyM: "challenge" } }
+    A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "KeyT", press: "KeyV", actions: { KeyR: "switch", KeyF: "pass", KeyG: "shoot", KeyB: "challenge", KeyE: "special" } },
+    B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "KeyI", press: "KeyN", actions: { KeyU: "switch", KeyJ: "pass", KeyK: "shoot", KeyM: "challenge", KeyO: "special" } }
+  };
+  const skillIcons = {
+    FW: '<path d="M14 2 5 13h6l-1 9 9-12h-6z"/>',
+    MF: '<circle cx="10" cy="14" r="7"/><path d="m10 10 4 3-2 4H8l-2-4zM18 2l1.2 3.4L23 6.5l-3.8 1.2L18 11l-1.2-3.3L13 6.5l3.8-1.1z"/>',
+    DF: '<path d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6zM7 12l3 3 7-7"/>',
+    GK: '<path d="M8 21 4 15 2 10c-.6-2 2-3 3-1l2 3V5c0-2 3-2 3 0v5-7c0-2 3-2 3 0v7-6c0-2 3-2 3 0v7-4c0-2 3-2 3 0v8l-3 6z"/>'
   };
   for (const guide of document.querySelectorAll(".pad-help")) {
     const slot = guide.dataset.slot, b = bindings[slot];
@@ -170,6 +176,18 @@
       onField.querySelector(".energy-name").textContent = `${player.slot} · ${player.name || "Chuẩn bị"}`;
       onField.querySelector("strong").textContent = percent + "%";
       onField.querySelector("progress").value = player.energy;
+      const skillButton = onField.querySelector(".special-button"), skill = player.special;
+      if (skillButton.dataset.kind !== skill.kind) {
+        skillButton.dataset.kind = skill.kind ?? "";
+        skillButton.querySelector("svg").innerHTML = skillIcons[skill.kind] ?? skillIcons.MF;
+      }
+      const skillState = skill.active ? `${Math.ceil(skill.remaining)}s` : skill.used ? "Đã dùng" : player.energy < .4 ? "Thiếu lực" : skill.ready ? "Sẵn sàng" : "Chờ";
+      skillButton.querySelector(".skill-state").textContent = skillState;
+      skillButton.classList.toggle("is-active", skill.active);
+      skillButton.classList.toggle("is-used", skill.used && !skill.active);
+      skillButton.disabled = session.paused || state.ended || !skill.ready;
+      skillButton.title = `${skill.name} · ${skillState} · 40% thể lực · 1 lần/cầu thủ/trận`;
+      skillButton.setAttribute("aria-label", `${player.slot}: ${skillButton.title}`);
       const slideButton = session.panel.querySelector(`.slide-action[data-slot="${player.slot}"]`);
       if (slideButton) {
         slideButton.disabled = session.paused || state.ended || !player.ready || (!player.hasBall && !player.slideReady);
@@ -226,8 +244,13 @@
     const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
     arena.querySelector(".arena-surface").append(penaltyHost);
     const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
-    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress></div>`).join("");
+    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><button type="button" class="special-button" data-slot="${slot}" disabled><svg viewBox="0 0 24 24" aria-hidden="true">${skillIcons.MF}</svg><kbd>${slot === "A" ? "E" : "O"}</kbd><span class="skill-state">Chờ</span></button></div>`).join("");
     arena.querySelector(".arena-surface").append(energy);
+    for (const button of energy.querySelectorAll(".special-button")) button.addEventListener("click", () => {
+      const session = sessions.get(panel.dataset.mode);
+      if (!session || session.paused) return;
+      arena.focus({ preventScroll: true }); session.api.action(button.dataset.slot, "special"); updateHud(session);
+    });
     const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
     result.innerHTML = '<strong></strong><span></span>';
     arena.querySelector(".arena-surface").append(result);
@@ -333,7 +356,7 @@
           if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
           if (session.api.beginCharge(slot, action)) chargeStarts.set(slot, performance.now());
         }
-      } else if (action === "challenge" || action === "slide") {
+      } else if (action === "challenge" || action === "slide" || action === "special") {
         const pending = pendingShots.get(slot);
         if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
         chargeStarts.delete(slot);

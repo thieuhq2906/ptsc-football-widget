@@ -63,10 +63,17 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .arena-result strong { color: #f5dd83; font-size: clamp(12px, 1.8vw, 20px); }
 .arena-result span { margin-top: 3px; font-size: 11px; }
 .arena-energy { position: absolute; bottom: 12px; left: 16px; right: 68px; display: flex; justify-content: space-between; gap: 12px; z-index: 2; pointer-events: none; }
-.energy-player { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 10px; width: 180px; padding: 6px 9px; border-radius: 7px; border-left: 4px solid #e45248; background: #10261fed; color: #fff; font-size: 11px; }
+.energy-player { display: grid; grid-template-columns: minmax(0, 1fr) auto 58px; align-items: center; gap: 3px 8px; width: 245px; padding: 6px 9px; border-radius: 7px; border-left: 4px solid #e45248; background: #10261fed; color: #fff; font-size: 11px; }
 .energy-player[data-team="B"] { border-left-color: #397eca; }
 .energy-player strong { font-size: 14px; color: #baf399; font-variant-numeric: tabular-nums; }
-.energy-player progress { grid-column: 1 / -1; width: 100%; height: 4px; accent-color: #a1e873; }
+.energy-player progress { grid-column: 1 / 3; width: 100%; height: 4px; accent-color: #a1e873; }
+.special-button { grid-column: 3; grid-row: 1 / 3; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1px 3px; padding: 4px; min-height: 40px; border: 1px solid #f7cf63; border-radius: 6px; background: #243b2a; color: #ffe494; pointer-events: auto; cursor: pointer; }
+.special-button svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.special-button kbd { font-size: 10px; }
+.special-button .skill-state { grid-column: 1 / -1; font-size: 9px; white-space: nowrap; }
+.special-button:disabled { cursor: default; opacity: .55; }
+.special-button.is-active { opacity: 1; color: #c7ffac; border-color: #a6f176; box-shadow: 0 0 9px #a6f17666; }
+.special-button.is-used { color: #a7b0ac; border-color: #68736d; }
 .energy-player.is-low strong { color: #ffc17a; }
 .energy-player.is-low progress { accent-color: #ff986c; }
 .energy-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -176,7 +183,10 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
   .arena-restart span { font-size: 19px; }
   .arena-result { top: 48px; padding: 5px 9px; }
   .arena-energy { left: 6px; right: 54px; bottom: 8px; gap: 6px; }
-  .energy-player { width: 130px; padding: 5px 6px; font-size: 9px; gap: 2px 4px; }
+  .energy-player { width: 130px; grid-template-columns: minmax(0, 1fr) auto 38px; padding: 5px 6px; font-size: 9px; gap: 2px 4px; }
+  .special-button { padding: 2px; gap: 1px; }
+  .special-button svg { width: 18px; height: 18px; }
+  .special-button kbd, .special-button .skill-state { font-size: 7px; }
   .energy-player strong { font-size: 12px; }
   .advanced-grid { grid-template-columns: 1fr; }
   .penalty-choices { bottom: 47px; left: 6px; right: 6px; gap: 6px; }

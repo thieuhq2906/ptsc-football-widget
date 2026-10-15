@@ -20,6 +20,7 @@
   "use strict";
   let count = 0;
   const challengeOutcome = roll => roll < 0.30 ? "foul" : roll < 0.80 ? "win" : roll < 0.95 ? "yellow" : "red";
+  const SLIDE_ASSIST_RANGE = 5.5, SLIDE_CONTACT_RANGE = 1.6;
   function kickProfile(action, power = 0.2, special = false) {
     power = Math.max(0.08, Math.min(1, Number(power) || 0.08));
     return { power, speed: (action === "pass" ? 9 : special ? 24 : 13) + power * (action === "pass" ? 12 : 13),
@@ -137,6 +138,9 @@
     const SEED = Number(query.get("seed") ?? Math.floor(Math.random() * 1e9));
     const rng = mulberry32(SEED);
     const refereeRng = mulberry32(SEED ^ 0x57c0ffee);
+    const benchRng = mulberry32(SEED ^ 0xbedc0a11);
+    const disciplineRng = mulberry32(SEED ^ 0x30ca4d);
+    const abilityRng = mulberry32(SEED ^ 0x70ab1117);
     const pick = list => list[Math.floor(rng() * list.length)];
     
     /* ---------------------------------- poses and rig ---------------------------------- */
@@ -398,14 +402,14 @@
       people.push(m);
       return m;
     });
-    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "onSince", "stintLen", "benchSince"];
+    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialUsed", "specialUntil", "onSince", "stintLen", "benchSince"];
     /** How long he stays on before the coach rotates him: about 20 minutes, staggered so they do not all go at once. */
     const newStint = () => 17 + rng() * 6;
     function setIdent(p, [name, head, skin, num, star]) {
       // Stamina differs from man to man (and from day to day): some are blowing after half an hour, some last.
       // Key men are the fittest: they are expected to last the whole match.
       Object.assign(p, { name, head, skin, num, star: star ?? 0, pillar: PILLARS.has(name), yellows: 0, energy: 1, stamina: PILLARS.has(name) ? 1.2 + rng() * 0.25 : 0.8 + rng() * 0.45,
-        injured: false, tiredSaid: false, lastSkill: null, onSince: 0, stintLen: newStint(), benchSince: -99 });
+        injured: false, tiredSaid: false, lastSkill: null, specialUsed: false, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
       if (p.sprite) restyle(p);
     }
     /** A fresh line-up: the usual six on the pitch and one to three of the others on the bench. */
@@ -472,6 +476,7 @@
     game.kickoffTeam = game.poss; game.firstKick = game.poss;
     game.story = newStory();
     planRefereeBreak();
+    planDiscipline();
     const ball = { mode: "hidden", owner: null, seg: null, g: ground(0.5, 0.5), h: 0, alpha: 0, show: false, spin: 0, kind: null };
     const cam = { x: ground(0.5, 0.5)[0], y: ground(0.5, 0.5)[1], z: 0.6 };
 
@@ -481,6 +486,51 @@
     let support = settings.support !== false && settings.support !== "false";
     const chargePower = h => h.charge ? h.charge.frozen ?? clamp((T - h.charge.start) / 0.9, 0.08, 1) : 0;
     const humanFor = p => p && humans.find(h => h.team === p.team);
+    const specialActive = p => !!p && (p.specialUntil ?? 0) > game.clock;
+    const protectedBall = p => p?.role === "FW" && specialActive(p) && ball.owner === p;
+    const specialKind = p => game.deadBallReason === "freeKick" && game.restartTaker === p ? "MF" : p?.role;
+    const specialName = p => ({ FW: "Bứt tốc bất khả cản", MF: "Vua đá phạt", DF: "Tường thép", GK: "Bàn tay thép" }[specialKind(p)] ?? "Skill đặc biệt");
+    function specialReady(p) {
+      if (!p || !on(p) || p.injured || p.specialUsed || p.energy < .4 || game.mode !== "play") return false;
+      if (specialKind(p) === "MF" && game.stoppage) return game.deadBallReason === "freeKick" && game.restartTaker === p && !game.pendingSubs?.length && T >= (game.subsUntil ?? 0);
+      if (game.stoppage || p.script || T < p.busyUntil) return false;
+      if (["FW", "MF"].includes(p.role)) return ball.owner === p && ball.mode === "carried";
+      if (p.role === "GK") return true;
+      const c = ball.owner;
+      return p.role === "DF" && !!c && c.team !== p.team && ball.mode === "carried" && !protectedBall(c) && mdist(p.pos, c.pos) <= 5.5;
+    }
+    function activateSpecial(h) {
+      const p = h.selected, kind = specialKind(p);
+      if (!specialReady(p)) return false;
+      p.specialUsed = true; p.energy = Math.max(0, p.energy - .4); h.charge = null;
+      game.stats.specialUses = (game.stats.specialUses ?? 0) + 1;
+      if (kind === "MF") {
+        p.script = null; p.keys = []; p.busyUntil = T;
+        if (game.stoppage) {
+          p.pos = [...game.fk.spot]; p.g = ground(...p.pos); carry(p); game.carrier = p;
+          game.fk.specialTaken = true; resumePlay(); clearRestartNote();
+        }
+        return shoot(p, { style: "knuckle", onTarget: true, goalProbability: .7, manual: true, windup: .6, label: "VUA ĐÁ PHẠT!" });
+      }
+      const success = abilityRng() < .7;
+      if (!success) { say(p, "Skill chưa thành công!", "var(--color-card)", 1.4); return true; }
+      game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
+      if (p.role === "FW") {
+        p.specialUntil = game.clock + 4;
+        say(p, "BỨT TỐC!", "var(--art-gold)", 1.5);
+      } else if (p.role === "GK") {
+        p.specialUntil = game.clock + 8;
+        say(p, "BÀN TAY THÉP!", "var(--art-gold)", 1.5);
+      } else {
+        const c = ball.owner;
+        c.script = null; c.busyUntil = T + .3;
+        p.pos = lerp(c.pos, p.pos, .7 / Math.max(.7, mdist(p.pos, c.pos))); p.g = ground(...p.pos);
+        p.keys.push([T, T + .35, "tap"]); p.busyUntil = T + .4;
+        carry(p); game.carrier = p; game.poss = p.team; game.dirty = true;
+        say(p, "TƯỜNG THÉP!", "var(--art-gold)", 1.5);
+      }
+      return true;
+    }
     const controllable = p => on(p) && !p.injured && (p.role !== "GK" || ball.owner === p || (game.stoppage && game.restartTaker === p));
     const manual = p => interactive && ["play", "reset", "halftime"].includes(game.mode) && controllable(p) && humanFor(p)?.selected === p;
     /** The keeper drops to his feet before the ball leaves the semicircular penalty area. */
@@ -569,6 +619,7 @@
         render();
         return true;
       }
+      if (action === "special") return activateSpecial(h);
       if (game.mode !== "play" || game.stoppage) return false;
       if (ball.owner?.team === h.team && ["carried", "held"].includes(ball.mode)) selectBallOwner(ball.owner);
       const p = h.selected;
@@ -579,11 +630,12 @@
         if (action === "pass" || action === "shoot") return directedKick(p, h, action, options);
       }
       if (action === "slide" && ball.owner !== p && T - h.tackleAt > 1.5) {
-        const c = game.carrier, direction = aimFor(h, p).world;
+        const c = ball.owner, direction = aimFor(h, p).world;
         h.tackleAt = T; p.energy = Math.max(0.05, p.energy - 0.035);
         game.stats.slides = (game.stats.slides ?? 0) + 1;
-        const towards = c ? ((c.pos[0] - p.pos[0]) * LEN * direction[0] * LEN + (c.pos[1] - p.pos[1]) * WID * direction[1] * WID) : -1;
-        if (c && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 4.5 && towards > 0) tackle(c, p, T + 0.4, { slide: true });
+        if (c && on(c) && !c.injured && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) <= SLIDE_ASSIST_RANGE) {
+          tackle(c, p, T + clamp(mdist(p.pos, c.pos) / 12, .18, .5), { slide: true });
+        }
         else {
           const target = inPitch(rayEnd(p, direction, 3.2 * fit(p)).position);
           mkScript(p, [T, p.pos], [T + 0.45, target], [T + 1.05, target]);
@@ -594,12 +646,12 @@
       }
       if (["challenge", "tackle"].includes(action) && T - h.tackleAt > 1.2) {
         const c = game.carrier;
-        if (c && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 2.7) {
+        if (c && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 2.7) {
           h.tackleAt = T;
           p.energy = Math.max(0.05, p.energy - 0.015);
           p.keys.push([T, T + 0.35, "tap"]); p.busyUntil = T + 0.45;
           at(T + 0.12, () => {
-            if (game.mode !== "play" || game.stoppage || ball.owner !== c || ball.mode !== "carried" || !on(p) || mdist(p.pos, c.pos) > 3) return;
+            if (game.mode !== "play" || game.stoppage || protectedBall(c) || ball.owner !== c || ball.mode !== "carried" || !on(p) || mdist(p.pos, c.pos) > 3) return;
             const result = challengeOutcome(rng());
             game.stats.challenges = (game.stats.challenges ?? 0) + 1;
             game.stats.challengeResults ??= { foul: 0, win: 0, yellow: 0, red: 0 };
@@ -623,6 +675,7 @@
       ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
       players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
+        special: { kind: specialKind(h.selected), name: specialName(h.selected), used: !!h.selected?.specialUsed, ready: specialReady(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) },
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
         pressing: !!h.pressing, yellows: h.selected?.yellows ?? 0,
@@ -733,11 +786,12 @@
       freeKick: ["Đá phạt! Chờ hiệu lệnh!", "Hàng rào đứng đúng khoảng cách!", "Đặt bóng nhanh nào!", "Chuẩn bị xong chưa? Nhanh lên!"],
       foul: ["Dừng lại! Chờ xử lý phạm lỗi!", "Bình tĩnh, chờ hiệu lệnh!", "Đứng dậy, chuẩn bị đá tiếp nào!", "Nhanh lên, đừng câu giờ!"],
       goalKick: ["Phát bóng lên! Chuẩn bị nào!", "Nhanh lên, đưa bóng vào cuộc!", "Thủ môn chuẩn bị xong chưa?", "Đừng có câu giờ!"],
+      injury: ["Dừng lại! Có người chấn thương!", "Y tế vào sân nào!", "Từ từ, chờ xử lý chấn thương!"],
       deadball: ["Bóng chết! Chờ hiệu lệnh!", "Nhanh lên, chuẩn bị đá tiếp!", "Đừng có câu giờ!", "Vào vị trí nhanh nào!"]
     };
     function beginRefereeWait(kind) {
       if (game.refWait?.kind === kind) return;
-      game.refWait = { kind, since: T, next: T + 2.4, line: 1 };
+      game.refWait = { kind, since: T, next: T + 5, line: 1 };
       const speaking = game.callouts.find(c => c.who === ref && T - c.t < c.life);
       if (!speaking || !/Thẻ|Phạm lỗi|Hết hiệp|TUÝTTT/i.test(speaking.text)) say(ref, REF_WAIT_LINES[kind][0], "var(--color-card)", 1.8);
     }
@@ -753,7 +807,31 @@
       const lines = REF_WAIT_LINES[kind];
       say(ref, lines[wait.line], "var(--color-card)", 1.8);
       wait.line = wait.line >= lines.length - 1 ? 1 : wait.line + 1;
-      wait.next = T + 2.8;
+      wait.next = T + 6;
+    }
+    const BENCH_LINES = {
+      support: ["Cố lên anh em!", "Đá chắc vào nào!", "Lên nào, còn thời gian!", "Chuyền bình tĩnh nhé!", "Giữ đội hình anh em!", "Bám người đi!", "Tập trung, mình làm được!"],
+      criticism: ["Chuyền gì thế?!", "Sao lại bỏ người!", "Đừng giữ bóng lâu quá!", "Bình tĩnh, đừng đá vội!", "Đá chắc chân vào!", "Đừng phạm lỗi nữa!"],
+      goal: ["Hay quá anh em!", "Đúng rồi, tiếp tục nào!", "Quá đẹp!", "Cố lên, thêm bàn nữa!"],
+      miss: ["Tiếc quá, làm lại nào!", "Lần sau nhìn đồng đội nhé!", "Bình tĩnh ngắm nào!", "Sút thế là tốt rồi!"]
+    };
+    function benchShout(t, event = "support") {
+      if (!["play", "reset", "celebrate"].includes(game.mode) || game.refBreak || (game.fight?.until ?? 0) > T) return;
+      if (game.callouts.some(c => c.who === ref && T - c.t < c.life)) return;
+      if (game.callouts.filter(c => T - c.t < c.life).length >= 2) return;
+      const available = bench[t].filter(b => !b.off && !b.injured && !b.subbing && !b.script);
+      if (!available.length) return;
+      const b = available[Math.floor(benchRng() * available.length)], lines = BENCH_LINES[event];
+      say(b, `Dự bị: ${lines[Math.floor(benchRng() * lines.length)]}`, event === "criticism" ? "var(--color-coral)" : "var(--color-card)", 2);
+      game.benchTalkAt = T + 6 + benchRng() * 5;
+    }
+    function updateBenchTalk() {
+      if (T < (game.benchTalkAt ?? 3) || !["play", "reset", "celebrate"].includes(game.mode)) return;
+      const t = game.mode === "celebrate" ? game.scorer.team : benchRng() < .65 ? game.poss : otherTeam(game.poss);
+      const event = game.mode === "celebrate" ? "goal" : game.mode === "play" && !game.stoppage && benchRng() < .2 ? "criticism" : "support";
+      // Retry after a short delay if another speech or a substitution takes priority.
+      game.benchTalkAt = T + 1;
+      benchShout(t, event);
     }
     /** Once a free kick, corner or kick-in has been taken, its note goes. */
     const clearRestartNote = () => { if (/^(Đá phạt|Phạt góc|Đá biên|Phạm lỗi)/.test(game.note ?? "")) setNote(null); };
@@ -1025,7 +1103,7 @@
         if (ball.owner !== c) return;
         // A defender right on him catches him as he plays it: free kick.
         const late = nearest(outfield(opponents(c.team)), c.pos);
-        if (!thief && !throwing && game.mode === "play" && !game.stoppage && late.p && late.d < 3 && rng() < 0.2) {
+        if (!protectedBall(c) && !thief && !throwing && game.mode === "play" && !game.stoppage && late.p && late.d < 3 && rng() < 0.2) {
           game.stats.lateFouls = (game.stats.lateFouls ?? 0) + 1;
           mkScript(late.p, [T, late.p.pos], [T + 0.15, lerp(c.pos, late.p.pos, 0.7 / Math.max(0.7, late.d))]);
           late.p.keys.push([T - 0.05, T + 0.4, "tap"]);
@@ -1573,26 +1651,81 @@
       },
     };
     
+    /** Track a nearby carrier until contact; only a real contact rolls the slide odds. */
+    function trackSlide(d) {
+      const slide = d.slideTarget, c = slide?.carrier;
+      if (!slide || !d.script || game.mode !== "play" || game.stoppage || !on(d) || !on(c) || c.injured || protectedBall(c) || ball.owner !== c || ball.mode !== "carried") {
+        d.slideTarget = null; return false;
+      }
+      const origin = [d.script.keys[0][1], d.script.keys[0][2]];
+      const target = lerp(c.pos, origin, .6 / Math.max(.6, mdist(c.pos, origin)));
+      for (const key of d.script.keys.slice(1)) { key[1] = target[0]; key[2] = target[1]; }
+      return true;
+    }
+    function slideTackle(c, d, contactAt) {
+      d.slideTarget = { carrier: c };
+      mkScript(d, [T, d.pos], [contactAt, c.pos], [contactAt + 1.1, c.pos]);
+      trackSlide(d);
+      d.keys.push([T, contactAt + .6, "slide"], [contactAt + .6, contactAt + 1.1, "sitUp"]);
+      d.busyUntil = contactAt + 1.15;
+      at(contactAt, () => {
+        const contact = trackSlide(d); d.slideTarget = null;
+        if (!contact) return;
+        d.pos = scriptPos(d, contactAt); d.g = ground(...d.pos);
+        if (mdist(d.pos, c.pos) > SLIDE_CONTACT_RANGE) return;
+        const win = rng() < .5, injured = rng() < .3;
+        game.stats.slideContacts = (game.stats.slideContacts ?? 0) + 1;
+        game.stats.slideWins = (game.stats.slideWins ?? 0) + Number(win);
+        game.stats.slideReds = (game.stats.slideReds ?? 0) + Number(!win);
+        game.stats.slideInjuries = (game.stats.slideInjuries ?? 0) + Number(injured);
+        if (!win) return foul(c, d, T, true, { forcedCard: "red", injury: injured });
+        c.script = null; c.busyUntil = T + .3; c.keys.push([T, T + .5, "shrug"]);
+        carry(d); game.carrier = d; game.poss = d.team; game.dirty = true;
+        say(d, "Xoạc trúng bóng!", "var(--color-sky-soft)", 1.2);
+        if (injured) {
+          // A clean win can still injure the opponent: stop for treatment, then keep possession.
+          game.stoppage = true; game.carrier = null; game.deadBallReason = "injury";
+          ball.mode = "dead"; ball.owner = null; ball.g = footPoint(d); ball.h = 0;
+          c.keys.push([T, T + .9, "fall"]);
+          const spot = [...d.pos], treatmentUntil = injure(c, T);
+          say(ref, "Dừng lại! Có người chấn thương!", "var(--color-card)", 1.8);
+          at(treatmentUntil, () => prepareRestart(() => {
+            const restart = on(d) ? d : nearest(outfield(team[d.team]), spot).p;
+            if (!restart) return;
+            carry(restart); game.carrier = restart; game.poss = restart.team;
+            restart.script = null; restart.keys = []; restart.busyUntil = T;
+            resumePlay(); setNote(null);
+          }));
+        }
+      });
+    }
+    const canScuffle = () => T - (game.scuffleAt ?? -99) > 20;
     function tackle(c, d, Tt, options = {}) {
+      if (protectedBall(c)) return;
+      if (options.slide) return slideTackle(c, d, Tt);
       if (interactive && !options.slide) {
         const target = c.script ? scriptPos(c, Tt) : c.pos;
         mkScript(d, [T, d.pos], [Tt, lerp(target, d.pos, 0.8 / Math.max(0.8, mdist(target, d.pos)))]);
         d.keys.push([T, Tt + 0.15, "jockey"]); d.busyUntil = Tt + 0.65;
         at(Tt, () => {
-          if (game.mode !== "play" || game.stoppage || ball.owner !== c || ball.mode !== "carried" || !on(d) || mdist(c.pos, d.pos) > 2 || rng() > 0.45) return;
+          if (game.mode !== "play" || game.stoppage || protectedBall(c) || ball.owner !== c || ball.mode !== "carried" || !on(d) || mdist(c.pos, d.pos) > 2) return;
+          const roll = rng();
+          if (roll < .22) return foul(c, d, Tt);
+          if (roll >= .67) return;
           carry(d); game.carrier = d; game.poss = d.team; game.dirty = true;
           c.script = null; c.busyUntil = T + 0.25;
           game.stats.pressWins = (game.stats.pressWins ?? 0) + 1;
         });
         return;
       }
-      const target = c.script ? scriptPos(c, Tt) : c.pos, slide = options.slide ?? rng() < 0.15;
+      const slide = options.slide ?? rng() < 0.15;
+      if (slide) return slideTackle(c, d, Tt);
+      const target = c.script ? scriptPos(c, Tt) : c.pos;
       mkScript(d, [T, d.pos], [Tt, lerp(target, d.pos, 0.6 / Math.max(0.6, mdist(target, d.pos)))]);
       d.busyUntil = Tt + 0.8;
-      if (slide) d.keys.push([Tt - 0.3, Tt + 0.6, "slide"], [Tt + 0.6, Tt + 1.1, "sitUp"]);
-      else d.keys.push([Tt - 0.12, Tt + 0.25, "tap"]);
+      d.keys.push([Tt - 0.12, Tt + 0.25, "tap"]);
       at(Tt, () => {
-        if (game.mode !== "play" || ball.owner !== c || ball.mode !== "carried") return;
+        if (game.mode !== "play" || game.stoppage || protectedBall(c) || ball.owner !== c || ball.mode !== "carried") return;
         // A spent defender is a step slow: he often just misses, and when he does get there it is more often late.
         if (rng() < 0.4 * (1 - fit(d)) - 0.2 * (1 - fit(c))) {
           // A step late: sometimes he only catches the man.
@@ -1601,9 +1734,8 @@
           if (rng() < 0.5) say(d, pick(["Không theo kịp…", "Hụt hơi rồi…"]), "var(--color-card)", 0.9);
           return;
         }
-        // Most challenges are clean. A defender already on a yellow is careful.
-        const counter = game.counter && game.counter.team === c.team && T < game.counter.until;
-        const foulP = slide ? 0.65 + 0.15 * (1 - fit(d)) : 0.09 + 0.08 * (1 - fit(d));
+        // Tired defenders are more likely to mistime a standing challenge.
+        const foulP = .22 + .1 * (1 - fit(d));
         if (rng() < foulP) foul(c, d, Tt, slide);
         else {
           praise(d);
@@ -1616,6 +1748,7 @@
     }
     /** Whistle, a yellow card, then a free kick; for Đỏ near goal, the striker comes over to take it. */
     function foul(c, d, Tt, slide = false, options = {}) {
+      if (protectedBall(c) || !on(c) || !on(d)) return;
       game.stoppage = true; game.carrier = null;
       game.deadBallReason = "foul";
       setNote(`Phạm lỗi · ${d.name} (${TEAM_NAME[d.team]})`);
@@ -1628,22 +1761,27 @@
       fly({ g: ground(...spot), h: 0 }, 0.4, 0.05, { roll: true });
       ref.keys.push([Tt + 0.15, Tt + 0.8, "whistle"]); at(Tt + 0.2, () => say(ref, "Dừng lại! Phạm lỗi!", "var(--color-card)", 1.6));
       if (options.forcedCard != null) {
-        if (options.forcedCard === "yellow") at(Tt + 0.8, () => { if (game.mode === "play") book(d, false); });
-        if (options.forcedCard === "red") at(Tt + 0.8, () => {
+        const hurtUntil = options.injury ? injure(c, Tt) : 0;
+        const fightUntil = !hurtUntil && d.role !== "GK" && canScuffle() && rng() < .25
+          ? scuffle(c, d, Tt, spot, slide, { cards: false, restart: false }) : 0;
+        const cardAt = Math.max(Tt + .8, fightUntil ? fightUntil - .8 : 0);
+        if (options.forcedCard === "yellow") at(cardAt, () => { if (game.mode === "play") book(d, false, .7); });
+        if (options.forcedCard === "red") at(cardAt, () => {
           if (game.mode !== "play") return;
-          game.redPending = T + 2; showRed(d, "THẺ ĐỎ!");
+          game.redPending = T + 2;
+          if (slide) showRed(d, "THẺ ĐỎ!"); else book(d, true, options.severity ?? .95);
         });
         const resume = () => {
           if (game.mode !== "play") return;
           if ((game.redPending ?? 0) > T) return at(game.redPending + 0.1, resume);
           setPiece(c, spot);
         };
-        at(Tt + 2.6, resume);
+        at(Math.max(Tt + 2.6, hurtUntil, fightUntil), resume);
         return;
       }
       // Now and then he does not get up (once a match at most); otherwise, very rarely, it boils over.
       const hurtUntil = !game.injured && c.role !== "GK" && rng() < (slide ? 0.2 : 0.07) ? injure(c, Tt) : 0;
-      if (!slide && !hurtUntil && !game.scuffled && rng() < 0.04 && scuffle(c, d, Tt, spot, slide)) return;
+      if (!hurtUntil && canScuffle() && rng() < .25 && scuffle(c, d, Tt, spot, slide)) return;
       // A card for a reckless slide or for stopping a counter-attack (a slide from behind, rarely, a straight red);
       // otherwise a word from the referee.
       const tactical = game.pullBack || (game.counter && game.counter.team === c.team && T < game.counter.until + 1);
@@ -1654,12 +1792,12 @@
       // The last man: a straight red, unless the referee is lenient (then yellow). For a card the referee jogs
       // over to the man first and shows it from a couple of metres away.
       let refWalk = 0, argues = false;
-      if ((slide && (lastMan || tactical)) || rng() < (slide ? 0.98 : 0.12)) {
+      if ((slide && (lastMan || tactical)) || rng() < (slide ? 0.98 : 0.45)) {
         const rd = mdist(ref.pos, d.pos);
         refWalk = Math.max(0, (rd - 3) / 5.5);
         game.refFocus = { uv: inPitch(lerp(d.pos, ref.pos, Math.min(1, 2.5 / Math.max(2.5, rd)))), until: Tt + 2.6 + refWalk };
-        const red = slide && ((lastMan && rng() < 0.7) || rng() < 0.25);
-        at(Tt + 1.3 + refWalk, () => book(d, red));
+        const red = slide ? ((lastMan && rng() < 0.7) || rng() < 0.25) : (tactical && rng() < .1) || rng() < .04;
+        at(Tt + 1.3 + refWalk, () => book(d, red, red ? .95 : tactical ? .75 : .55 + disciplineRng() * .3));
       } else {
         ref.keys.push([Tt + 1.0, Tt + 1.6, "point"]);
         at(Tt + 1.05, () => say(ref, "Nhẹ chân thôi!", "var(--color-card)", 1.0));
@@ -1683,14 +1821,21 @@
     }
     
     /** A card: yellow (a second one turns red) or a straight red. Keepers only ever see yellow. */
-    function book(p, wantRed) {
-      // A straight red at most once a match, and never for a keeper; a second yellow is always a red.
-      if (wantRed && p.role !== "GK" && game.reds.R + game.reds.B === 0) return showRed(p, "THẺ ĐỎ!");
+    function book(p, wantRed, severity = wantRed ? .95 : .7) {
+      if (!on(p)) return;
+      const plan = game.discipline, allowed = plan.chosen && !plan.issued;
+      if ((p.yellows ?? 0) >= 1 && (severity < .65 || !allowed)) {
+        say(ref, "Đã có thẻ vàng! Cẩn thận pha sau!", "var(--color-card)", 1.8); return;
+      }
+      if (wantRed && severity >= .9 && allowed && p.role !== "GK") {
+        plan.issued = true; game.redPending = T + 2; return showRed(p, "THẺ ĐỎ!");
+      }
       p.yellows = (p.yellows ?? 0) + 1; game.cards[p.team]++; game.stats.yellows++; game.dirty = true;
       ref.keys.push([T, T + 1.2, "card"]); say(ref, "Thẻ vàng!", "var(--art-card-yellow)", 1.2);
       setNote(`Thẻ vàng · ${p.name} (${TEAM_NAME[p.team]})`);
       p.keys.push([T + 0.1, T + 1.2, "shrug"]);
       if (p.yellows >= 2 && p.role !== "GK") {
+        plan.issued = true;
         game.stats.secondYellows++; game.redPending = T + 2.2;
         at(T + 0.9, () => showRed(p, "Thẻ vàng thứ 2 · THẺ ĐỎ!"));
       }
@@ -1710,15 +1855,15 @@
     
     const offset = (uv, [mx, my]) => [uv[0] + mx / LEN, uv[1] + my / WID];
     /**
-     * Tempers flare (once a match at most): words, maybe a push, a team-mate calms things down and the referee
+     * Tempers flare with a cooldown: words, maybe a push, a team-mate calms things down and the referee
      * steps in between them before dealing with it.
      */
-    function scuffle(c, d, Tt, spot, slide) {
+    function scuffle(c, d, Tt, spot, slide, options = {}) {
       // The fouled player's nearest team-mate (within a few metres) walks over to have words; otherwise the fouled
       // player himself once he is back on his feet.
       const pool = team[c.team].filter(p => on(p) && p !== c && p.role !== "GK" && !p.star && mdist(p.pos, d.pos) < 6);
       const confronter = pool.length ? nearest(pool, d.pos).p : c;
-      game.scuffled = true; game.stats.scuffles++;
+      game.scuffled = true; game.scuffleAt = T; game.stats.scuffles++;
       const v = [(d.pos[0] - confronter.pos[0]) * LEN, (d.pos[1] - confronter.pos[1]) * WID], n = Math.hypot(...v) || 1, u = [v[0] / n, v[1] / n];
       const start = confronter === c ? Tt + 1.8 : Tt + 0.4;
       const meet = inPitch(offset(d.pos, mul(u, -1.0))), ta = start + Math.max(0.6, mdist(confronter.pos, meet) / 3.5);
@@ -1750,10 +1895,13 @@
       at(refIn + 0.05, () => say(ref, "Dừng lại!", "var(--color-card)", 1.0));
       game.fight = { uv: mid, until: refIn + 3.0 };
       // Cards: the confronter only if he shoved (a red only in the rarest case); the foul itself on its usual odds.
-      if (shove) at(refIn + 1.8, () => book(confronter, rng() < 0.25));
-      if (rng() < (slide ? 0.4 : 0.15)) at(refIn + 3.0, () => book(d, false));
-      at(refIn + 3.6, () => { if (game.mode === "play") setPiece(c, spot); });
-      return true;
+      if (options.cards !== false) {
+        if (shove) at(refIn + 1.8, () => { if (game.mode === "play" && on(confronter)) book(confronter, rng() < .25); });
+        if (rng() < .55) at(refIn + 3.0, () => { if (game.mode === "play" && on(d)) book(d, false); });
+      }
+      const resumeAt = Math.max(end, refIn + 3.6);
+      if (options.restart !== false) at(resumeAt, () => { if (game.mode === "play") setPiece(c, spot); });
+      return resumeAt;
     }
     
     /**
@@ -1784,8 +1932,9 @@
       // Taker: walks over, steps back for his run-up and waits for the whistle (which waits for him).
       const runFrom = atM(-3.2, -1.3), tArr = T + Math.max(1.2, mdist(taker.pos, runFrom) / 4.5);
       // A wall takes a while to set up; without one the free kick is taken as soon as the taker is ready.
-      const Tk = walled ? Math.max(T + 4.6, tArr + 1.4) : Math.max(T + 2.6, tArr + 0.7);
+      const Tk = walled ? Math.max(T + 2.8, tArr + 1) : Math.max(T + 1.8, tArr + 0.5);
       game.fk = { spot: [...spot], goal: toW(att, [1, 0.5]), until: Tk + 1.3, direct, att };
+      const restartPlan = game.fk;
       mkScript(taker, [T + (taker === c ? 0.3 : 0), taker.pos], [tArr, runFrom], [Tk - 0.5, runFrom], [Tk - 0.04, atM(-0.4, -0.2)]);
       taker.keys.push([tArr + 0.1, Tk - 0.5, direct ? "stance" : "ready"]);
       at(tArr, () => lockFace(taker, Tk + 0.35, Math.sign(ground(...goal)[0] - taker.g[0]) || ATT[att]));
@@ -1817,14 +1966,14 @@
       if (direct) {
         if (walled) at(Tk - 2.0, () => say(gk, pick(["Hàng rào đứng chắc!", "Dịch sang trái!", "Dịch sang phải!"]), "var(--color-card)", 1.1));
         at(Tk - 0.4, () => {
-          if (game.mode !== "play") return;
+          if (game.mode !== "play" || restartPlan.specialTaken) return;
           resumePlay(); game.refPlan = null; clearRestartNote();
           const r = rng(), style = att === "R" ? (r < 0.5 ? "kick" : r < 0.85 ? "curl" : "knuckle") : (r < 0.6 ? "kick" : "curl");
           shoot(taker, { style, windup: 0.4, keepScript: true, wall: walled ? WALL_M : 0, wallPt, label: "Đá phạt!" });
         });
       } else {
         at(Tk, () => {
-          if (game.mode !== "play") return;
+          if (game.mode !== "play" || restartPlan.specialTaken) return;
           resumePlay(); game.refPlan = null; clearRestartNote();
           carry(taker); game.carrier = taker; game.freeKick = true; taker.busyUntil = T;
         });
@@ -1888,7 +2037,10 @@
       const spec = o.powerProfile ? { ...SHOT[style], speed: o.powerProfile.speed, arc: o.powerProfile.arc } : SHOT[style], aerial = style === "header" || style === "bicycle";
       const Tk = T + (aerial ? 0.02 : o.windup ?? (style === "power" ? 0.42 : 0.3));
       const keeperBonus = interactive && !o.special ? .04 * fit(gk) : 0;
-      const roll = rng(), gc = clamp(goalChance(c, style) - keeperBonus + (o.special ? .24 : 0), 0, .95);
+      const roll = o.goalProbability != null ? abilityRng() : rng();
+      let gc = o.goalProbability ?? clamp(goalChance(c, style) - keeperBonus + (o.special ? .24 : 0), 0, .95);
+      if (o.goalProbability != null && roll < gc) game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
+      if (specialActive(gk) && o.goalProbability == null) { gc = 0; o.onTarget = true; gk.specialUntil = 0; }
       // Misses: mostly saved or off target; the woodwork is rare (and at most twice a match per side).
       let outcome = roll < gc ? "goal" : roll < gc + (1 - gc) * 0.55 ? "save" : roll < gc + (1 - gc) * 0.6 ? "post" : "wide";
       if (o.onTarget) outcome = roll < gc ? "goal" : "save";
@@ -2007,6 +2159,7 @@
     }
     /** After a chance goes begging, a team-mate either lifts the shooter or lets him have it. */
     function reactToMiss(c, how) {
+      at(T + .65, () => benchShout(c.team, "miss"));
       if (rng() > 0.45) return;
       const ctx = c.shotCtx ?? {}, field = outfield(team[c.team]).filter(p => p !== c);
       // A word of advice only when someone really was free (and never when he was through on his own), and only sometimes.
@@ -2074,6 +2227,7 @@
       game.mode = "celebrate"; game.modeT = T; game.scorer = c; game.carrier = null; game.stoppage = true;
       game.net = { t: T, end: toW(c.team, [1, 0.5])[0] > 0.5 ? 1 : 0 };
       game.crowdCheer = T; game.cheerTeam = c.team;
+      at(T + 1, () => benchShout(c.team, "goal"));
       say("ball", "VÀOOO!", "var(--color-pear)", 1.3);
       ref.keys.push([T + 0.3, T + 0.9, "whistle"], [T + 1.0, T + 2.4, "point"]);
       // What sort of goal was it? Still behind: grab the ball and get on with it. Padding a big lead: low key.
@@ -2422,6 +2576,7 @@
     function updatePerson(p, dt) {
       if (p.off) return;
       const before = [...p.pos];
+      if (p.slideTarget) trackSlide(p);
       const selectedHuman = manual(p) ? humanFor(p) : null;
       const waiting = game.stoppage || game.mode !== "play";
       // Movement takes priority over positioning scripts while waiting for a restart.
@@ -2445,7 +2600,7 @@
         const advance = pressing ? Math.max(0, Math.min(4, mdist(p.pos, game.carrier.pos) - 0.85)) : 4;
         let tgt = h ? inPitch([p.pos[0] + (directionLength ? direction[0] / directionLength * advance : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * advance : 0)]) : targetFor(p);
         const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
-        const top = (h ? h.sprint ? 6.2 : pressing ? 5.5 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
+        const top = (protectedBall(p) ? 9.8 : h ? h.sprint ? 6.2 : pressing ? 5.5 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
         // Keep a little space between bodies. Players ignore the referee; he steps around them.
         const dn = Math.hypot(...des) > 0.1 ? mul(des, 1 / Math.hypot(...des)) : null;
@@ -2500,12 +2655,13 @@
     
     /* ---------------------------------- modes ---------------------------------- */
     function startMatch() {
-      game.refWait = null; game.deadBallReason = null; game.restartTaker = null;
+      game.refWait = null; game.deadBallReason = null; game.restartTaker = null; game.scuffleAt = -99; game.benchTalkAt = T + 3;
       game.extraTime = false; game.extraHalf2 = false; game.penalty = null; game.keeperSince = null;
       planRefereeBreak(); ref.off = false;
+      planDiscipline();
       game.timers = []; game.pendingSubs = []; game.newMatch = true; game.redPending = 0;
-      for (const p of people) { p.script = null; p.keys = []; p.faceLock = null; p.busyUntil = 0; p.waitMovement = false; }
-      for (const m of medics) { m.off = false; m.pos = [...m.post]; m.g = ground(...m.pos); }
+      for (const p of people) { p.script = null; p.keys = []; p.faceLock = null; p.busyUntil = 0; p.waitMovement = false; p.slideTarget = null; }
+      for (const m of medics) { m.off = false; m.treatmentAt = null; m.pos = [...m.post]; m.g = ground(...m.pos); }
       for (const p of players) if (p.off || p.sentOff) { p.off = p.sentOff = false; p.script = null; p.pos = toW(p.team, KICKOFF_DEF[p.i]); }
       for (const p of players) { p.endPose = null; p.stayDown = false; p.sulking = false; p.near = null; p.subbing = false; }
       pickSquads(); game.injured = false; game.subsUntil = 0;
@@ -2531,12 +2687,13 @@
         // Kick off only once both teams are back in shape (with a safety limit so the match can never stall).
         const taker = kickoffTaker(game.kickoffTeam);
         if (game.restartTaker !== taker) pointRestart(taker);
-        const lined = players.filter(on).every(p => !p.script && mdist(p.pos, kickoffSpot(p)) < (p === taker ? 0.5 : 1.0));
+        if (!taker) return fullTime(otherTeam(game.kickoffTeam));
+        const lined = players.filter(on).every(p => (manual(p) && p.waitMovement) || (!p.script && mdist(p.pos, kickoffSpot(p)) < 1.6));
         const subbing = T < (game.subsUntil ?? 0), since = T - Math.max(game.modeT, game.subsUntil ?? 0);
-        const limit = game.halfBreak || game.newMatch ? 16 : 9, takerReady = mdist(taker.pos, kickoffSpot(taker)) < 1.5;
-        if (!subbing && !game.pendingSubs?.length && ((s > 1.5 && lined) || (since > limit && takerReady) || s > 25)) {
+        if (!subbing && !game.pendingSubs?.length && ((s > .3 && lined && ball.show) || since > 8)) {
           game.mode = "play"; resumePlay(); game.halfBreak = false; game.newMatch = false; game.afterGoal = false; game.ballFetched = false; game.poss = game.kickoffTeam; game.kickoffPass = true; game.dirty = true;
           taker.pos = toW(taker.team, [0.487, 0.5]); taker.g = ground(...taker.pos);
+          taker.script = null; taker.keys = [];
           carry(taker); game.carrier = taker; taker.busyUntil = T + 0.6;
           for (const h of humans) {
             h.charge = null;
@@ -2679,13 +2836,18 @@
         c.keys.push([Tt + 0.9, tLift, "hurt"], [tLift, tEnd + 0.2, "onStretcher"]);
         mkScript(c, [Tt, X], [tLift, X], [tOut, exit], [tEnd, beyond]);
         medics.forEach((m, k) => {
+          // A later injury may reuse this medic before an older return timer fires.
+          m.treatmentAt = Tt; m.off = false;
           const sgn = k ? 1 : -1;
           mkScript(m, [tGo, m.pos], [tArr, side(X, sgn)], [tLift, side(X, sgn)], [tOut, side(exit, sgn)], [tEnd, side(beyond, sgn)]);
           m.keys.push([tArr, tLift - 0.2, "treat"], [tLift - 0.2, tEnd, "carryLow"]);
           at(tArr - 0.4, () => lockFace(m, tEnd, -sgn * (Math.sign(ground(...side(X, 1))[0] - ground(...side(X, -1))[0]) || 1)));
           // Taken down the tunnel; the medics are back at their post a little later.
-          at(tEnd, () => { m.off = true; });
-          at(tEnd + 5, () => { m.off = false; m.script = null; m.pos = [...m.post]; m.g = ground(...m.pos); m.keys = []; });
+          at(tEnd, () => { if (m.treatmentAt === Tt) m.off = true; });
+          at(tEnd + 5, () => {
+            if (m.treatmentAt !== Tt) return;
+            m.off = false; m.script = null; m.pos = [...m.post]; m.g = ground(...m.pos); m.keys = [];
+          });
         });
         at(tArr + 0.2, () => say(medics[0], pick(["Để chúng tôi xem!", "Nằm yên nhé!"]), "var(--color-card)", 1.1));
         setNote(`Chấn thương · ${c.name} (${TEAM_NAME[c.team]}) · cáng ra ngoài`);
@@ -2926,6 +3088,24 @@
     }
     
     /* ---------------------------------- the step ---------------------------------- */
+    function planDiscipline() {
+      game.discipline = { chosen: disciplineRng() < .3, minute: 8 + disciplineRng() * 35, issued: false, pending: false };
+    }
+    function maybeDisciplineIncident() {
+      const plan = game.discipline, c = ball.owner;
+      if (!plan.chosen || plan.issued || plan.pending || minute() < plan.minute || game.mode !== "play" || game.stoppage || !c || ball.mode !== "carried" || protectedBall(c) || humans.some(h => h.charge)) return;
+      const d = nearest(outfield(opponents(c.team)).filter(p => !manual(p) && !p.script && T >= p.busyUntil), c.pos);
+      if (!d.p || d.d > 4.5) return;
+      plan.pending = true;
+      const offender = d.p, contactAt = T + Math.max(.3, d.d / 6);
+      mkScript(offender, [T, offender.pos], [contactAt, lerp(c.pos, offender.pos, .7 / Math.max(.7, d.d))]);
+      offender.keys.push([contactAt - .2, contactAt + .3, "lunge"]); offender.busyUntil = contactAt + .5;
+      at(contactAt, () => {
+        plan.pending = false;
+        if (plan.issued || game.mode !== "play" || game.stoppage || !on(offender) || ball.owner !== c || protectedBall(c) || mdist(offender.pos, c.pos) > 2.5) return;
+        foul(c, offender, T, false, { forcedCard: "red", severity: offender.yellows ? .75 : .95 });
+      });
+    }
     /** Draw one independent 5% chance per match, without changing the football storyline RNG. */
     function planRefereeBreak() {
       game.refBreak = null;
@@ -2989,8 +3169,10 @@
       updateEnergy(dt);
       updateModes();
       updateRefereeWait();
+      updateBenchTalk();
       updateShape();
       updateControls();
+      maybeDisciplineIncident();
       updatePress();
       releaseKeeperIfLate();
       if (game.mode === "play" && !game.stoppage && game.carrier && ball.owner === game.carrier && (ball.mode === "carried" || ball.mode === "held") && T >= game.carrier.busyUntil && !humanFor(game.carrier)) decide(game.carrier);
