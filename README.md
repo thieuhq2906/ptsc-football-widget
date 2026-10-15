@@ -105,40 +105,57 @@ Các hiệu ứng kích hoạt có tỷ lệ thành công 70%; riêng sút đặ
 
 Đội triển khai được xác định bằng người cầm bóng; lúc bóng bay dùng quyền triển khai gần nhất. Không có thời gian hồi đầu trận: tăng tốc có thể bật khi đội mình chuẩn bị giao bóng, nhưng skill sút/chuyền cần người đó thực sự có bóng. Đường chạy tự động không khóa skill. Động tác đang ra chân hiển thị **Đang ra chân**; chờ vào vị trí đá phạt hiển thị **Vào vị trí**. Tạm dừng giữa trận không nhận lệnh kích hoạt.
 
-Mỗi skill có một icon tượng hình riêng (cùng nét, cùng khung) và nhãn 1–2 từ: Bứt tốc, Dứt điểm, Lách người, Đá phạt, Cầm nhịp, Chọc khe, Chặn đứng, Tổng thủ, Cắt bóng, Bắt dính, Lao ra, Phản xạ, Đại bác, Phạt góc, Không chiến, Sút pen, Bắt pen. Nhãn hiện ngay dưới icon trên sân; **Bảng skill** ngoài sân liệt kê đủ icon, nhãn, tên và tình huống dùng. Không khả dụng chuyển xám. Trạng thái nêu lý do cụ thể: **Cần có bóng**, **Chỉ tấn công**, **Chỉ phòng ngự**, **Chỉ bắt pen**, **Thiếu lực**, **Đã dùng**… Tên skill, loại tình huống và phím E/O hiện dưới bảng cầu thủ; màn penalty hiện thêm chỉ dẫn skill ở mỗi góc. Khi luân lưu đổi lượt, tự chọn người sút tiếp theo và thủ môn bên kia; không lộ hướng trước khi cả hai chốt.
+Mỗi skill có một icon tượng hình riêng (cùng nét, cùng khung) và nhãn 1–2 từ: Bứt tốc, Dứt điểm, Lách người, Đá phạt, Cầm nhịp, Chọc khe, Chặn đứng, Tổng thủ, Cắt bóng, Bắt dính, Lao ra, Phản xạ, Đại bác, Phạt góc, Không chiến, Sút pen, Bắt pen. Nhãn hiện ngay dưới icon trên sân; **Bảng skill** ngoài sân chia nhóm Tấn công, Phòng ngự, Thủ môn (tự kích hoạt), Đá phạt & phạt góc, Penalty; mỗi skill có icon, nhãn, tên và tình huống dùng. Không khả dụng chuyển xám. Trạng thái nêu lý do cụ thể: **Cần có bóng**, **Chỉ tấn công**, **Chỉ phòng ngự**, **Chỉ bắt pen**, **Thiếu lực**, **Đã dùng**… Tên skill, loại tình huống và phím E/O hiện dưới bảng cầu thủ; màn penalty hiện thêm chỉ dẫn skill ở mỗi góc. Khi luân lưu đổi lượt, tự chọn người sút tiếp theo và thủ môn bên kia; không lộ hướng trước khi cả hai chốt.
 
 Tham khảo thiết kế tình huống từ [hướng dẫn gameplay chính thức của Konami](https://www.konami.com/efootball/en/page/2022/season1_patch-notes_v1-0-0) và cách nhận vị trí/lặp phím từ [MDN KeyboardEvent](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent). Phân loại, tỷ lệ và giới hạn lượt ở đây là cơ chế riêng của PTSC Cup.
 
 ### Lối chơi (playstyle)
 
-Mỗi cầu thủ có một lối chơi theo eFootball, chọn ngẫu nhiên theo vị trí (đi theo cầu thủ khi thay người; vào sân ở vị trí khác thì nhận lối chơi hợp vị trí đó). Lối chơi điều khiển AI: vị trí đứng khi có/không có bóng, độ dạt cánh, phạm vi di chuyển, khoảng sút, xu hướng đi bóng/tạt/phối hợp/chuyền dài, việc đồng đội tìm đường chuyền cho ai và mức độ áp sát. Cầu thủ đang được người điều khiển đi theo phím bấm; lối chơi quyết định phần còn lại. Thẻ cầu thủ ghi lối chơi; **Bảng lối chơi** ngoài sân mô tả cả 22 kiểu.
+Mỗi cầu thủ có **một lối chơi tấn công** (dùng khi đội mình có bóng) và **một lối chơi phòng ngự** (khi mất bóng), theo hệ thống của eFootball. Chỉ chọn những kiểu hợp sân nhỏ 5 cầu thủ ngoài sân + thủ môn; các kiểu cần nhiều người hoặc hành lang cánh dài (Dummy Runner, Roaming Flank, Cross Specialist, Creative Playmaker, Defensive Full-back, Full-back Finisher, Attack Outlet, All-action Defender, Attacking GK) không đưa vào vì trùng hoặc không thể hiện rõ trên sân 6 người. Lối chơi gắn với cầu thủ (đi theo khi thay người; vào ở vị trí khác thì nhận kiểu hợp vị trí đó). Cầu thủ đang được người điều khiển đi theo phím bấm; lối chơi quyết định phần còn lại. Thẻ cầu thủ ghi cả hai kiểu; **Bảng lối chơi** ngoài sân chia theo vùng, hai cột tấn công/phòng ngự.
 
-| Vị trí | Lối chơi | Hành vi trong game |
+| Vùng | Khi có bóng · tấn công | Khi mất bóng · phòng ngự |
 |---|---|---|
-| Tiền đạo | Săn bàn (Goal Poacher) | Đứng cao, bám vai hậu vệ cuối, được tìm bằng bóng chọc khe, sút sớm. |
-| | Cáo vòng cấm (Fox in the Box) | Đứng giữa vòng cấm, được tìm bằng bóng tạt, đánh đầu nhiều hơn. |
-| | Mục tiêu (Target Man) | Được tìm bằng bóng dài, đánh đầu nhiều, ít đi bóng. |
-| | Hộ công lùi sâu (Deep-Lying Forward) | Lùi về nhận bóng, phối hợp nhiều gấp 1,8 lần. |
-| | Chạy chỗ nghi binh (Dummy Runner) | Đứng cao, di chuyển rộng, ít được chuyền tới. |
-| | Cánh săn bàn (Prolific Winger) | Dạt cánh, đi bóng bó vào và sút từ xa hơn. |
-| | Cánh tự do (Roaming Flank) | Dạt cánh nhưng di chuyển tự do, phối hợp nhiều hơn. |
-| | Chuyên tạt (Cross Specialist) | Bám biên rộng nhất, 70% tạt bóng khi ở cánh gần vòng cấm. |
-| Tiền vệ | Số 10 cổ điển (Classic No. 10) | Đứng sau tiền đạo, ít lui về, đi bóng và sút xa. |
-| | Kiến tạo (Creative Playmaker) | Di chuyển tìm khoảng trống, phối hợp và chuyền dây chuyền nhiều hơn. |
-| | Xâm nhập (Hole Player) | Băng cao nhất trong các tiền vệ, sút sớm, nhận bóng chọc khe. |
-| | Con thoi (Box-to-Box) | Lên cao khi có bóng, lùi sâu khi mất bóng, ưu tiên áp sát. |
-| | Điều phối (Orchestrator) | Lùi sâu, phát động bằng chuyền dài. |
-| | Mỏ neo (Anchor Man) | Đứng trước hàng thủ, hẹp, hầu như không đi áp sát xa. |
-| Hậu vệ | Phát động (Build Up) | Chuyền dài phát động tấn công. |
-| | Trung vệ dâng cao (Extra Frontman) | Được dâng cao hơn khi có bóng, có thể đi bóng lên. |
-| | Đánh chặn (Destroyer) | Ưu tiên áp sát, chạy nhanh hơn khi pressing. |
-| | Hậu vệ cánh công (Offensive Full-back) | Băng lên dọc biên, tạt bóng. |
-| | Hậu vệ cánh thủ (Defensive Full-back) | Ở lại phòng ngự, giữ cánh. |
-| | Hậu vệ xâm nhập (Full-back Finisher) | Từ cánh bó vào trung lộ, có thể tự dứt điểm. |
-| Thủ môn | Thủ môn dâng cao (Offensive Goalkeeper) | Đứng cao hơn, lao ra xa thêm 3m và tự tin hơn. |
-| | Thủ môn giữ khung (Defensive Goalkeeper) | Bám vạch vôi, lao ra ít hơn, giảm 4 điểm % khả năng thủng lưới. |
+| Tiền đạo | **Săn bàn** (Goal Poacher): đứng cao, được tìm bằng bóng chọc khe, sút sớm. **Cáo vòng cấm** (Fox in the Box): đứng giữa vòng cấm, nhận bóng tạt, đánh đầu nhiều. **Mục tiêu** (Target Man): nhận bóng dài, đánh đầu, ít đi bóng. **Cánh săn bàn** (Prolific Winger): dạt cánh, đi bóng bó vào, sút từ xa hơn. **Hộ công lùi sâu** (Deep-lying Forward): lùi về, phối hợp nhiều gấp 1,8 lần. | **Pressing tuyến đầu** (Front Line Pressure): ưu tiên áp sát khi bóng ở phần sân đối phương. **Chờ phản công** (Front Line Poacher): ở lại phía trên, không đi áp sát, được ưu tiên chuyền tới khi phản công. **Lùi về hỗ trợ** (Press Back): lùi sâu về phần sân nhà. |
+| Tiền vệ | **Số 10 cổ điển** (Classic No. 10): sau tiền đạo, đi bóng, sút xa. **Xâm nhập** (Hole Player): băng cao nhất, sút sớm, nhận bóng chọc khe. **Điều phối** (Orchestrator): lùi sâu, chuyền dài phát động. | **Con thoi** (Box-to-Box): lùi về và áp sát liên tục. **Mỏ neo** (Anchor Man): đứng chắn trước hàng thủ, hẹp, gần như không đi áp sát. **Đánh chặn** (The Destroyer): ưu tiên áp sát, chạy nhanh hơn, vào bóng nhiều hơn 50%. **Cắt đường chuyền** (Pass Disruptor): thêm 14% khả năng cắt đường chuyền sệt đi gần mình. |
+| Hậu vệ | **Phát động** (Build Up): ở lại phía sau, chuyền dài. **Trung vệ dâng cao** (Extra Frontman): dâng cao hơn, có thể đi bóng lên. **Hậu vệ cánh công** (Attacking Full-back): băng dọc biên, tạt bóng. | **Kèm người** (Tough Marker): đứng sát phía trong tiền đạo gần nhất, vào bóng nhiều hơn. **Bọc lót** (Covering Role): lùi sau đồng đội, thu vào giữa. **Giữ tuyến cao** (High Line Master): dâng hàng thủ cao. **Lùi sâu** (Deep Defender): lùi sát vòng cấm. |
+| Thủ môn | **Thủ môn phát động** (Build-up GK): chuyền/lăn ngắn cho hậu vệ. **Thủ môn dâng cao** (High Line GK): đứng cao khi đội mình tấn công. | **Thủ môn giữ khung** (Defensive GK): bám vạch, lao ra ít hơn, giảm 4 điểm % khả năng thủng lưới. **Thủ môn băng ra** (Sweeper GK): đứng cao hơn, lao ra xa thêm 3 m, tự tin hơn. |
 
-Toàn bộ 22 lối chơi của eFootball đều có mặt; tên tiếng Việt đổi khi trùng tên skill (ví dụ Orchestrator là **Điều phối** vì đã có skill **Nhạc trưởng**). Với sân 6 người, cầu thủ chạy cánh của eFootball thuộc nhóm tiền đạo; hậu vệ cánh thuộc nhóm hậu vệ.
+Tên tiếng Việt khác tên skill để không nhầm (Sweeper GK là **Thủ môn băng ra** vì đã có skill **Thủ môn quét**).
+
+### Chỉ số cầu thủ
+
+Mỗi cầu thủ có 10 chỉ số (35–95): **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Chỉ số = nền theo vị trí sở trường + điểm cộng/trừ của lối chơi tấn công và phòng ngự (ví dụ Săn bàn +10 Dứt điểm +6 Tốc độ, Mục tiêu +10 Đánh đầu +10 Sức mạnh −6 Tốc độ, Đánh chặn +8 Phòng ngự +8 Sức mạnh) + ngôi sao (#10, #7) + ngẫu nhiên ±5. **OVR** tính theo trọng số của vị trí đang đá. Dự bị có vị trí sở trường riêng.
+
+| Chỉ số | Tác động trong game |
+|---|---|
+| Tốc độ | Tốc chạy của mọi cầu thủ (AI và người điều khiển): 85 nhanh hơn khoảng 9% so với 70. |
+| Thể lực | Tốc độ hao thể lực, nên quyết định khi nào bị thay. |
+| Dứt điểm / Đánh đầu | Khả năng ghi bàn ở chế độ chơi (đánh đầu dùng chỉ số Đánh đầu); Đánh đầu còn tăng tỷ lệ đánh đầu khi đón bóng tạt. |
+| Bắt bóng | Khả năng cứu thua ở chế độ chơi. |
+| Chuyền ngắn | Đường chuyền sệt ít bị cắt hơn. |
+| Chuyền dài | Ít chuyền dài quá tay ra biên hơn. |
+| Rê bóng + Sức mạnh đấu Phòng ngự + Sức mạnh | Tranh chấp tự động: ai thắng, người rê giỏi đôi khi lách qua pha vào bóng. |
+
+Tranh bóng bằng phím (B/M) vẫn giữ tỷ lệ cố định 30/50/15/5% như mô tả ở trên. Chế độ xem vẫn theo kịch bản bàn thắng. Thẻ cầu thủ hiện OVR và 10 chỉ số; HUD trên sân ghi OVR cạnh tên; bảng **Đội hình & chỉ số** liệt kê cả hai đội, kể cả dự bị.
+
+### Đội hình tùy chỉnh (squads)
+
+Đội hình là dữ liệu (`PTSCFootball.data.squads`). Truyền `squads` (object hoặc chuỗi JSON, cũng dùng được `data-squads`) khi mount để đá với đội khác. Mỗi đội cần đúng 6 người đá chính theo thứ tự thủ môn, hai hậu vệ, tiền vệ, hai tiền đạo; dự bị tùy ý (tối đa 3 người ngồi ghế mỗi trận). Đội nào thiếu dữ liệu hợp lệ thì giữ đội mặc định. Chỉ số không ghi sẽ được sinh tự động; lối chơi không ghi hoặc không hợp vị trí sẽ được chọn tự động.
+
+```js
+PTSCFootball.mount(el, { mode: "cpu", squads: { R: {
+  players: [
+    { name: "Thủ Thành", head: "buzz", skin: 1, num: 1, stats: { goalkeeping: 90 }, defense: "sweeperGK" },
+    { name: "Hậu A", head: "spiky", skin: 1, num: 2 }, { name: "Hậu B", head: "curly", skin: 2, num: 3 },
+    { name: "Tiền Vệ", head: "beard", skin: 1, num: 8, attack: "orchestrator" },
+    { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, star: 7, stats: { finishing: 92, speed: 88 }, attack: "goalPoacher" },
+    { name: "Cánh Phải", head: "glasses", skin: 1, num: 11 }
+  ],
+  bench: [{ name: "Dự Bị", head: "buzz", skin: 2, num: 12, natural: "DF" }]
+} } });
+```
+
+Kiểu tóc: `buzz`, `spiky`, `curly`, `beard`, `glasses`, `quiff`, `sidepart`. Mã lối chơi xem `PTSCFootball.data.playstyles`.
 
 ### Khung thành
 
@@ -146,7 +163,7 @@ Lưới khung thành chia lớp theo chiều sâu: lưới sau và lưới hông
 
 ### Cấu trúc dữ liệu gameplay
 
-`PTSCFootball.data` công khai bảng cấu hình `GAME_DATA` trong `ptsc-football.js`: `skills` (id, tên, `roles`, `contexts`, `requiresBall`, hiệu ứng, icon, tốc độ/tầm), `skillContexts` (nhãn và điều kiện tình huống), `skillRules` (40%, 70%, 2s, một lượt, `keeperAuto` 5 phút/7% mỗi phút), `playstyles` (22 lối chơi và tham số hành vi), `controls`, `rendering`, `restarts`, `corners`, `goalkeeper` và `celebrations`. Engine và HUD đọc cùng bảng; `skillContext()` xác định tình huống, `specialAvailability()` kiểm tra điều kiện dùng chung cho cả máy và người.
+`PTSCFootball.data` công khai bảng cấu hình `GAME_DATA` trong `ptsc-football.js`: `skills` (id, tên, `roles`, `contexts`, `requiresBall`, hiệu ứng, icon, tốc độ/tầm), `skillContexts` (nhãn và điều kiện tình huống), `skillRules` (40%, 70%, 2s, một lượt, `keeperAuto` 5 phút/7% mỗi phút), `playstyles` (`attack` và `defense`, mỗi kiểu kèm vị trí, tham số hành vi và điểm cộng chỉ số), `stats` (10 chỉ số, nền theo vị trí, trọng số OVR), `squads` (đội hình mặc định), `controls`, `rendering`, `restarts`, `corners`, `goalkeeper` và `celebrations`. Engine và HUD đọc cùng bảng; `skillContext()` xác định tình huống, `specialAvailability()` kiểm tra điều kiện dùng chung cho cả máy và người.
 
 Trạng thái cầu thủ lưu `specialId`, `specialSituations`, `specialUsed`, `specialActiveId`, `specialUntil`; các trường theo danh tính khi thay người. Phạt góc và penalty lưu hiệu ứng theo đúng tình huống/lượt, không mang buff sang lần tiếp theo. Trạng thái giao bóng chờ chuyền tách khỏi bóng trong cuộc, nên không tự đá do hết thời gian chờ.
 

@@ -57,41 +57,105 @@
     restarts: { kickoff: { action: "pass", takerRange: 1.4 }, corner: { takerRange: 1.4 }, freeKick: { takerRange: 1.4 }, penalty: { distance: 6 } },
     corners: [{ id: "cross", name: "Tạt bổng" }, { id: "short", name: "Chuyền ngắn" }, { id: "oneTwo", name: "Đập nhả" }, { id: "edge", name: "Trả tuyến hai" }],
     /**
-     * Playing styles after eFootball's, one per player identity, chosen by position. They steer the AI: where he
-     * stands with and without the ball (push/drop, width, roam, how far a defender may go), what he does on the
-     * ball (shot range, dribbling, crossing, combinations, long balls), which passes are looked for to him and how
-     * eagerly he presses. A human-controlled player moves where he is steered; the style shapes everything else.
+     * Playing styles after eFootball's, picked for a small pitch: every player has one for when his side has the
+     * ball (attack) and one for when it does not (defence). Attack styles move him with the ball (push, width, roam,
+     * how far a defender may go) and shape what he does on it (shot range, dribbles, crosses, combinations, long
+     * balls) and which passes are looked for to him. Defence styles decide where he drops to, how eagerly he
+     * presses, whether he marks a man, reads passes, holds a high line or stays up for the counter. A human-
+     * controlled player moves where he is steered; the styles shape everything else.
      */
     playstyles: {
-      goalPoacher: { name: "Săn bàn", en: "Goal Poacher", roles: ["FW"], desc: "Luôn bám vai hậu vệ cuối, chờ bóng sau lưng, dứt điểm ngay.", push: .1, drop: .1, width: .55, shoot: .06, target: { through: 1 } },
-      foxInTheBox: { name: "Cáo vòng cấm", en: "Fox in the Box", roles: ["FW"], desc: "Đứng trong vòng cấm, chờ tạt và bóng bật ra.", push: .12, drop: .05, width: .35, shoot: .02, target: { box: 1.2 }, header: .25 },
-      targetMan: { name: "Mục tiêu", en: "Target Man", roles: ["FW"], desc: "Làm tường, nhận bóng dài, mạnh không chiến.", push: .05, drop: .02, width: .45, target: { long: 1.3 }, header: .3, dribble: -.1 },
-      deepLyingForward: { name: "Hộ công lùi sâu", en: "Deep-Lying Forward", roles: ["FW"], desc: "Lùi về nhận bóng, phối hợp rồi mới lên.", push: -.1, drop: -.04, width: .6, combo: 1.8, target: { short: .6 } },
-      dummyRunner: { name: "Chạy chỗ nghi binh", en: "Dummy Runner", roles: ["FW"], desc: "Chạy rộng kéo giãn hàng thủ, ít khi nhận bóng.", push: .09, drop: .03, roam: 3, target: { all: -.6 } },
-      prolificWinger: { name: "Cánh săn bàn", en: "Prolific Winger", roles: ["FW"], desc: "Dạt cánh rồi bó vào trong dứt điểm.", width: 1.35, push: .04, dribble: .3, shoot: .04 },
-      roamingFlank: { name: "Cánh tự do", en: "Roaming Flank", roles: ["FW"], desc: "Di chuyển tự do giữa cánh và trung lộ.", width: 1.15, roam: 2.5, combo: 1.3 },
-      crossSpecialist: { name: "Chuyên tạt", en: "Cross Specialist", roles: ["FW"], desc: "Bám biên, tạt bóng vào vòng cấm.", width: 1.5, push: .03, cross: .7 },
-      classicNo10: { name: "Số 10 cổ điển", en: "Classic No. 10", roles: ["MF"], desc: "Đứng sau tiền đạo, ít lui về, đi bóng và sút xa.", push: .06, drop: .08, width: .4, dribble: .2, shoot: .05, target: { short: .5 } },
-      creativePlaymaker: { name: "Kiến tạo", en: "Creative Playmaker", roles: ["MF"], desc: "Tìm khoảng trống, khởi xướng phối hợp.", push: .04, roam: 2, combo: 1.7, chain: 1.6 },
-      holePlayer: { name: "Xâm nhập", en: "Hole Player", roles: ["MF"], desc: "Băng lên muộn vào vòng cấm để dứt điểm.", push: .14, shoot: .05, target: { through: .5 } },
-      boxToBox: { name: "Con thoi", en: "Box-to-Box", roles: ["MF"], desc: "Lên công về thủ, áp sát liên tục.", push: .08, drop: -.08, press: .4 },
-      orchestrator: { name: "Điều phối", en: "Orchestrator", roles: ["MF"], desc: "Lùi sâu cầm nhịp, phát động bằng chuyền dài.", push: -.06, drop: -.02, long: .5, target: { short: .4 } },
-      anchorMan: { name: "Mỏ neo", en: "Anchor Man", roles: ["MF"], desc: "Đứng trước hàng thủ, không dâng cao, không đuổi bóng xa.", push: -.12, drop: -.06, width: .3, press: -.5 },
-      buildUp: { name: "Phát động", en: "Build Up", roles: ["DF"], desc: "Trung vệ phát động tấn công bằng chuyền dài.", long: .5 },
-      extraFrontman: { name: "Trung vệ dâng cao", en: "Extra Frontman", roles: ["DF"], desc: "Dâng lên hỗ trợ tấn công khi có bóng.", push: .1, cap: .14, dribble: .25 },
-      destroyer: { name: "Đánh chặn", en: "Destroyer", roles: ["DF"], desc: "Lao vào tranh chấp, cắt bóng quyết liệt.", drop: .02, press: .6 },
-      offensiveFullback: { name: "Hậu vệ cánh công", en: "Offensive Full-back", roles: ["DF"], desc: "Băng lên dọc biên và tạt bóng.", width: 1.25, push: .1, cap: .12, cross: .5 },
-      defensiveFullback: { name: "Hậu vệ cánh thủ", en: "Defensive Full-back", roles: ["DF"], desc: "Ở lại phòng ngự, giữ chặt cánh.", width: 1.1, push: -.06, drop: -.02 },
-      fullbackFinisher: { name: "Hậu vệ xâm nhập", en: "Full-back Finisher", roles: ["DF"], desc: "Từ cánh bó vào trung lộ, có thể tự dứt điểm.", push: .09, cap: .15, width: .85, shoot: .03 },
-      offensiveGoalkeeper: { name: "Thủ môn dâng cao", en: "Offensive Goalkeeper", roles: ["GK"], desc: "Đứng cao, lao ra sớm, phát bóng dài.", line: .035, rush: 3, confidence: .15 },
-      defensiveGoalkeeper: { name: "Thủ môn giữ khung", en: "Defensive Goalkeeper", roles: ["GK"], desc: "Bám vạch vôi, chọn vị trí chuẩn để cứu thua.", line: -.01, rush: -2.5, save: .04 }
+      attack: {
+        goalPoacher: { name: "Săn bàn", en: "Goal Poacher", roles: ["FW"], stats: { finishing: 10, speed: 6 }, desc: "Bám vai hậu vệ cuối, chờ bóng chọc khe, dứt điểm ngay.", push: .1, width: .55, shoot: .06, target: { through: 1 } },
+        foxInTheBox: { name: "Cáo vòng cấm", en: "Fox in the Box", roles: ["FW"], stats: { finishing: 8, heading: 6 }, desc: "Đứng giữa vòng cấm chờ bóng tạt và bóng bật ra, đánh đầu tốt.", push: .12, width: .35, shoot: .02, target: { box: 1.2 }, header: .25 },
+        targetMan: { name: "Mục tiêu", en: "Target Man", roles: ["FW"], stats: { heading: 10, strength: 10, speed: -6 }, desc: "Làm tường, nhận bóng dài, mạnh không chiến.", push: .05, width: .45, target: { long: 1.3 }, header: .3, dribble: -.1 },
+        prolificWinger: { name: "Cánh săn bàn", en: "Prolific Winger", roles: ["FW"], stats: { speed: 8, dribbling: 8 }, desc: "Dạt cánh rồi đi bóng bó vào trong dứt điểm.", width: 1.35, push: .04, dribble: .3, shoot: .04 },
+        deepLyingForward: { name: "Hộ công lùi sâu", en: "Deep-lying Forward", roles: ["FW"], stats: { passing: 8, dribbling: 4 }, desc: "Lùi về nhận bóng, phối hợp rồi mới lên.", push: -.1, width: .6, combo: 1.8, target: { short: .6 } },
+        classicNo10: { name: "Số 10 cổ điển", en: "Classic No. 10", roles: ["MF"], stats: { dribbling: 8, finishing: 4, passing: 4, stamina: -4 }, desc: "Đứng sau tiền đạo, đi bóng và sút xa.", push: .06, width: .4, dribble: .2, shoot: .05, target: { short: .5 } },
+        holePlayer: { name: "Xâm nhập", en: "Hole Player", roles: ["MF"], stats: { finishing: 6, speed: 4, stamina: 4 }, desc: "Băng lên muộn vào vòng cấm để dứt điểm.", push: .14, shoot: .05, target: { through: .5 } },
+        orchestrator: { name: "Điều phối", en: "Orchestrator", roles: ["MF"], stats: { longPass: 10, passing: 6 }, desc: "Lùi sâu cầm nhịp, phát động bằng chuyền dài.", push: -.06, long: .5, combo: 1.3, target: { short: .4 } },
+        buildUp: { name: "Phát động", en: "Build Up", roles: ["DF"], stats: { longPass: 8, passing: 4 }, desc: "Ở lại phía sau, phát động tấn công bằng chuyền dài.", push: -.03, long: .5 },
+        extraFrontman: { name: "Trung vệ dâng cao", en: "Extra Frontman", roles: ["DF"], stats: { dribbling: 6, speed: 4 }, desc: "Dâng lên hỗ trợ tấn công, có thể đi bóng lên.", push: .1, cap: .14, dribble: .25 },
+        attackingFullback: { name: "Hậu vệ cánh công", en: "Attacking Full-back", roles: ["DF"], stats: { speed: 6, stamina: 6, longPass: 4 }, desc: "Băng lên dọc biên và tạt bóng.", width: 1.25, push: .1, cap: .12, cross: .5 },
+        buildUpGK: { name: "Thủ môn phát động", en: "Build-up GK", roles: ["GK"], stats: { passing: 10 }, desc: "Chuyền ngắn cho hậu vệ để triển khai từ sân nhà.", short: true },
+        highLineGK: { name: "Thủ môn dâng cao", en: "High Line GK", roles: ["GK"], stats: { longPass: 8, speed: 6 }, desc: "Đứng cao khi đội mình tấn công, phát bóng dài.", line: .05 }
+      },
+      defense: {
+        frontLinePressure: { name: "Pressing tuyến đầu", en: "Front Line Pressure", roles: ["FW"], stats: { stamina: 8, speed: 4 }, desc: "Áp sát hậu vệ và thủ môn đối phương ngay khi mất bóng.", drop: .06, press: .5, pressHigh: true },
+        frontLinePoacher: { name: "Chờ phản công", en: "Front Line Poacher", roles: ["FW"], stats: { speed: 4, finishing: 2 }, desc: "Ở lại phía trên, không về thủ, là điểm nhận bóng phản công.", drop: .12, press: -.5, outlet: 1.2 },
+        pressBack: { name: "Lùi về hỗ trợ", en: "Press Back", roles: ["FW"], stats: { stamina: 6, defending: 8 }, desc: "Lùi sâu về phần sân nhà để giúp phòng ngự.", drop: -.12, press: .15 },
+        boxToBox: { name: "Con thoi", en: "Box-to-Box", roles: ["MF"], stats: { stamina: 10, defending: 4 }, desc: "Lùi về khi mất bóng và áp sát liên tục.", drop: -.07, press: .4 },
+        anchorMan: { name: "Mỏ neo", en: "Anchor Man", roles: ["MF"], stats: { defending: 8, strength: 6 }, desc: "Đứng chắn trước hàng thủ, không đuổi bóng xa.", drop: -.1, width: .3, press: -.5 },
+        destroyer: { name: "Đánh chặn", en: "The Destroyer", roles: ["MF"], stats: { defending: 8, strength: 8 }, desc: "Lao vào tranh chấp, xoạc và cướp bóng quyết liệt.", press: .6, tackle: .5 },
+        passDisruptor: { name: "Cắt đường chuyền", en: "Pass Disruptor", roles: ["MF"], stats: { defending: 6, speed: 2 }, desc: "Đọc hướng chuyền, đứng chặn khe và cắt bóng.", drop: -.03, intercept: .14 },
+        toughMarker: { name: "Kèm người", en: "Tough Marker", roles: ["DF"], stats: { defending: 6, strength: 8 }, desc: "Bám sát tiền đạo gần nhất, không cho quay người.", mark: .6, tackle: .25 },
+        coveringRole: { name: "Bọc lót", en: "Covering Role", roles: ["DF"], stats: { defending: 6, speed: 4 }, desc: "Đứng lùi sau đồng đội, thu hẹp vào giữa để bọc lót.", drop: -.05, width: .6 },
+        highLineMaster: { name: "Giữ tuyến cao", en: "High Line Master", roles: ["DF"], stats: { speed: 8, defending: 2 }, desc: "Dâng hàng thủ cao, ép đối phương ra xa khung thành.", drop: .07, line: .08 },
+        deepDefender: { name: "Lùi sâu", en: "Deep Defender", roles: ["DF"], stats: { heading: 6, defending: 4 }, desc: "Lùi sát vòng cấm, chặn khoảng trống sau lưng.", drop: -.08 },
+        defensiveGK: { name: "Thủ môn giữ khung", en: "Defensive GK", roles: ["GK"], stats: { goalkeeping: 8 }, desc: "Bám vạch vôi, chọn vị trí chuẩn để cứu thua.", line: -.01, rush: -2.5, save: .04 },
+        sweeperGK: { name: "Thủ môn băng ra", en: "Sweeper GK", roles: ["GK"], stats: { speed: 8, goalkeeping: 3 }, desc: "Đứng cao, lao ra sớm đón bóng sau lưng hàng thủ.", line: .02, rush: 3, confidence: .15 }
+      }
+    },
+    /** Player ratings, 35–95. Each man's come from his natural position, his two playing styles and a little chance. */
+    stats: {
+      keys: ["speed", "dribbling", "passing", "longPass", "finishing", "heading", "defending", "strength", "stamina", "goalkeeping"],
+      labels: { speed: "Tốc độ", dribbling: "Rê bóng", passing: "Chuyền ngắn", longPass: "Chuyền dài", finishing: "Dứt điểm", heading: "Đánh đầu", defending: "Phòng ngự", strength: "Sức mạnh", stamina: "Thể lực", goalkeeping: "Bắt bóng" },
+      short: { speed: "TỐC", dribbling: "RÊ", passing: "CHN", longPass: "CHD", finishing: "SÚT", heading: "ĐẦU", defending: "THỦ", strength: "SỨC", stamina: "BỀN", goalkeeping: "GK" },
+      base: {
+        FW: { speed: 72, dribbling: 70, passing: 64, longPass: 55, finishing: 74, heading: 66, defending: 38, strength: 64, stamina: 68, goalkeeping: 20 },
+        MF: { speed: 68, dribbling: 70, passing: 74, longPass: 70, finishing: 62, heading: 58, defending: 58, strength: 62, stamina: 74, goalkeeping: 20 },
+        DF: { speed: 64, dribbling: 56, passing: 64, longPass: 62, finishing: 45, heading: 68, defending: 74, strength: 72, stamina: 70, goalkeeping: 20 },
+        GK: { speed: 50, dribbling: 40, passing: 56, longPass: 62, finishing: 25, heading: 40, defending: 40, strength: 66, stamina: 60, goalkeeping: 74 }
+      },
+      // The overall rating (OVR) weighs the ratings that matter in the position he is playing.
+      weights: {
+        FW: { finishing: .3, speed: .2, dribbling: .2, heading: .1, strength: .1, passing: .1 },
+        MF: { passing: .25, longPass: .15, dribbling: .2, stamina: .15, defending: .15, finishing: .1 },
+        DF: { defending: .35, strength: .2, heading: .15, speed: .15, passing: .15 },
+        GK: { goalkeeping: .7, longPass: .1, passing: .1, speed: .1 }
+      },
+      star: { finishing: 5, dribbling: 5, passing: 3 }, range: [35, 95], spread: 5
+    },
+    /**
+     * The two squads as data: six starters (keeper, two defenders, a midfielder, two forwards) and a bench pool.
+     * Each player: name, hair, skin (1/2), shirt number, optional star (10 dribbler, 7 striker), natural position
+     * (bench only), and optional fixed `stats` (any subset), `attack`/`defense` style ids. Pass `squads` to mount()
+     * with the same shape to play other teams.
+     */
+    squads: {
+      R: {
+        players: [{ name: "Hùng", head: "buzz", skin: 2, num: 1 }, { name: "Long", head: "spiky", skin: 1, num: 2 }, { name: "Khoa", head: "curly", skin: 2, num: 5 },
+          { name: "Bin", head: "beard", skin: 1, num: 10, star: 10 }, { name: "Tuấn", head: "glasses", skin: 1, num: 9 }, { name: "Quang", head: "quiff", skin: 1, num: 7, star: 7 }],
+        bench: [{ name: "Minh", head: "quiff", skin: 2, num: 12 }, { name: "Dũng", head: "buzz", skin: 1, num: 14 }, { name: "Huy", head: "sidepart", skin: 2, num: 17 }, { name: "Lâm", head: "curly", skin: 1, num: 19 }]
+      },
+      B: {
+        players: [{ name: "Hưng", head: "glasses", skin: 2, num: 1 }, { name: "Nam", head: "buzz", skin: 1, num: 3 }, { name: "Phát", head: "sidepart", skin: 1, num: 4 },
+          { name: "Đạt", head: "spiky", skin: 2, num: 8 }, { name: "Quân", head: "curly", skin: 1, num: 11 }, { name: "Vũ", head: "beard", skin: 2, num: 9 }],
+        bench: [{ name: "Sơn", head: "spiky", skin: 1, num: 13 }, { name: "Tài", head: "quiff", skin: 2, num: 15 }, { name: "Lộc", head: "beard", skin: 1, num: 16 }, { name: "Kiên", head: "sidepart", skin: 2, num: 18 }]
+      }
     },
     goalkeeper: { claimHeight: 1.6, rushRange: 6.5, claimRange: 1.25, speed: 7.2, decisionInterval: .7, confidence: .7 },
     celebrations: { fist: "Vung nắm đấm", mate: "Đập tay, ôm đồng đội", arms: "Dang tay", airplane: "Máy bay", pointMate: "Chỉ tay cảm ơn đồng đội", badge: "Chỉ huy hiệu áo", dance: "Nhảy múa", kneeSlide: "Trượt gối", shush: "Suỵt", siu: "SIUU", sky: "Chỉ lên trời", hurry: "Ôm bóng về giữa sân khi vẫn bị dẫn", groupHug: "Ôm cả nhóm", kneelBrief: "Quỳ giơ tay" }
   };
-  for (const style of Object.values(GAME_DATA.playstyles)) {
-    Object.assign(style, { push: 0, drop: 0, width: 1, roam: 1, cap: 0, shoot: 0, dribble: 0, cross: 0, combo: 1, chain: 1, long: 0, press: 0, header: 0, line: 0, rush: 0, confidence: 0, save: 0, ...style });
-    style.target = { through: 0, long: 0, short: 0, box: 0, all: 0, ...style.target };
+  // Every style lists every parameter, so behaviour code can read them without checks.
+  const STYLE_DEFAULTS = { push: 0, drop: 0, width: 1, roam: 1, cap: 0, shoot: 0, dribble: 0, cross: 0, combo: 1, chain: 1, long: 0, short: false, header: 0,
+    press: 0, pressHigh: false, outlet: 0, tackle: 0, intercept: 0, mark: 0, line: 0, rush: 0, confidence: 0, save: 0 };
+  for (const [phase, table] of Object.entries(GAME_DATA.playstyles)) for (const style of Object.values(table)) {
+    Object.assign(style, { ...STYLE_DEFAULTS, ...style, phase });
+    style.target = { through: 0, long: 0, short: 0, box: 0, ...style.target };
+    style.stats ??= {};
+  }
+  /** Squads from mount options (an object or JSON text) over the built-in ones; a team without six starters keeps the default. */
+  function squadsFrom(option) {
+    let custom = option;
+    if (typeof custom === "string") { try { custom = JSON.parse(custom); } catch { custom = null; } }
+    const valid = entry => entry && typeof entry.name === "string" && entry.name.trim();
+    return Object.fromEntries(["R", "B"].map(t => {
+      const own = custom?.[t], base = GAME_DATA.squads[t];
+      const players = Array.isArray(own?.players) && own.players.length === 6 && own.players.every(valid) ? own.players : base.players;
+      const benchPool = Array.isArray(own?.bench) && own.bench.every(valid) ? own.bench.slice(0, 6) : base.bench;
+      return [t, { players, bench: benchPool }];
+    }));
   }
   for (const skill of Object.values(GAME_DATA.skills)) {
     skill.roles ??= [skill.role];
@@ -222,6 +286,7 @@
     const abilityRng = mulberry32(SEED ^ 0x70ab1117);
     const keeperRng = mulberry32(SEED ^ 0x61ee9a);
     const styleRng = mulberry32(SEED ^ 0x5717e5);
+    const statRng = mulberry32(SEED ^ 0x57a75);
     const pick = list => list[Math.floor(rng() * list.length)];
     
     /* ---------------------------------- poses and rig ---------------------------------- */
@@ -433,18 +498,16 @@
       return { home: sh.home[Math.min(k, sh.home.length - 1)], line: sh.lines[Math.min(k, sh.lines.length - 1)] };
     }
     const sitsDeep = t => !!SHAPES[game.shape[t]].sit;
-    // name, hair, skin, shirt number, star (10 = the dribbler, 7 = the striker)
-    const ROSTER = {
-      R: [["Hùng", "buzz", 2, 1], ["Long", "spiky", 1, 2], ["Khoa", "curly", 2, 5], ["Bin", "beard", 1, 10, 10], ["Tuấn", "glasses", 1, 9], ["Quang", "quiff", 1, 7, 7]],
-      B: [["Hưng", "glasses", 2, 1], ["Nam", "buzz", 1, 3], ["Phát", "sidepart", 1, 4], ["Đạt", "spiky", 2, 8], ["Quân", "curly", 1, 11], ["Vũ", "beard", 2, 9]],
-    };
+    // The squads: starters by slot (keeper, two defenders, midfielder, two forwards) and a bench pool.
+    const SQUADS = squadsFrom(settings.squads);
+    const ROSTER = { R: SQUADS.R.players, B: SQUADS.B.players };
     const KIT = {
       R: { shirt: "var(--art-red)", shorts: "var(--color-card)", socks: "var(--art-red)", gk: "var(--art-gk-r)" },
       B: { shirt: "var(--art-blue)", shorts: "var(--art-shorts)", socks: "var(--art-blue)", gk: "var(--art-gk-b)" },
     };
     const players = [];
     const team = { R: [], B: [] };
-    for (const t of TEAMS) ROSTER[t].forEach(([name, head, skin, num, star], i) => {
+    for (const t of TEAMS) ROSTER[t].forEach(({ name, head, skin, num, star }, i) => {
       const p = { id: `${t}${i}`, team: t, i, n: players.length, role: ROLES[i], home: HOME[i], name, head, skin, num, star: star ?? 0,
         pos: toW(t, HOME[i]), vel: [0, 0], face: ATT[t], faceDir: ATT[t], turnSince: null, faceLock: null, script: null, keys: [], pose: { ...POSES.ready }, poseName: "ready",
         stride: players.length * 0.7, busyUntil: 0, dribStyle: null, g: [0, 0] };
@@ -464,10 +527,7 @@
      * A substitution swaps who a pitch slot is (name, looks, shirt, legs, cards) with a bench seat, and swaps their
      * positions at the same instant, so each figure stays exactly where it was on screen.
      */
-    const BENCH_POOL = {
-      R: [["Minh", "quiff", 2, 12], ["Dũng", "buzz", 1, 14], ["Huy", "sidepart", 2, 17], ["Lâm", "curly", 1, 19]],
-      B: [["Sơn", "spiky", 1, 13], ["Tài", "quiff", 2, 15], ["Lộc", "beard", 1, 16], ["Kiên", "sidepart", 2, 18]],
-    };
+    const BENCH_POOL = { R: SQUADS.R.bench, B: SQUADS.B.bench };
     const bench = { R: [], B: [] };
     const seatUV = b => [b.team === "R" ? 0.375 + b.seat * 0.036 : 0.553 + b.seat * 0.036, -0.045];
     for (const t of TEAMS) for (let k = 0; k < 3; k++) {
@@ -488,37 +548,67 @@
       people.push(m);
       return m;
     });
-    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "styleId"];
+    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural"];
     function assignSpecial(p) {
       const choices = Object.keys(GAME_DATA.skills).filter(id => GAME_DATA.skills[id].roles.includes(p.role));
       const draw = pool => pool.length ? pool[Math.floor(abilityRng() * pool.length)] : null;
       p.specialId = draw(choices.filter(id => GAME_DATA.skills[id].contexts.some(c => ["attack", "defense"].includes(c))));
       p.specialSituations = Object.fromEntries(Object.keys(GAME_DATA.skillContexts).filter(c => !["attack", "defense"].includes(c)).map(c => [c, draw(choices.filter(id => GAME_DATA.skills[id].contexts.includes(c)))]));
     }
-    /** A playing style for his position; a man who comes on in another position gets one that suits it. */
+    /** An attacking and a defensive style for his position; a man who comes on in another position gets ones that suit it. */
     function ensureStyle(p) {
-      if (!p.team || p.role === "SUB") return;
-      if (GAME_DATA.playstyles[p.styleId]?.roles.includes(p.role)) return;
-      const pool = Object.keys(GAME_DATA.playstyles).filter(id => GAME_DATA.playstyles[id].roles.includes(p.role));
-      p.styleId = pool[Math.floor(styleRng() * pool.length)];
+      const role = p.role === "SUB" ? p.natural : p.role;
+      if (!p.team || !role) return;
+      for (const [phase, key] of [["attack", "attackStyleId"], ["defense", "defenseStyleId"]]) {
+        const table = GAME_DATA.playstyles[phase];
+        if (table[p[key]]?.roles.includes(role)) continue;
+        const pool = Object.keys(table).filter(id => table[id].roles.includes(role));
+        p[key] = pool[Math.floor(styleRng() * pool.length)];
+      }
     }
-    const NO_STYLE = { push: 0, drop: 0, width: 1, roam: 1, cap: 0, shoot: 0, dribble: 0, cross: 0, combo: 1, chain: 1, long: 0, press: 0, header: 0, line: 0, rush: 0, confidence: 0, save: 0, target: { through: 0, long: 0, short: 0, box: 0, all: 0 } };
-    const styleOf = p => GAME_DATA.playstyles[p?.styleId] ?? NO_STYLE;
+    const NO_STYLE = { ...STYLE_DEFAULTS, target: { through: 0, long: 0, short: 0, box: 0 } };
+    const atkOf = p => GAME_DATA.playstyles.attack[p?.attackStyleId] ?? NO_STYLE;
+    const defOf = p => GAME_DATA.playstyles.defense[p?.defenseStyleId] ?? NO_STYLE;
     /** How long he stays on before the coach rotates him: about 20 minutes, staggered so they do not all go at once. */
     const newStint = () => 17 + rng() * 6;
-    function setIdent(p, [name, head, skin, num, star]) {
-      // Stamina differs from man to man (and from day to day): some are blowing after half an hour, some last.
-      // Key men are the fittest: they are expected to last the whole match.
-      Object.assign(p, { name, head, skin, num, star: star ?? 0, pillar: PILLARS.has(name), yellows: 0, energy: 1, stamina: PILLARS.has(name) ? 1.2 + rng() * 0.25 : 0.8 + rng() * 0.45,
+    /** Ratings from his natural position and his two styles, a star's extra quality and a little chance; fixed ones win. */
+    function makeStats(p, fixed = {}) {
+      const rules = GAME_DATA.stats, base = rules.base[p.natural] ?? rules.base.MF, atk = atkOf(p).stats, def = defOf(p).stats;
+      return Object.fromEntries(rules.keys.map(k => {
+        const rolled = base[k] + (atk[k] ?? 0) + (def[k] ?? 0) + (p.star ? rules.star[k] ?? 0 : 0) + Math.round((statRng() * 2 - 1) * rules.spread) - (p.role === "SUB" ? 2 : 0);
+        const value = Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : rolled;
+        return [k, clamp(Math.round(value), rules.range[0], rules.range[1])];
+      }));
+    }
+    function setIdent(p, entry) {
+      const { name, head, skin, num, star } = entry;
+      // Stamina comes from his rating with a little day-to-day variation; key men are the fittest and expected to last.
+      const natural = p.role === "SUB" ? (["DF", "MF", "FW"].includes(entry.natural) ? entry.natural : ["DF", "MF", "FW"][Math.floor(statRng() * 3)]) : p.role, jitter = rng();
+      Object.assign(p, { name, head, skin, num, star: star ?? 0, pillar: PILLARS.has(name), yellows: 0, energy: 1, natural,
         injured: false, bandage: null, tiredSaid: false, lastSkill: null, specialUsed: false, specialPrimed: false, specialPrimedId: null, specialActiveId: null, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
-      assignSpecial(p); p.abilityCheckAt = 0; p.styleId = null; ensureStyle(p);
+      assignSpecial(p); p.abilityCheckAt = 0; p.attackStyleId = entry.attack ?? null; p.defenseStyleId = entry.defense ?? null; ensureStyle(p);
+      p.stats = makeStats(p, entry.stats);
+      p.stamina = 0.35 + p.stats.stamina * 0.0095 + (p.pillar ? 0.25 : 0) + jitter * 0.12;
       if (p.sprite) restyle(p);
     }
+    const stat = (p, key) => p?.stats?.[key] ?? 70;
+    /** A rating's distance from an ordinary 70, as a fraction (85 → +0.15). */
+    const edge = (p, key) => (stat(p, key) - 70) / 100;
+    /** Overall rating in the position he is playing (or his natural one on the bench). */
+    function overall(p) {
+      const weights = GAME_DATA.stats.weights[p?.role === "SUB" ? p.natural : p?.role];
+      if (!weights || !p.stats) return null;
+      return Math.round(Object.entries(weights).reduce((sum, [k, w]) => sum + stat(p, k) * w, 0));
+    }
+    // Ball-carrying against ball-winning: dribbling and strength against defending and strength.
+    const carryRating = p => stat(p, "dribbling") * .7 + stat(p, "strength") * .3;
+    const duelRating = p => stat(p, "defending") * .7 + stat(p, "strength") * .3;
+    const pace = p => p?.team && !p.bench && p.stats ? 1 + edge(p, "speed") * .6 : 1;
     /** A fresh line-up: the usual six on the pitch and one to three of the others on the bench. */
     function pickSquads() {
       for (const t of TEAMS) {
         team[t].forEach((p, i) => setIdent(p, ROSTER[t][i]));
-        const pool = [...BENCH_POOL[t]].sort(() => rng() - 0.5), nb = 1 + Math.floor(rng() * 3);
+        const pool = [...BENCH_POOL[t]].sort(() => rng() - 0.5), nb = Math.min(pool.length, 1 + Math.floor(rng() * 3));
         bench[t].forEach((b, k) => {
           b.off = k >= nb; b.script = null; b.exitTo = null; b.subbing = false; b.keys = [];
           if (!b.off) setIdent(b, pool[k]);
@@ -814,7 +904,7 @@
       const c = game.carrier;
       if (game.mode !== "play" || game.stoppage || !c || !humanFor(c) || c.script || ball.mode !== "carried" || T < c.busyUntil) return;
       const d = nearest(outfield(opponents(c.team)).filter(p => !manual(p) && !p.script && T >= p.busyUntil), c.pos);
-      if (d.p && d.d < 2.1 && T - (game.manualChallengeAt ?? -99) > 1.2) {
+      if (d.p && d.d < 2.1 + defOf(d.p).tackle * 1.5 && T - (game.manualChallengeAt ?? -99) > 1.2) {
         game.manualChallengeAt = T;
         tackle(c, d.p, T + 0.3);
       }
@@ -972,7 +1062,8 @@
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
         pressing: !!h.pressing && defendingTeam(h.team), yellows: h.selected?.yellows ?? 0,
-        style: h.selected?.styleId ? { id: h.selected.styleId, name: styleOf(h.selected).name, en: styleOf(h.selected).en, desc: styleOf(h.selected).desc } : null,
+        ovr: overall(h.selected), stats: h.selected?.stats ? { ...h.selected.stats } : null,
+        style: h.selected?.attackStyleId ? Object.fromEntries([["attack", atkOf(h.selected)], ["defense", defOf(h.selected)]].map(([phase, s]) => [phase, { name: s.name, en: s.en, desc: s.desc }])) : null,
         charge: h.charge ? { action: h.charge.action, power: chargePower(h) } : null,
         aim: aimFor(h).screen, role: h.selected?.role ?? null,
         position: h.selected ? [...h.selected.pos] : null })) });
@@ -1293,6 +1384,8 @@
       if (game.restart === "kickIn") { game.restart = null; return pass(c, { backOk: d > 0.7 }) || dribble(c); }
       const sitting = sitsDeep(c.team);
       if (c.role === "GK") {
+        // A build-up keeper rolls it short to a defender; the others look further up.
+        if (atkOf(c).short && pass(c, { style: ball.mode === "held" ? "throw" : undefined, backOk: true, short: true })) return;
         if (ball.mode === "held" && pass(c, { style: "throw", toFwd: sitting })) return;
         return pass(c, { long: true, toFwd: sitting }) || dribble(c);
       }
@@ -1325,7 +1418,7 @@
         return dribble(c, { direct: true });
       }
       // His playing style: how far out he shoots, whether he takes men on, crosses or looks for a long ball.
-      const st = styleOf(c), w = toT(c.team, c.pos)[1], wide = Math.abs(w - 0.5) > 0.22;
+      const st = atkOf(c), w = toT(c.team, c.pos)[1], wide = Math.abs(w - 0.5) > 0.22;
       if (st.cross && wide && d > 0.6 && rng() < st.cross && pass(c, { toBox: true })) return;
       if (st.dribble > 0 && opp.d > 2 && d > 0.35 && d < 0.8 && rng() < st.dribble) { c.dribStyle = "dribble"; return dribble(c, { direct: true }); }
       if (st.long && d < 0.5 && rng() < st.long && pass(c, { long: true, forwardOnly: true, toFwd: true })) return;
@@ -1370,8 +1463,8 @@
         const goalUV = toW(c.team, [1, 0.5]), nearer = mdist(c.pos, goalUV) - mdist(tgt, goalUV);
         if (o.closerOnly && (nearer < 2 || nearest(opponents(c.team), tgt).d < 3)) continue;
         const open = nearest(opponents(c.team), tgt).d;
-        const ms = styleOf(m).target, lofted = o.long || dist > 18;
-        const styled = ms.all + (lofted ? ms.long : ms.short * 0.5) + ((o.forwardOnly || o.toFwd) && tT[0] > cT[0] + 0.08 ? ms.through : 0) + (tT[0] > 0.72 ? ms.box * (o.toBox ? 1.5 : 0.6) : 0) + (o.toBox && tT[0] > 0.72 ? 1 : 0);
+        const ms = atkOf(m).target, lofted = o.long || dist > 18, countering = game.counter && game.counter.team === c.team && T < game.counter.until;
+        const styled = (countering ? defOf(m).outlet : 0) - (o.short && dist > 16 ? 2 : 0) + (lofted ? ms.long : ms.short * 0.5) + ((o.forwardOnly || o.toFwd) && tT[0] > cT[0] + 0.08 ? ms.through : 0) + (tT[0] > 0.72 ? ms.box * (o.toBox ? 1.5 : 0.6) : 0) + (o.toBox && tT[0] > 0.72 ? 1 : 0);
         const s = (tT[0] - cT[0]) * (o.backOk ? -1 : 2) + rng() * 0.6 + Math.min(open, 8) * 0.05 - (open < 2.5 ? 0.5 : 0) + (m.star ? 0.3 : 0) + styled
           + (o.toFwd && shapeSlot(m, SHAPES[game.shape[c.team]]).line === "FW" ? 1.2 : 0)
           - (!o.backOk && cT[0] > 0.6 && tT[0] < cT[0] - 0.03 ? 1.2 : 0)
@@ -1401,12 +1494,14 @@
       // Headers only happen close in, in front of the posts; a low cross gets a first-time volley; an overhead kick is rare.
       const [td, tw] = toT(c.team, tgt);
       const aerial = cross && td >= 0.85 && tw > 0.3 && tw < 0.7 && rng() < 0.8
-        ? (m.star && rng() < 0.05 ? "bicycle" : rng() < 0.6 + styleOf(m).header ? "header" : "volley") : null;
+        ? (m.star && rng() < 0.05 ? "bicycle" : rng() < 0.6 + atkOf(m).header + edge(m, "heading") * 0.5 ? "header" : "volley") : null;
       // A defender may read a ground pass. The side whose goal is due gets the better of it, within reason.
       let thief = null;
       const f = 0.55, mom = game.momentum, next = game.story.goals[game.storyIdx], overdue = game.golden ? 8 : next ? Math.max(0, minute() - next[1]) : 0;
       const thiefP = mom ? (c.team === mom ? 0.04 : Math.min(0.55, 0.18 + overdue * 0.05)) : 0.14;
-      if (!lofted && !throwing && rng() < thiefP + 0.12 * (1 - fit(c))) {
+      const reader = nearest(outfield(opponents(c.team)), lerp(c.pos, tgt, f));
+      const disrupt = reader.p && reader.d < 9 ? defOf(reader.p).intercept : 0;
+      if (!lofted && !throwing && rng() < (thiefP + disrupt + 0.12 * (1 - fit(c))) * clamp(1 - edge(c, "passing") * 1.5, .4, 1.6)) {
         const mid = lerp(c.pos, tgt, f), n = nearest(outfield(opponents(c.team)), mid);
         if (n.p && n.d / RUN < Tk + flight * f - T) thief = { p: n.p, mid };
       }
@@ -1438,7 +1533,7 @@
           return;
         }
         const b = contact ?? { g: add(ground(...tgt), [-dirX * 6, 1]), h: 0 };
-        if (lofted && !cross && !aerial && rng() < 0.15) {
+        if (lofted && !cross && !aerial && rng() < 0.15 * clamp(1 - edge(c, "longPass") * 2.5, .2, 2)) {
           const out = touchOut(tgt); mkScript(m, [T, m.pos], [T + flight, lerp(m.pos, out, 0.6)]);
           fly({ g: ground(...out), h: 0 }, flight + 0.2, arcOf(dist), { onEnd: () => ballOut(otherTeam(c.team), out) });
           say(c, "Quá tay!", "var(--color-sky-soft)", 0.9);
@@ -1492,7 +1587,7 @@
       c.busyUntil = T + dur;
       // A challenge comes from a nearby defender who can reach him (about 6 m/s), and is usually clean.
       const tackleP = o.direct ? 0.25 : mom ? (c.team === mom ? 0.3 : 0.55) : 0.55;
-      if (opp.p && opp.d < 7 && rng() < tackleP * (1 + 0.6 * (1 - fit(c)))) {
+      if (opp.p && opp.d < 7 && rng() < tackleP * (1 + 0.6 * (1 - fit(c))) * (1 + defOf(opp.p).tackle) * clamp(1 + (duelRating(opp.p) - carryRating(c)) * 0.01, .5, 1.6)) {
         const Tt = T + Math.max(dur * 0.6, (opp.d - 0.6) / 6);
         if (Tt < T + dur) tackle(c, opp.p, Tt);
       }
@@ -2072,9 +2167,10 @@
         d.keys.push([T, Tt + 0.15, "jockey"]); d.busyUntil = Tt + 0.65;
         at(Tt, () => {
           if (game.mode !== "play" || game.stoppage || protectedBall(c) || ball.owner !== c || ball.mode !== "carried" || !on(d) || mdist(c.pos, d.pos) > 2) return;
-          const roll = rng();
+          // A better ball-winner (defending, strength) wins it more often from a weaker dribbler, and the reverse.
+          const roll = rng(), winBelow = clamp(.67 + (duelRating(d) - carryRating(c)) * .005, .45, .85);
           if (roll < .22) return foul(c, d, Tt);
-          if (roll >= .67) return;
+          if (roll >= winBelow) return;
           carry(d); game.carrier = d; game.poss = d.team; game.dirty = true;
           c.script = null; c.busyUntil = T + 0.25;
           game.stats.pressWins = (game.stats.pressWins ?? 0) + 1;
@@ -2097,6 +2193,8 @@
           if (rng() < 0.5) say(d, pick(["Không theo kịp…", "Hụt hơi rồi…"]), "var(--color-card)", 0.9);
           return;
         }
+        // A good dribbler sometimes simply rides the challenge.
+        if (rng() < clamp((carryRating(c) - duelRating(d)) * .008, 0, .25)) { d.keys.push([Tt, Tt + 0.6, "shrug"]); return; }
         // Tired defenders are more likely to mistime a standing challenge.
         const foulP = .22 + .1 * (1 - fit(d));
         if (rng() < foulP) foul(c, d, Tt, slide);
@@ -2373,7 +2471,8 @@
       const distance = mdist(c.pos, toW(c.team, [1, 0.5]));
       if (interactive) {
         const open = nearest(outfield(opponents(c.team)), c.pos).d;
-        return clamp(0.74 - distance * 0.024 + (open > 4 ? 0.08 : -0.1) - (1 - fit(c)) * 0.18, 0.025, 0.82);
+        const skill = edge(c, style === "header" ? "heading" : "finishing") * 0.5;
+        return clamp(0.74 - distance * 0.024 + (open > 4 ? 0.08 : -0.1) - (1 - fit(c)) * 0.18 + skill, 0.025, 0.86);
       }
       if (game.golden) return minute() >= FULL + 3 ? 0.85 : 0.6;
       if (!next) return clamp(0.35 - distance * 0.012, 0.03, 0.35);
@@ -2428,7 +2527,7 @@
       if (o.goalProbability != null && roll < gc) game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
       const keeperSkill = specialActive(gk) ? activeSpecialData(gk) : null;
       if (keeperSkill?.auto && o.goalProbability == null) gc *= 1 - keeperSkill.save;
-      if (o.goalProbability == null) gc = Math.max(0, gc - styleOf(gk).save);
+      if (o.goalProbability == null) gc = Math.max(0, gc - defOf(gk).save - (interactive ? edge(gk, "goalkeeping") * 0.4 : 0));
       // Misses: mostly saved or off target; the woodwork is rare (and at most twice a match per side).
       let outcome = roll < gc ? "goal" : roll < gc + (1 - gc) * 0.55 ? "save" : roll < gc + (1 - gc) * 0.6 ? "post" : "wide";
       if (o.onTarget) outcome = roll < gc ? "goal" : "save";
@@ -2802,18 +2901,26 @@
     const kickoffSpot = p => p === kickoffTaker(game.kickoffTeam) ? toW(p.team, [0.487, 0.5]) : toW(p.team, (p.team === game.kickoffTeam ? KICKOFF : KICKOFF_DEF)[p.i]);
     function formation(p) {
       const t = p.team, [bd, bw] = toT(t, ballUV()), poss = game.poss === t, sh = SHAPES[game.shape[t]];
-      const st = styleOf(p);
+      const atk = atkOf(p), def = defOf(p), st = poss ? atk : def;
       if (p.role === "GK") return toW(t, [clamp(0.03 + st.line + (bd < 0.3 ? (0.3 - bd) * 0.12 : 0), .015, .12), 0.5 + (bw - 0.5) * 0.3]);
       // A side sitting in 3-1-1 springs back into 2-1-2 the moment it has the ball, further still on the counter.
       const shape = sh.sit && poss ? SHAPES[sh.withBall] : sh;
       const counter = game.counter && game.counter.team === t && T < game.counter.until;
       const { home: [hd, hw], line } = shapeSlot(p, shape);
-      let d = hd * 0.55 + bd * 0.45 + (poss ? 0.08 + st.push : -0.07 + st.drop) + shape.push + (counter && line !== "DF" ? 0.08 : 0);
+      let d = hd * 0.55 + bd * 0.45 + (poss ? 0.08 + atk.push : -0.07 + def.drop) + shape.push + (counter && line !== "DF" ? 0.08 : 0);
       // Width: a winger hugs the touchline, a central striker or a full-back who cuts inside comes in.
       const hwStyled = 0.5 + (hw - 0.5) * st.width + (hw === 0.5 && st.width > 1 ? (p.n % 2 ? .1 : -.1) * (st.width - 1) * 2 : 0);
       let w = poss ? 0.5 + (hwStyled - 0.5) * 1.2 + (bw - 0.5) * 0.25 : 0.5 + (hwStyled - 0.5) * 0.8 + (bw - 0.5) * 0.4;
-      if (line === "DF") d = Math.min(d, poss ? 0.56 + shape.push + st.cap : Math.max(0.08, bd - 0.05 + Math.max(0, st.drop)));
+      if (line === "DF") d = Math.min(d, poss ? 0.56 + shape.push + atk.cap : Math.max(0.08, bd - 0.05 + def.line));
       if (line === "FW") d = Math.max(d, poss ? 0.4 : sh.sit ? 0.45 : 0.3);
+      // A man-marker stands goal-side of the nearest forward instead of holding his zone.
+      if (!poss && def.mark) {
+        const spot = toW(t, [d, w]), mark = nearest(outfield(opponents(t)), spot);
+        if (mark.p && mark.d < 12) {
+          const [md, mw] = toT(t, mark.p.pos);
+          d += (md - 0.035 - d) * def.mark; w += (mw - w) * def.mark;
+        }
+      }
       d += 0.012 * st.roam * Math.sin(T * 0.6 + p.n * 1.7); w += 0.016 * st.roam * Math.sin(T * 0.5 + p.n * 2.3);
       return toW(t, [clamp(d, 0.06, 0.9), clamp(w, 0.06, 0.94)]);
     }
@@ -2921,7 +3028,7 @@
       // At the end the winners jog over to their captain; the beaten side walks.
       if (m === "ceremony" || m === "fulltime") return p.team === game.winner ? 3.0 : 2.1;
       if (game.counter && game.counter.team === p.team && T < game.counter.until) return 6.0;
-      if (game.press[p.team] === p) return 5.5 + Math.max(0, styleOf(p).press);
+      if (game.press[p.team] === p) return 5.5 + Math.max(0, defOf(p).press);
       // Off the ball: a jog over short distances, a run when there is ground to make up.
       return dist > 8 ? 4.8 : 3.2;
     }
@@ -2934,7 +3041,9 @@
         // The nearest man presses; an eager presser (a destroyer, a box-to-box runner) takes over from a few metres further.
         let best = null, bestScore = Infinity;
         for (const p of outfield(team[t]).filter(p => !p.script)) {
-          const s = mdist(p.pos, ballUV()) - styleOf(p).press * 6;
+          // A front-line presser hunts the ball high up the pitch; elsewhere he leaves it to others.
+          const dst = defOf(p), high = toT(p.team, ballUV())[0] > .55;
+          const s = mdist(p.pos, ballUV()) - dst.press * 6 - (dst.pressHigh && high ? 6 : 0);
           if (s < bestScore) { best = p; bestScore = s; }
         }
         game.press[t] = best;
@@ -3020,7 +3129,7 @@
         // A human defender may move around a waiting free kick, but not walk up to the ball.
         if (h && game.stoppage && directionLength) tgt = keepOffBall(p, tgt);
         const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
-        const top = (speedSkillActive(p) ? activeSpecialData(p).speed : defenseActive(p.team) && p.role === "DF" ? 7.8 : p.keeperRush ? GAME_DATA.goalkeeper.speed : h ? pressing ? 6.8 : h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
+        const top = (speedSkillActive(p) ? activeSpecialData(p).speed : defenseActive(p.team) && p.role === "DF" ? 7.8 : p.keeperRush ? GAME_DATA.goalkeeper.speed : h ? pressing ? 6.8 : h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? (0.7 + 0.3 * fit(p)) * pace(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
         // Keep a little space between bodies. Players ignore the referee; he steps around them.
         const dn = Math.hypot(...des) > 0.1 ? mul(des, 1 / Math.hypot(...des)) : null;
@@ -3731,7 +3840,7 @@
       } else if (ball.mode === "carried") {
         if (protectedBall(ball.owner) || mdist(p.pos, target) > 2.2) return null;
       } else if (ball.mode !== "dead") return null;
-      const rushRange = rules.rushRange + styleOf(p).rush + (specialActive(p) && activeSpecialData(p)?.rush ? 3 : 0);
+      const rushRange = rules.rushRange + defOf(p).rush + (specialActive(p) && activeSpecialData(p)?.rush ? 3 : 0);
       if (!insideKeeperArea(p.team, target) || mdist(p.pos, target) > rushRange) return null;
       const opponent = nearest(outfield(opponents(p.team)), target);
       const keeperArrival = mdist(p.pos, target) / rules.speed;
@@ -3745,7 +3854,7 @@
         if (p.keeperRush) { p.keeperRush.target = decision.target; continue; }
         if (game.clock < (p.rushCheckAt ?? 0)) continue;
         p.rushCheckAt = game.clock + GAME_DATA.goalkeeper.decisionInterval;
-        const confidence = GAME_DATA.goalkeeper.confidence + styleOf(p).confidence + (specialActive(p) && specialData(p)?.rush ? .2 : 0);
+        const confidence = GAME_DATA.goalkeeper.confidence + defOf(p).confidence + (specialActive(p) && specialData(p)?.rush ? .2 : 0);
         if (keeperRng() < confidence) {
           p.keeperRush = decision;
           say(p, "Để tôi bắt!", "var(--color-sky-soft)", 1);
@@ -4339,6 +4448,11 @@
     
     /* scoreboard */
     const boardNodes = new Map();
+    /** Both squads with ratings: the men on the pitch first, then the bench (not the injured who have gone off). */
+    api.roster = () => Object.fromEntries(TEAMS.map(t => [t, [...team[t].filter(inSquad), ...bench[t].filter(b => !b.off)].map(p => ({
+      name: p.name, num: p.num, role: p.role === "SUB" ? p.natural : p.role, onPitch: !p.bench, ovr: overall(p), stats: { ...p.stats },
+      attack: atkOf(p).name ?? "", defense: defOf(p).name ?? "", injured: !!p.injured, star: !!p.star
+    }))]));
     api.palette = () => {
       const style = getComputedStyle(root);
       return Object.fromEntries(["color-ink", "color-card", "color-sky-soft", "color-sun", "color-pear-soft", "art-skin", "art-skin-2", "art-hair", "art-hair-brown", "art-gold", "art-shorts", "art-red", "art-blue", "art-gk-r", "art-gk-b", "art-grass", "art-grass-2", "art-surround", "art-stand", "art-stand-deep", "art-shadow", "font-mono", "font-display"].map(name => ["--" + name, style.getPropertyValue("--" + name).trim()]));
@@ -4422,7 +4536,7 @@
       if (forceReturn) { game.forceInjuryReturn = true; game.forceBandage = typeof forceReturn === "string" ? forceReturn : null; }
       foul(c, d, T, false, { forcedCard: "none", injury: true }); return c.name;
     };
-    api.__players = () => players.filter(on).map(p => ({ name: p.name, team: p.team, role: p.role, style: p.styleId, d: toT(p.team, p.pos)[0], w: toT(p.team, p.pos)[1], poss: game.poss === p.team, ball: ball.owner === p }));
+    api.__players = () => players.filter(on).map(p => ({ name: p.name, team: p.team, role: p.role, attack: p.attackStyleId, defense: p.defenseStyleId, d: toT(p.team, p.pos)[0], w: toT(p.team, p.pos)[1], poss: game.poss === p.team, ball: ball.owner === p }));
     api.__keeperSkills = () => [GK.R, GK.B].map(gk => ({ team: gk.team, kind: gk.specialActiveId, used: !!gk.specialUsed, active: (gk.specialUntil ?? 0) > game.clock && !!GAME_DATA.skills[gk.specialActiveId]?.auto, minutesLeft: Math.ceil(Math.max(0, (gk.specialUntil ?? 0) - game.clock) * PACE) }));
     api.__bench = () => [...bench.R, ...bench.B].map(b => ({ name: b.name, team: b.team, off: !!b.off, injured: !!b.injured, bandage: b.bandage ?? null }));
     api.__penalties = () => { startPenalties(); render(); return api.status(); };

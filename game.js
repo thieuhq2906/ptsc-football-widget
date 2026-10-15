@@ -45,20 +45,43 @@
   }
   /** A legend of every skill pictogram, its one-word label and full name. */
   function renderSkillLegend(panel) {
-    const legend = document.createElement("details"); legend.className = "advanced skill-legend"; legend.open = true;
-    const groups = { FW: "Tiền đạo", MF: "Tiền vệ", DF: "Hậu vệ", GK: "Thủ môn" };
-    const items = Object.entries(gameData.skills).map(([kind, skill]) => {
-      const context = skill.auto ? "Tự kích hoạt · 5 phút" : skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
+    const roles = { FW: "Tiền đạo", MF: "Tiền vệ", DF: "Hậu vệ", GK: "Thủ môn" };
+    // Skills grouped by the situation they are for.
+    const situations = [
+      ["Tấn công", skill => skill.contexts.includes("attack")],
+      ["Phòng ngự", skill => skill.contexts.includes("defense") && !skill.auto],
+      ["Thủ môn · tự kích hoạt 5 phút", skill => skill.auto],
+      ["Đá phạt & phạt góc", skill => skill.contexts.some(c => ["directFreeKick", "cornerAttack", "cornerDefense"].includes(c))],
+      ["Penalty", skill => skill.contexts.some(c => ["penaltyAttack", "penaltyDefense"].includes(c))]
+    ];
+    const skillItem = ([kind, skill]) => {
+      const context = skill.auto ? "Tự bật khi bị tấn công" : skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
       const badge = skillBadge(kind, skill.icon, `legend-${panel.dataset.mode}-${kind}`);
-      return `<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">${badge}</svg><span><b>${escapeHtml(skill.short)}</b><small>${escapeHtml(skill.name)} · ${skill.roles.map(r => groups[r]).join(", ")} · ${escapeHtml(context)}</small></span></div>`;
-    });
-    legend.innerHTML = `<summary>Bảng skill · nhìn icon là hiểu</summary><div class="skill-legend-grid">${items.join("")}</div>`;
+      return `<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">${badge}</svg><span><b>${escapeHtml(skill.short)}</b><small>${escapeHtml(skill.name)} · ${skill.roles.map(r => roles[r]).join(", ")} · ${escapeHtml(context)}</small></span></div>`;
+    };
+    const skills = Object.entries(gameData.skills);
+    const legend = document.createElement("details"); legend.className = "advanced skill-legend"; legend.open = true;
+    legend.innerHTML = `<summary>Bảng skill · nhìn icon là hiểu</summary>${situations.map(([title, test]) => `<section class="legend-group"><h3>${title}</h3><div class="skill-legend-grid">${skills.filter(([, skill]) => test(skill)).map(skillItem).join("")}</div></section>`).join("")}`;
     panel.querySelector(".advanced-grid").after(legend);
-    // Playing styles: what each one does on the pitch.
+    // Playing styles by zone of the pitch, attacking and defensive side by side.
+    const styleItem = style => `<div class="style-legend-item"><b>${escapeHtml(style.name)} <span>${escapeHtml(style.en)}</span></b><small>${escapeHtml(style.desc)}</small></div>`;
+    const column = (phase, role) => Object.values(gameData.playstyles[phase]).filter(style => style.roles.includes(role)).map(styleItem).join("");
     const styles = document.createElement("details"); styles.className = "advanced style-legend";
-    const styleItems = Object.values(gameData.playstyles).map(style => `<div class="style-legend-item"><b>${escapeHtml(style.name)} <span>${escapeHtml(style.en)} · ${style.roles.map(r => groups[r]).join(", ")}</span></b><small>${escapeHtml(style.desc)}</small></div>`);
-    styles.innerHTML = `<summary>Bảng lối chơi (playstyle) · quyết định cách cầu thủ di chuyển</summary><div class="style-legend-grid">${styleItems.join("")}</div>`;
+    styles.innerHTML = `<summary>Bảng lối chơi · mỗi cầu thủ có 1 kiểu tấn công + 1 kiểu phòng ngự</summary>${Object.entries(roles).map(([role, title]) => `<section class="legend-group"><h3>${title}</h3><div class="style-zone"><div><h4>Khi có bóng · tấn công</h4>${column("attack", role)}</div><div><h4>Khi mất bóng · phòng ngự</h4>${column("defense", role)}</div></div></section>`).join("")}`;
     legend.after(styles);
+  }
+  /** Both squads with every rating; redrawn only when someone comes on or off. */
+  function renderRoster(session) {
+    const roster = session.api.roster?.();
+    if (!roster) return;
+    const key = JSON.stringify(Object.values(roster).map(list => list.map(p => [p.name, p.onPitch, p.role, p.injured])));
+    if (session.rosterKey === key) return;
+    session.rosterKey = key;
+    const roles = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" }, keys = gameData.stats.keys;
+    const cell = v => `<td data-level="${v >= 80 ? "high" : v >= 65 ? "mid" : "low"}">${v}</td>`;
+    const table = (t, list) => `<div class="roster-team" data-team="${t}"><h3>Đội ${names[t]}</h3><div class="roster-scroll"><table><thead><tr><th>#</th><th>Cầu thủ</th><th>VT</th><th>OVR</th>${keys.map(k => `<th title="${gameData.stats.labels[k]}">${gameData.stats.short[k]}</th>`).join("")}<th>Lối chơi (tấn công · phòng ngự)</th></tr></thead><tbody>${list.map(p => `<tr class="${p.onPitch ? "" : "is-bench"}"><td>${p.num}</td><td>${escapeHtml(p.name)}${p.onPitch ? "" : " <small>dự bị</small>"}</td><td>${roles[p.role] ?? p.role}</td><td class="ovr">${p.ovr ?? "–"}</td>${keys.map(k => cell(p.stats[k])).join("")}<td class="styles">${escapeHtml(p.attack)} · ${escapeHtml(p.defense)}</td></tr>`).join("")}</tbody></table></div></div>`;
+    session.panel.querySelector(".roster-body").innerHTML = Object.entries(roster).map(([t, list]) => table(t, list)).join("");
+    session.panel.querySelector(".roster").hidden = false;
   }
   /** Redraws every key hint in a panel from the layouts its players use. */
   function renderPanelKeys(panel) {
@@ -212,7 +235,9 @@
       power.innerHTML = '<span class="charge-text">Giữ phím chuyền/sút để nạp lực</span><progress max="1" value="0" aria-label="Lực chuyền hoặc sút"></progress>';
       const skillInfo = document.createElement("p"); skillInfo.className = "skill-description";
       const styleInfo = document.createElement("p"); styleInfo.className = "style-description";
-      energyLabel.append(energyText, percent); card.append(title, energyLabel, meter, power, skillInfo, styleInfo); cards.append(card);
+      const statGrid = document.createElement("div"); statGrid.className = "stat-grid";
+      statGrid.innerHTML = gameData.stats.keys.map(k => `<span data-stat="${k}" title="${gameData.stats.labels[k]}"><b>${gameData.stats.short[k]}</b><i></i></span>`).join("");
+      energyLabel.append(energyText, percent); card.append(title, energyLabel, meter, power, skillInfo, styleInfo, statGrid); cards.append(card);
     }
   }
   function updateHud(session) {
@@ -222,6 +247,7 @@
       return session.hudNodes.get(selector);
     };
     const state = session.api.status(), bindings = bindingsOf(session.options.mode);
+    renderRoster(session);
     if (!!state.refBreak !== !!session.refStopped) {
       session.refStopped = !!state.refBreak;
       // A referee stoppage cancels kicks but preserves held movement keys.
@@ -275,7 +301,7 @@
       const onField = q(`.arena-energy [data-slot="${player.slot}"]`);
       const percent = Math.round(player.energy * 100);
       onField.dataset.team = player.team; onField.classList.toggle("is-low", player.energy < .35);
-      writeText(onField.querySelector(".energy-name"), `${player.slot} · ${player.name || "Chuẩn bị"}`);
+      writeText(onField.querySelector(".energy-name"), `${player.slot} · ${player.name || "Chuẩn bị"}${player.ovr ? ` · ${player.ovr}` : ""}`);
       writeText(onField.querySelector("strong"), percent + "%");
       onField.querySelector("progress").value = player.energy;
       const skillButton = onField.querySelector(".special-button"), skill = player.special;
@@ -299,10 +325,16 @@
       }
       const card = q(`.player-card[data-slot="${player.slot}"]`);
       if (!card) continue;
-      writeText(card.querySelector(".style-description"), player.style ? `Lối chơi: ${player.style.name} (${player.style.en}) · ${player.style.desc}` : "");
+      for (const cell of card.querySelectorAll("[data-stat]")) {
+        const value = player.stats?.[cell.dataset.stat] ?? "–";
+        writeText(cell.querySelector("i"), value);
+        cell.dataset.level = value >= 80 ? "high" : value >= 65 ? "mid" : "low";
+      }
+      writeText(card.querySelector(".style-description"), player.style ? `Tấn công: ${player.style.attack.name} (${player.style.attack.en}) · Phòng ngự: ${player.style.defense.name} (${player.style.defense.en})` : "");
+      card.querySelector(".style-description").title = player.style ? `${player.style.attack.desc} ${player.style.defense.desc}` : "";
       writeText(card.querySelector(".skill-description"), `${set ? label(set.special) : ""} · ${skill.name} · ${category} · ${skillState}`);
       const side = state.leftTeam === player.team ? "trái" : "phải";
-      writeText(card.querySelector("strong"), `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`);
+      writeText(card.querySelector("strong"), `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""}${player.ovr ? ` · OVR ${player.ovr}` : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`);
       card.querySelector("meter").value = player.energy;
       writeText(card.querySelector(".percent"), percent + "%");
       card.querySelector("progress").value = player.charge?.power ?? 0;
@@ -495,6 +527,9 @@
     setupKeymap(panel);
     renderPanelKeys(panel);
     renderSkillLegend(panel);
+    const roster = document.createElement("details"); roster.className = "advanced roster"; roster.open = true; roster.hidden = true;
+    roster.innerHTML = '<summary>Đội hình &amp; chỉ số · OVR tính theo vị trí đang đá</summary><div class="roster-body"></div>';
+    panel.querySelector(".player-status").after(roster);
     form.addEventListener("change", event => { if (!event.target.closest(".keymap-assign")) setupSummary(panel); });
     setupSummary(panel);
     panel.querySelector(".support").addEventListener("change", event => {

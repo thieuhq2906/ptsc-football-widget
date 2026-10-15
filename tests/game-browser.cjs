@@ -614,29 +614,68 @@ const server = http.createServer((req, res) => {
     assert(injury.back && injury.back.bandage === "leg" && !injury.back.off, "He can come back to the bench strapped up: " + JSON.stringify(injury));
     console.log("PASS injuries: ambulance, no return to play, back on the touchline with a bandage");
 
-    // Playing styles: one per player, suited to his position, and they change where he plays.
+    // Playing styles: an attacking and a defensive one per player, suited to his position, each changing where he plays.
     const styles = await page.evaluate(() => {
-      const acc = {}, roles = [];
+      const acc = { attack: {}, defense: {} }, roles = [];
       for (let seed = 1; seed <= 10; seed++) {
         const host = document.createElement("div"); document.body.append(host);
         const api = PTSCFootball.mount(host, { seed, still: 0, fonts: "none" });
-        for (const p of api.__players()) roles.push([p.role, p.style]);
+        for (const p of api.__players()) roles.push([p.role, p.attack, p.defense]);
         for (let i = 0; i < 900 && !api.status().ended; i++) {
           api.__step(.2);
           if (api.status().phase !== "play" || api.status().stoppage) continue;
-          for (const p of api.__players()) if (p.poss) { const a = acc[p.style] ??= { d: 0, n: 0 }; a.d += p.d; a.n++; }
+          for (const p of api.__players()) {
+            const phase = p.poss ? "attack" : "defense", id = p[phase], a = acc[phase][id] ??= { d: 0, n: 0 };
+            a.d += p.d; a.n++;
+          }
         }
         api.destroy(); host.remove();
       }
-      return { roles, depth: Object.fromEntries(Object.entries(acc).map(([k, a]) => [k, a.d / a.n])) };
+      const mean = table => Object.fromEntries(Object.entries(table).map(([k, a]) => [k, a.d / a.n]));
+      return { roles, attack: mean(acc.attack), defense: mean(acc.defense) };
     });
     const styleTable = await page.evaluate(() => PTSCFootball.data.playstyles);
-    assert(styles.roles.every(([role, style]) => styleTable[style]?.roles.includes(role)), "Every player has a style for his position");
-    const depthOf = id => styles.depth[id];
-    for (const [low, high] of [["deepLyingForward", "goalPoacher"], ["anchorMan", "holePlayer"], ["defensiveFullback", "offensiveFullback"], ["defensiveGoalkeeper", "offensiveGoalkeeper"]]) {
-      if (depthOf(low) != null && depthOf(high) != null) assert(depthOf(low) < depthOf(high), `${low} must play deeper than ${high}: ` + JSON.stringify(styles.depth));
-    }
-    console.log("PASS playing styles fit positions and change where players stand");
+    assert(Object.keys(styleTable.attack).length < 22 && Object.keys(styleTable.defense).length < 22, "Only a selection of styles suits a small pitch");
+    assert(styles.roles.every(([role, attack, defense]) => styleTable.attack[attack]?.roles.includes(role) && styleTable.defense[defense]?.roles.includes(role)), "Every player has an attacking and a defensive style for his position");
+    const ordered = (phase, low, high) => {
+      const table = styles[phase];
+      if (table[low] != null && table[high] != null) assert(table[low] < table[high], `${low} must play deeper than ${high}: ` + JSON.stringify(table));
+    };
+    ordered("attack", "deepLyingForward", "goalPoacher"); ordered("attack", "orchestrator", "holePlayer"); ordered("attack", "buildUp", "extraFrontman");
+    ordered("defense", "pressBack", "frontLinePoacher"); ordered("defense", "anchorMan", "destroyer"); ordered("defense", "deepDefender", "highLineMaster"); ordered("defense", "defensiveGK", "sweeperGK");
+    assert(await page.locator("#panel-local .style-legend .legend-group").count() === 4, "Styles are grouped by zone");
+    assert(await page.locator("#panel-local .skill-legend .legend-group").count() === 5, "Skills are grouped by situation");
+    console.log("PASS attacking and defensive playing styles fit positions, change where players stand, grouped legends");
+
+    // Ratings: every player has ten, in range, shaped by his styles; squads can be supplied as data with fixed ratings.
+    const ratings = await page.evaluate(() => {
+      const rules = PTSCFootball.data.stats, all = [];
+      for (let seed = 1; seed <= 12; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none" });
+        for (const list of Object.values(api.roster())) all.push(...list);
+        api.destroy(); host.remove();
+      }
+      const custom = { R: { players: [
+        { name: "Thủ Thành", head: "buzz", skin: 1, num: 1, stats: { goalkeeping: 92 } }, { name: "Hậu A", head: "spiky", skin: 1, num: 2 }, { name: "Hậu B", head: "curly", skin: 2, num: 3 },
+        { name: "Tiền Vệ", head: "beard", skin: 1, num: 8 }, { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, stats: { finishing: 95, speed: 90 }, attack: "goalPoacher", defense: "frontLinePoacher" },
+        { name: "Cánh Phải", head: "glasses", skin: 1, num: 11 }], bench: [{ name: "Dự Bị", head: "buzz", skin: 2, num: 12, natural: "DF" }] } };
+      const host = document.createElement("div"); document.body.append(host);
+      const api = PTSCFootball.mount(host, { mode: "cpu", seed: 4, still: 0, fonts: "none", squads: JSON.stringify(custom) });
+      const roster = api.roster(); api.destroy(); host.remove();
+      return { rules: { keys: rules.keys, range: rules.range }, all, roster };
+    });
+    assert(ratings.all.every(p => ratings.rules.keys.every(k => p.stats[k] >= ratings.rules.range[0] && p.stats[k] <= ratings.rules.range[1]) && p.ovr >= 35 && p.ovr <= 95), "Ratings stay within 35–95");
+    const mean = (list, key) => list.reduce((s, p) => s + p.stats[key], 0) / list.length;
+    const forwards = ratings.all.filter(p => p.role === "FW");
+    assert(mean(forwards.filter(p => p.attack === "Săn bàn"), "finishing") > mean(forwards.filter(p => p.attack === "Hộ công lùi sâu"), "finishing"), "Goal poachers finish better than deep-lying forwards");
+    assert(mean(ratings.all.filter(p => p.role === "GK"), "goalkeeping") > 70 && mean(ratings.all.filter(p => p.role !== "GK"), "goalkeeping") < 40, "Only keepers can keep goal");
+    const striker = ratings.roster.R.find(p => p.name === "Sát Thủ");
+    assert(striker && striker.stats.finishing === 95 && striker.stats.speed === 90 && striker.attack === "Săn bàn" && striker.defense === "Chờ phản công", "Squads given as data keep fixed ratings and styles: " + JSON.stringify(striker));
+    assert.equal(ratings.roster.R.find(p => p.name === "Thủ Thành").stats.goalkeeping, 92);
+    assert(ratings.roster.B.some(p => p.name === "Vũ"), "A team without custom data keeps the default squad");
+    assert(await page.locator("#panel-local .roster table").count() === 2, "Both squads are listed with ratings");
+    console.log("PASS player ratings: ten per player in range, shaped by playing styles, squads as data with fixed ratings, roster tables");
 
     const watcherTime = await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().T);
     await page.waitForTimeout(200);

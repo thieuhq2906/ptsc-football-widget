@@ -218,13 +218,37 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
 .skill-legend-item b { display: block; font-size: 13px; }
 .skill-legend-item small { display: block; font-size: 11px; line-height: 1.4; color: #586072; }
 .style-legend { margin-top: 16px; }
-.style-legend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 12px; }
+.legend-group h3 { margin: 16px 0 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #48693a; }
+.style-zone { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 16px; margin-top: 8px; }
+.style-zone > div { display: grid; gap: 6px; align-content: start; }
+.style-zone h4 { margin: 0; font-size: 11px; color: #788172; font-weight: 700; }
 .style-legend-item { padding: 8px 10px; border: 1px solid #d0d8cc; border-radius: 9px; background: #fff; }
 .style-legend-item b { display: block; font-size: 13px; }
 .style-legend-item b span { font-size: 11px; font-weight: 600; color: #788172; }
 .style-legend-item small { display: block; margin-top: 3px; font-size: 11px; line-height: 1.45; color: #586072; }
 .style-description { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: #48693a; }
+.stat-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+.stat-grid span { display: flex; justify-content: space-between; gap: 4px; padding: 3px 6px; border-radius: 5px; background: #f1f2ea; font-size: 10px; }
+.stat-grid b { color: #788172; font-weight: 700; }
+.stat-grid i { font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
+[data-level="high"] { color: #1f7a3c; } [data-level="mid"] { color: #8a6d0b; } [data-level="low"] { color: #b3412e; }
+.stat-grid span[data-level="high"] { background: #e3f4e3; } .stat-grid span[data-level="low"] { background: #fbeae6; }
+.roster { margin: 0 0 18px; }
+.roster-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 10px; }
+.roster-team { min-width: 0; }
+.roster-team h3 { margin: 0 0 6px; font-size: 13px; }
+.roster-team[data-team="R"] h3 { color: #c63d33; } .roster-team[data-team="B"] h3 { color: #2b67ad; }
+.roster-scroll { overflow-x: auto; }
+.roster table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.roster th, .roster td { padding: 4px 6px; border-bottom: 1px solid #e3e4da; text-align: center; white-space: nowrap; }
+.roster th { font-size: 10px; color: #788172; font-weight: 700; }
+.roster td:nth-child(2), .roster th:nth-child(2), .roster td.styles, .roster th:last-child { text-align: left; }
+.roster td.ovr { font-weight: 800; color: #1d2340; }
+.roster td.styles { color: #586072; font-size: 11px; }
+.roster tr.is-bench td { opacity: .7; }
+.roster small { color: #788172; }
 @media (max-width: 640px) {
+  .stat-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .keymap { padding: 12px; }
   .keymap-head input { width: 100%; }
   .keymap-head label { flex-wrap: wrap; width: 100%; }
