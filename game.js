@@ -30,6 +30,8 @@
   }
   const cornerKeys = { A: ["KeyF", "KeyG", "KeyV", "KeyB"], B: ["KeyJ", "KeyK", "KeyN", "KeyM"] };
   const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press, ...Object.keys(b.actions)])]);
+  const movementKeys = new Set(Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press]));
+  const pressSlots = new Map(Object.entries(bindings).map(([slot, b]) => [b.press, slot]));
   const padKeys = [...document.querySelectorAll(".pad-key, .action-key")];
   const writeText = (node, value) => { const text = String(value); if (node.textContent !== text) node.textContent = text; };
   const pendingShots = new Map(), chargeStarts = new Map();
@@ -38,14 +40,13 @@
 
   function applyKeys(session = sessions.get(activeMode)) {
     if (!session) return;
-    const state = session.api.status();
-    const arena = session.panel.querySelector(".arena");
-    const acceptsInput = !session.paused && !state.ended && session === sessions.get(activeMode) && document.activeElement === arena;
+    const arena = session.arena;
+    const acceptsInput = !session.paused && session.api.acceptsMovement() && session === sessions.get(activeMode) && document.activeElement === arena;
     for (const [slot, b] of Object.entries(bindings)) {
       session.api.setInput(slot, !acceptsInput ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
         y: Number(keys.has(b.down)) - Number(keys.has(b.up)), sprint: keys.has(b.sprint),
-        pressing: keys.has(b.press) && !state.players.find(p => p.slot === slot)?.hasBall
+        pressing: keys.has(b.press)
       });
     }
   }
@@ -54,12 +55,15 @@
     for (const repeat of switchRepeats.values()) clearTimeout(repeat.timer);
     switchRepeats.clear();
     highlightPads();
-    for (const pending of pendingShots.values()) clearTimeout(pending.timer);
-    pendingShots.clear(); chargeStarts.clear();
+    cancelKicks();
     for (const session of sessions.values()) {
       session.api.setInput("A"); session.api.setInput("B");
-      session.api.cancelCharge("A"); session.api.cancelCharge("B");
     }
+  }
+  function cancelKicks() {
+    for (const pending of pendingShots.values()) clearTimeout(pending.timer);
+    pendingShots.clear(); chargeStarts.clear();
+    for (const session of sessions.values()) { session.api.cancelCharge("A"); session.api.cancelCharge("B"); }
   }
   function highlightPads() {
     for (const key of padKeys) key.classList.toggle("is-held", keys.has(key.dataset.code));
@@ -156,7 +160,8 @@
       meter.setAttribute("aria-label", `Thể lực người ${player.slot}`);
       const power = document.createElement("div"); power.className = "charge-hud";
       power.innerHTML = '<span class="charge-text">Giữ phím chuyền/sút để nạp lực</span><progress max="1" value="0" aria-label="Lực chuyền hoặc sút"></progress>';
-      label.append(energyLabel, percent); card.append(title, label, meter, power); cards.append(card);
+      const skillInfo = document.createElement("p"); skillInfo.className = "skill-description";
+      label.append(energyLabel, percent); card.append(title, label, meter, power, skillInfo); cards.append(card);
     }
   }
   function updateHud(session) {
@@ -174,7 +179,6 @@
       }
       chargeStarts.clear(); session.api.cancelCharge("A"); session.api.cancelCharge("B");
     }
-    if (session === sessions.get(activeMode)) applyKeys(session);
     session.penaltyView.update(state, session.paused);
     q(".arena-hints").hidden = !!state.penalty || state.ended;
     const restartChoice = q(".restart-choice"), corner = state.corner, kickoff = state.kickoff, freeKick = state.freeKick;
@@ -227,7 +231,8 @@
       skillButton.classList.toggle("is-active", skill.active);
       skillButton.classList.toggle("is-used", skill.used && !skill.active);
       skillButton.classList.toggle("is-unavailable", (session.paused && !session.awaitingStart) || state.ended || !skill.ready);
-      skillButton.title = `${skill.name} · ${skillState}${skill.primed ? " · tự dùng khi nhận bóng hoặc tới lượt đá phạt" : ""} · ${Math.round(gameData.skillRules.cost * 100)}% thể lực · ${gameData.skillRules.usesPerMatch} lần/cầu thủ/trận`;
+      const category = skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
+      skillButton.title = `${skill.name} · ${category} · ${skillState} · ${Math.round(gameData.skillRules.cost * 100)}% thể lực · ${gameData.skillRules.usesPerMatch} lần/cầu thủ/trận`;
       skillButton.setAttribute("aria-label", `${player.slot}: ${skillButton.title}`);
       const slideButton = q(`.slide-action[data-slot="${player.slot}"]`);
       if (slideButton) {
@@ -236,6 +241,7 @@
       }
       const card = q(`.player-card[data-slot="${player.slot}"]`);
       if (!card) continue;
+      writeText(card.querySelector(".skill-description"), `${player.slot === "A" ? "E" : "O"} · ${skill.name} · ${category} · ${skillState}`);
       const side = state.leftTeam === player.team ? "trái" : "phải";
       writeText(card.querySelector("strong"), `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`);
       card.querySelector("meter").value = player.energy;
@@ -254,7 +260,7 @@
       fullscreen.setAttribute("aria-pressed", String(expanded));
     }
     async function toggleFullscreen() {
-      releaseKeys();
+      cancelKicks();
       if (document.fullscreenElement) await document.exitFullscreen();
       else if (arena.classList.contains("fullscreen-fallback")) { arena.classList.remove("fullscreen-fallback"); document.body.classList.remove("has-fullscreen"); }
       else if (arena.requestFullscreen) {
@@ -262,6 +268,7 @@
       } else { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
       syncFullscreenButton();
       arena.focus({ preventScroll: true });
+      applyKeys();
     }
     fullscreen.addEventListener("click", toggleFullscreen);
     arena.addEventListener("keydown", event => {
@@ -269,8 +276,9 @@
     });
     document.addEventListener("fullscreenchange", () => {
       syncFullscreenButton();
-      releaseKeys();
+      cancelKicks();
       if (arena.closest('[role="tabpanel"]').id === "panel-" + activeMode) arena.focus({ preventScroll: true });
+      applyKeys();
     });
   }
   for (const panel of document.querySelectorAll(".game-panel")) {
@@ -329,7 +337,7 @@
       const host = panel.querySelector(".match-host"); host.replaceChildren();
       const api = window.PTSCFootball.mount(host, options);
       api.pause();
-      const session = { panel, api, options, paused: true, awaitingStart: true,
+      const session = { panel, arena, api, options, paused: true, awaitingStart: true,
         penaltyView: new window.PTSCPenaltyView(penaltyHost, api) };
       sessions.set(mode, session);
       energy.hidden = false;
@@ -349,12 +357,19 @@
     arena.addEventListener("pointerdown", () => { if (sessions.has(panel.dataset.mode)) arena.focus({ preventScroll: true }); });
     arena.addEventListener("focusout", event => { if (!arena.contains(event.relatedTarget)) releaseKeys(); });
   }
-  document.addEventListener("keydown", event => {
+  window.addEventListener("keydown", event => {
     const session = sessions.get(activeMode);
     if (!session || !session.panel.querySelector(".arena").contains(document.activeElement) || !handledKeys.has(event.code)) return;
     if (event.code === "Escape" && document.fullscreenElement) { releaseKeys(); return; }
     if (event.code !== "Escape" && document.activeElement.matches("button, input, select, textarea")) return;
     event.preventDefault();
+    const cornerPress = pressSlots.has(event.code) && session.api.cornerSlot() === pressSlots.get(event.code);
+    if (movementKeys.has(event.code) && !cornerPress && session.api.acceptsMovement()) {
+      if (!session.paused && !keys.has(event.code)) {
+        keys.add(event.code); applyKeys(session); highlightPads();
+      }
+      return;
+    }
     if (event.code === "Space" || event.code === "Escape") {
       if (event.code === "Escape" && session.panel.querySelector(".arena").classList.contains("fullscreen-fallback")) {
         session.panel.querySelector(".fullscreen").click(); return;
@@ -373,7 +388,10 @@
       return;
     }
     const specialBinding = Object.entries(bindings).find(([, binding]) => binding.actions[event.code] === "special");
-    if (session.awaitingStart && specialBinding && !event.repeat) {
+    if (specialBinding && !event.repeat && (!session.paused || session.awaitingStart)) {
+      const pending = pendingShots.get(specialBinding[0]);
+      if (pending) { clearTimeout(pending.timer); pendingShots.delete(specialBinding[0]); }
+      chargeStarts.delete(specialBinding[0]); session.api.cancelCharge(specialBinding[0]);
       session.api.action(specialBinding[0], "special"); updateHud(session); return;
     }
     if (session.paused || session.api.status().ended) return;
@@ -416,7 +434,7 @@
     }
     updateHud(session);
     highlightPads();
-  });
+  }, true);
   window.addEventListener("keyup", event => {
     const repeat = switchRepeats.get(event.code);
     if (repeat) { clearTimeout(repeat.timer); switchRepeats.delete(event.code); }
@@ -449,7 +467,6 @@
   }
   window.addEventListener("blur", suspend);
   window.addEventListener("pagehide", suspend);
-  window.addEventListener("pointercancel", releaseKeys);
   window.addEventListener("focus", () => { if (activeMode === "watch" && !document.hidden) watcher?.play(); });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) suspend();

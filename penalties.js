@@ -56,7 +56,7 @@
       for (const slot of ["A", "B"]) {
         const card = document.createElement("div"); card.className = "penalty-player"; card.dataset.slot = slot;
         const keys = slot === "A" ? ["A", "S", "D"] : ["←", "↓", "→"];
-        card.innerHTML = `<strong></strong><div>${keys.map((key, i) => `<span><kbd>${key}</kbd> ${["Trái", "Giữa", "Phải"][i]}</span>`).join("")}</div><small></small>`;
+        card.innerHTML = `<strong></strong><div>${keys.map((key, i) => `<span><kbd>${key}</kbd> ${["Trái", "Giữa", "Phải"][i]}</span>`).join("")}</div><small class="penalty-lock"></small><small class="penalty-skill"></small>`;
         this.controls.append(card);
       }
     }
@@ -71,7 +71,7 @@
       text(this.host.querySelector('[data-pen="title"]'), p.kind === "inMatch" ? "PENALTY" : "LUÂN LƯU");
       const scoreHtml = `<small>Trận: Đỏ ${state.score.R}–${state.score.B} Xanh · ${p.kind === "inMatch" ? "Penalty" : "PEN"}</small>` + (p.kind === "inMatch" ? "" : ["R", "B"].map(team => `<div><b style="color:${colors[team]}">${names[team]} ${p.score[team]}</b><span>${p.history[team].map(goal => `<i class="${goal ? "goal" : "saved"}"></i>`).join("")}${"<i></i>".repeat(Math.max(0, 5 - p.history[team].length))}</span></div>`).join(""));
       if (this.scoreHtml !== scoreHtml) { this.host.querySelector(".penalty-score").innerHTML = scoreHtml; this.scoreHtml = scoreHtml; }
-      const message = p.phase === "finished" ? state.note : paused ? "Đang tạm dừng" : p.phase === "result" ? p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!" : p.kind === "inMatch" ? `Penalty · Đội ${names[p.attack]} sút` : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
+      const message = p.phase === "finished" ? state.note : paused ? "Đang tạm dừng" : p.phase === "result" ? p.last.skillWinner === "attack" ? "VÀO! BẢN LĨNH CHẤM PHẠT!" : p.last.skillWinner === "defense" ? "SKILL THỦ MÔN CỨU THUA!" : p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!" : p.kind === "inMatch" ? `Penalty · Đội ${names[p.attack]} sút` : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
       const messageNode = this.host.querySelector(".penalty-message");
       if (messageNode.textContent !== message) messageNode.textContent = message;
       for (const card of this.controls.children) {
@@ -79,7 +79,9 @@
         card.hidden = !player;
         if (!player) continue;
         text(card.querySelector("strong"), `${player.slot} · ${names[player.team]} · ${player.role === "attack" ? "Sút" : "Thủ môn"}`);
-        text(card.querySelector("small"), paused ? "Tạm dừng" : player.locked && p.phase === "choose" ? "Đã chốt · đợi đối thủ" : p.phase === "choose" ? "Bấm phím để chốt" : "");
+        text(card.querySelector(".penalty-lock"), paused ? "Tạm dừng" : player.locked && p.phase === "choose" ? "Đã chốt · đợi đối thủ" : p.phase === "choose" ? "Bấm phím để chốt" : "");
+        const skill = state.players.find(item => item.slot === player.slot)?.special;
+        text(card.querySelector(".penalty-skill"), skill ? `${player.slot === "A" ? "E" : "O"} · ${skill.name} · ${skill.label}` : "");
         card.classList.toggle("is-locked", paused || player.locked || p.phase !== "choose");
       }
       if (this.turn === p.turn && this.phase === p.phase) return;
@@ -91,11 +93,11 @@
       text(this.host.querySelector('[data-pen="number"]'), String(selected?.number ?? 7));
       ball.style.transform = ""; keeper.style.transform = ""; shooter.style.transform = ""; aim.setAttribute("opacity", "0");
       if (p.phase === "result" || p.phase === "finished") {
-        const shotX = positions[p.last.shot], diveX = positions[p.last.dive];
+        const shotX = positions[p.last.shot], dive = p.last.actualDive ?? p.last.dive, diveX = positions[dive];
         aim.setAttribute("d", `M320 270L${shotX} 158`); aim.setAttribute("opacity", ".55");
         // Every choice is concealed until both players have committed.
         ball.style.transform = `translate(${shotX - 320}px, -112px) scale(.6)`;
-        keeper.style.transform = `translate(${diveX - 320}px, 0) rotate(${p.last.dive === "left" ? -65 : p.last.dive === "right" ? 65 : 0}deg)`;
+        keeper.style.transform = `translate(${diveX - 320}px, 0) rotate(${dive === "left" ? -65 : dive === "right" ? 65 : 0}deg)`;
         shooter.style.transform = "translate(57px, -44px)";
       }
     }
