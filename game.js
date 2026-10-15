@@ -10,12 +10,12 @@
     A: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", sprint: "KeyT", press: "KeyV", actions: { KeyR: "switch", KeyF: "pass", KeyG: "shoot", KeyB: "challenge", KeyE: "special" } },
     B: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", sprint: "KeyI", press: "KeyN", actions: { KeyU: "switch", KeyJ: "pass", KeyK: "shoot", KeyM: "challenge", KeyO: "special" } }
   };
-  const skillIcons = {
-    FW: '<path d="M14 2 5 13h6l-1 9 9-12h-6z"/>',
-    MF: '<circle cx="10" cy="14" r="7"/><path d="m10 10 4 3-2 4H8l-2-4zM18 2l1.2 3.4L23 6.5l-3.8 1.2L18 11l-1.2-3.3L13 6.5l3.8-1.1z"/>',
-    DF: '<path d="m12 2 9 4v6c0 6-9 10-9 10S3 18 3 12V6zM7 12l3 3 7-7"/>',
-    GK: '<path d="M8 21 4 15 2 10c-.6-2 2-3 3-1l2 3V5c0-2 3-2 3 0v5-7c0-2 3-2 3 0v7-6c0-2 3-2 3 0v7-4c0-2 3-2 3 0v8l-3 6z"/>'
-  };
+  const gameData = window.PTSCFootball.data;
+  const defaultSkillIcon = gameData.skills.freeKick.icon;
+  function skillBadge(kind, icon, id) {
+    const role = gameData.skills[kind]?.role ?? "MF", color = gameData.skillRules.colors[role];
+    return `<defs><radialGradient id="${id}"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#123a62"/></radialGradient></defs><circle cx="12" cy="12" r="11.2" fill="#16456b" stroke="#2b92da" stroke-width="1.4"/><circle cx="12" cy="12" r="9.2" fill="url(#${id})" stroke="#8dd1fb" stroke-width="1"/><path d="M5 7Q12 1 19 7" fill="none" stroke="#d2f0ff" stroke-width="1" opacity=".7"/><path d="M3 16Q12 23 21 16" fill="none" stroke="#4bbcf5" stroke-width="1.3"/><g transform="translate(4,4) scale(.66)" fill="none" stroke="${role === "DF" ? "#acffbd" : role === "GK" ? "#ffe3d4" : "#fff1b0"}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${icon || defaultSkillIcon}</g>`;
+  }
   for (const guide of document.querySelectorAll(".pad-help")) {
     const slot = guide.dataset.slot, b = bindings[slot];
     const labels = slot === "A" ? { up: "W", left: "A", down: "S", right: "D" } : { up: "↑", left: "←", down: "↓", right: "→" };
@@ -150,6 +150,19 @@
     if (session === sessions.get(activeMode)) applyKeys(session);
     session.penaltyView.update(state, session.paused);
     session.panel.querySelector(".arena-hints").hidden = !!state.penalty || state.ended;
+    const restartChoice = session.panel.querySelector(".restart-choice"), corner = state.corner, kickoff = state.kickoff, freeKick = state.freeKick;
+    restartChoice.hidden = state.ended || !(corner?.slot || kickoff?.slot || freeKick?.slot);
+    if (!restartChoice.hidden) {
+      const restart = corner ?? kickoff ?? freeKick;
+      restartChoice.querySelector(".restart-label").textContent = state.refBreak ? "Chờ trọng tài quay lại" : corner ? `Phạt góc · ${restart.slot} · ${restart.name}${restart.ready ? " · chọn kiểu đá" : " · chờ người đá cạnh bóng"}` : freeKick ? `Đá phạt · ${restart.slot} · ${restart.name} · đứng cạnh bóng, giữ rồi thả ${restart.slot === "A" ? "F/G" : "J/K"}` : `${restart.slot} · ${restart.name} · đứng cạnh bóng, nhấn ${restart.slot === "A" ? "F" : "J"} để giao bóng`;
+      for (const button of restartChoice.querySelectorAll(".corner-kind")) { button.hidden = !corner; button.disabled = session.paused || !restart.ready; }
+      const passButton = restartChoice.querySelector(".kickoff-pass");
+      passButton.hidden = !kickoff; passButton.disabled = session.paused || !restart.ready;
+      passButton.textContent = `${restart.slot === "A" ? "F" : "J"} · Chuyền giao bóng`;
+      for (const button of restartChoice.querySelectorAll(".free-kick-action")) {
+        button.hidden = !freeKick; button.disabled = session.paused || !restart.ready;
+      }
+    }
     const result = session.panel.querySelector(".arena-result");
     result.hidden = !state.ended;
     if (state.ended) {
@@ -179,14 +192,14 @@
       const skillButton = onField.querySelector(".special-button"), skill = player.special;
       if (skillButton.dataset.kind !== skill.kind) {
         skillButton.dataset.kind = skill.kind ?? "";
-        skillButton.querySelector("svg").innerHTML = skillIcons[skill.kind] ?? skillIcons.MF;
+        skillButton.querySelector("svg").innerHTML = skillBadge(skill.kind, skill.icon, `skill-${session.options.mode}-${player.slot}`);
       }
-      const skillState = skill.active ? `${Math.ceil(skill.remaining)}s` : skill.used ? "Đã dùng" : player.energy < .4 ? "Thiếu lực" : skill.ready ? "Sẵn sàng" : "Chờ";
+      const skillState = skill.active ? `${Math.ceil(skill.remaining)}s` : skill.primed ? "Đã chuẩn bị" : skill.used ? "Đã dùng" : player.energy < gameData.skillRules.cost ? "Thiếu lực" : skill.ready ? "Sẵn sàng" : "Chờ";
       skillButton.querySelector(".skill-state").textContent = skillState;
       skillButton.classList.toggle("is-active", skill.active);
       skillButton.classList.toggle("is-used", skill.used && !skill.active);
-      skillButton.disabled = session.paused || state.ended || !skill.ready;
-      skillButton.title = `${skill.name} · ${skillState} · 40% thể lực · 1 lần/cầu thủ/trận`;
+      skillButton.disabled = (session.paused && !session.awaitingStart) || state.ended || !skill.ready;
+      skillButton.title = `${skill.name} · ${skillState} · ${Math.round(gameData.skillRules.cost * 100)}% thể lực · ${gameData.skillRules.usesPerMatch} lần/cầu thủ/trận`;
       skillButton.setAttribute("aria-label", `${player.slot}: ${skillButton.title}`);
       const slideButton = session.panel.querySelector(`.slide-action[data-slot="${player.slot}"]`);
       if (slideButton) {
@@ -243,12 +256,42 @@
     arena.querySelector(".arena-surface").append(overlay);
     const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
     arena.querySelector(".arena-surface").append(penaltyHost);
+    const restartChoice = document.createElement("div"); restartChoice.className = "restart-choice"; restartChoice.hidden = true;
+    restartChoice.innerHTML = `<span class="restart-label"></span><div><button type="button" class="select-restart">Chọn người đá</button><button type="button" class="kickoff-pass" hidden>Chuyền giao bóng</button><button type="button" class="free-kick-action" data-action="pass" hidden>Giữ: chuyền</button><button type="button" class="free-kick-action" data-action="shoot" hidden>Giữ: sút</button>${gameData.corners.map(c => `<button type="button" class="corner-kind" data-kind="${c.id}" hidden>${c.name}</button>`).join("")}</div>`;
+    arena.querySelector(".arena-surface").append(restartChoice);
+    for (const button of restartChoice.querySelectorAll("button")) button.addEventListener("click", () => {
+      if (button.matches(".free-kick-action")) return;
+      const session = sessions.get(panel.dataset.mode);
+      if (!session) return;
+      const state = session.api.status(), slot = state.corner?.slot ?? state.kickoff?.slot ?? state.freeKick?.slot;
+      if (!slot) return;
+      arena.focus({ preventScroll: true });
+      if (button.matches(".select-restart")) session.api.action(slot, "selectRestart");
+      else if (!session.paused && button.matches(".corner-kind")) session.api.takeCorner(slot, button.dataset.kind);
+      else if (!session.paused) session.api.action(slot, "pass", { power: .25 });
+      updateHud(session);
+    });
+    for (const button of restartChoice.querySelectorAll(".free-kick-action")) {
+      button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        const session = sessions.get(panel.dataset.mode), slot = session?.api.status().freeKick?.slot;
+        if (!session || session.paused || !slot) return;
+        arena.focus({ preventScroll: true });
+        if (session.api.beginCharge(slot, button.dataset.action)) { button.chargeSlot = slot; button.setPointerCapture(event.pointerId); updateHud(session); }
+      });
+      button.addEventListener("pointerup", () => {
+        const session = sessions.get(panel.dataset.mode), slot = button.chargeSlot; button.chargeSlot = null;
+        if (session && slot && !session.paused) session.api.releaseCharge(slot);
+        if (session) updateHud(session); arena.focus({ preventScroll: true });
+      });
+      button.addEventListener("pointercancel", () => { sessions.get(panel.dataset.mode)?.api.cancelCharge(button.chargeSlot); button.chargeSlot = null; });
+    }
     const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
-    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><button type="button" class="special-button" data-slot="${slot}" disabled><svg viewBox="0 0 24 24" aria-hidden="true">${skillIcons.MF}</svg><kbd>${slot === "A" ? "E" : "O"}</kbd><span class="skill-state">Chờ</span></button></div>`).join("");
+    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><button type="button" class="special-button" data-slot="${slot}" disabled><svg viewBox="0 0 24 24" aria-hidden="true">${defaultSkillIcon}</svg><kbd>${slot === "A" ? "E" : "O"}</kbd><span class="skill-state">Chờ</span></button></div>`).join("");
     arena.querySelector(".arena-surface").append(energy);
     for (const button of energy.querySelectorAll(".special-button")) button.addEventListener("click", () => {
       const session = sessions.get(panel.dataset.mode);
-      if (!session || session.paused) return;
+      if (!session || (session.paused && !session.awaitingStart)) return;
       arena.focus({ preventScroll: true }); session.api.action(button.dataset.slot, "special"); updateHud(session);
     });
     const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
@@ -328,10 +371,17 @@
     }
     const switchBinding = Object.entries(bindings).find(([, binding]) => binding.actions[event.code] === "switch");
     if (switchBinding) {
-      if (!event.repeat) {
+      const now = performance.now(), slot = switchBinding[0];
+      session.switchTimes ??= {};
+      if (!event.repeat || (keys.has(event.code) && now - (session.switchTimes[slot] ?? 0) >= gameData.controls.switchRepeatMs)) {
+        session.switchTimes[slot] = now;
         keys.add(event.code); session.api.action(switchBinding[0], "switch"); updateHud(session); highlightPads();
       }
       return;
+    }
+    const specialBinding = Object.entries(bindings).find(([, binding]) => binding.actions[event.code] === "special");
+    if (session.awaitingStart && specialBinding && !event.repeat) {
+      session.api.action(specialBinding[0], "special"); updateHud(session); return;
     }
     if (session.paused || session.api.status().ended) return;
     if (event.repeat && !keys.has(event.code)) return;
@@ -346,7 +396,7 @@
     if (!event.repeat) for (const [slot, binding] of Object.entries(bindings)) {
       const player = session.api.status().players.find(p => p.slot === slot);
       const bound = binding.actions[event.code];
-      const action = bound === "shoot" && !player?.hasBall ? "slide" : bound;
+      const action = bound === "shoot" && !player?.hasBall && session.api.status().freeKick?.slot !== slot ? "slide" : bound;
       if (action === "pass" || action === "shoot") {
         const pending = pendingShots.get(slot);
         if (action === "shoot" && pending?.session === session) {

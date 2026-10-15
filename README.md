@@ -38,9 +38,15 @@ Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn
 Phần trăm và thanh thể lực của người đang điều khiển hiện ngay trong sân: A bên trái, B bên phải, vẫn đọc được khi toàn màn hình; chuyển màu cảnh báo khi dưới 35%.
 Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
 Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không cầm bóng.
-Giao bóng, đá phạt, phạt góc, đá biên và phát bóng lên tự chọn đúng người thực hiện. R/U chọn người gần bóng nhất và hoạt động cả khi chờ giao bóng, thay người, bóng chết hoặc tạm dừng; không tự ghi đè lựa chọn trong lúc chờ, trừ khi chọn người thực hiện một tình huống mới.
+Giao bóng, đá phạt, phạt góc, đá biên và phát bóng lên tự chọn đúng người thực hiện. R/U lần đầu ưu tiên người gần bóng; các lần liên tiếp trong 1 giây luân phiên qua những đồng đội đủ điều kiện, không kẹt ở người gần nhất. Nhấn riêng từng lần phản hồi ngay; giữ phím hỗ trợ các lần lặp cách nhau ít nhất 65ms. Lựa chọn thủ công được giữ cho đến khi bóng đổi chủ hoặc có một tình huống nhận/giao bóng mới, kể cả lúc chờ và tạm dừng.
+Giao bóng phải có cầu thủ đứng trong 1,4m cạnh bóng giữa sân. A dùng **F**, B dùng **J** (giữ rồi thả để chuyền), hoặc bấm **Chuyền giao bóng**. Space chỉ bỏ tạm dừng, không tự chuyền giao bóng. Máy cũng phải tới cạnh bóng trước khi chuyền.
+Phạt góc có người đá đứng trong 1,4m cạnh cờ, tự trỏ về người đó; người chơi chọn **Tạt bổng / Chuyền ngắn / Đập nhả / Trả tuyến hai** trên sân. Chưa có người cạnh bóng hoặc trọng tài chưa quay lại thì không phát bóng. Nút **Chọn người đá** đưa điều khiển về đúng người thực hiện; có thể di chuyển sát đường biên khi chuẩn bị đá góc. Máy tự chọn kiểu đá khi đã sẵn sàng.
 Có thể di chuyển lúc chờ giao bóng, bóng chết, thay người và trọng tài nghỉ. Input di chuyển ngắt đường chạy bố trí tự động của cầu thủ đang chọn; nhấn hướng phản hồi ngay, nhả phím dừng ngay. Space vẫn đóng băng trận. Đồng hồ và thể lực không giảm trong các khoảng chờ.
+Giữ V/N áp sát phản hồi ngay, bỏ đường chạy bố trí tự động không thuộc hành động đang thực hiện; tốc độ tiếp cận cơ bản 6,8m/s, hướng bám người cầm bóng cập nhật mỗi bước. Thả nút dừng áp sát, không tự tranh bóng/xoạc.
+Đá phạt thường ưu tiên cầu thủ có **Vua đá phạt** còn lượt và đủ thể lực. Người đang chọn có thể chạy tới trong 1,4m cạnh bóng để thay làm người đá, hoặc bấm **Chọn người đá**. Giữ rồi thả **F/J** để chuyền, **G/K** để sút; có nạp lực, hướng ngắm và đường bóng cao/thấp như lúc chơi. Trên sân cũng có nút chuyền/sút giữ để nạp lực bằng chuột. Cú đá tự động của đội người chơi chờ thao tác; máy chỉ đá sau khi người đá và hàng rào chuẩn bị xong, cân nhắc kích hoạt Vua đá phạt.
+Phạm lỗi trong vòng cấm bán nguyệt của đội phòng ngự dẫn tới **penalty trong trận**: màn camera từ sau người sút, hai bên chọn trái/giữa/phải. Vào thì cộng bàn thật và chuẩn bị giao bóng; bị cản thì thủ môn ôm bóng tiếp tục. Tình huống này tách khỏi luân lưu cuối trận, không cộng vào tỷ số luân lưu.
 Thủ môn được tăng nhẹ khả năng cản sút thường và bắt dính; sút thần sầu dễ ghi bàn hơn nhưng vẫn có thể bị cứu thua.
+Thủ môn có thể lao ra ôm đường chuyền thấp, bóng rời hoặc áp sát người cầm bóng gần khung thành. Quyết định dựa trên vùng cấm, độ cao, khoảng cách, thời gian tới bóng và đối thủ; tình huống không an toàn giữ vị trí. Bóng được ôm chỉ khi thực sự ở trong tầm tay và vòng cấm, không ép lao ra với mọi pha bóng hay thay thế logic cứu thua các cú sút.
 Thủ môn ôm bóng trên tay tối đa 6 giây trước khi tự phát bóng. Khi đi ra khỏi vòng cấm bán nguyệt, thủ môn tự hạ bóng xuống chân và tiếp tục điều khiển bình thường; không bị ép phá bóng khi bóng đã ở chân. Việc kiểm tra xét cả vị trí bóng trên tay và sân hiện tại sau đổi sân.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
@@ -62,15 +68,25 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 ### Skills đặc biệt
 
 Mỗi cầu thủ dùng tối đa **một lần mỗi trận**, tiêu hao **40% thể lực**, cần ít nhất 40% để kích hoạt. Dùng thất bại vẫn tính lượt và trừ thể lực. Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Bấm icon bên cạnh tên/thể lực hoặc **E cho A, O cho B**; icon và trạng thái thay đổi theo cầu thủ đang chọn.
+Skill dùng được ngay từ màn bắt đầu trước Space hoặc lúc đang chờ giao bóng đầu trận, không có thời gian chờ đầu trận. Skill tăng tốc/phòng thủ được bật sẵn và chỉ đếm hiệu lực khi bóng trong cuộc; skill sút/chuyền/cướp bóng có thể chuẩn bị trước, hiển thị **Đã chuẩn bị**, tự thực hiện khi cầu thủ có bóng/đối thủ trong tầm. Vẫn tiêu hao lượt và thể lực ngay khi chuẩn bị. Tạm dừng giữa trận không cho kích hoạt skill.
 
-| Vai trò / icon | Skill | Hiệu quả |
+Mỗi trận mỗi cầu thủ được phân ngẫu nhiên một trong ba skill phù hợp vị trí. Máy cũng chủ động dùng skill khi đủ thể lực và phù hợp diễn biến. Skill theo thời gian có hiệu lực **2 giây bóng trong cuộc**; skill sút, chuyền và cướp bóng giải quyết một pha bóng. Tỷ lệ hiệu quả 70%; riêng skill sút là 70% ghi bàn, không nhân thêm một lần xác suất kích hoạt.
+
+| Vị trí | Skill được phân ngẫu nhiên | Hiệu quả |
 |---|---|---|
-| Tiền đạo / tia sét | Bứt tốc bất khả cản | 70% kích hoạt thành công: tốc độ cơ bản 9,8m/s, giữ bóng không thể bị cướp/xoạc trong 4 giây bóng trong cuộc. Chuyền hoặc sút kết thúc bảo vệ quyền cầm bóng. |
-| Tiền vệ hoặc người đang đá phạt / bóng và sao | Vua đá phạt | Một cú sút ngắm khung thành, lấy đà 0,6s, xác suất ghi bàn 70%; không rút thêm một lần 70% kích hoạt. Có thể dùng khi đang chuẩn bị đá phạt, thay cho cú đá tự động. |
-| Hậu vệ / khiên | Tường thép | 70% cướp bóng sạch từ đối thủ trong 5,5m; không gây thẻ/chấn thương. Không xuyên qua bảo vệ bứt tốc. |
-| Thủ môn / găng tay | Bàn tay thép | 70% bật bảo vệ trong 8 giây bóng trong cuộc; cản cú sút thường tiếp theo rồi hết hiệu lực. Skill sút đặc biệt vẫn giữ xác suất vào 70%. |
+| Tiền đạo | Bứt tốc bất khả cản / Sát thủ vòng cấm / Bóng ma sân cỏ | Tăng tốc và bảo vệ bóng 2s, hoặc cú sút đặc biệt 70%. |
+| Tiền vệ | Vua đá phạt / Nhạc trưởng / Chuyền xuyên tuyến | Sút đặc biệt 70%, giữ bóng tăng tốc 2s, hoặc đường chuyền nhanh tới người ở tuyến trên. |
+| Hậu vệ | Tường thép / Siêu phòng thủ / Máy quét | Cướp bóng sạch trong 5,5–7m; hoặc tăng tốc các hậu vệ và cướp bóng khi áp sát trong 2s. Không vượt bảo vệ giữ bóng. |
+| Thủ môn | Bàn tay thép / Thủ môn quét / Phản xạ chớp nhoáng | Bật bảo vệ cho cú sút thường kế tiếp trong 2s; thủ môn quét tăng độ chủ động trong tình huống an toàn. Skill sút đặc biệt vẫn giữ 70%. |
 
-Nút skill hiển thị **Sẵn sàng**, **Chờ**, **Thiếu lực**, **Đã dùng** hoặc số giây hiệu lực còn lại. Skill tấn công cần đang có bóng, skill hậu vệ cần đối thủ trong tầm. Tạm dừng, thay người hoặc bóng chết thông thường không kích hoạt được skill. Dùng skill xong không có hồi để dùng lại trong cùng trận.
+Icon skill là huy hiệu tròn nhiều lớp viền xanh, nền màu và hình riêng cho mỗi loại; không khả dụng chuyển xám, đang hiệu lực phát sáng. Nút hiển thị **Sẵn sàng**, **Chờ**, **Thiếu lực**, **Đã chuẩn bị**, **Đã dùng** hoặc giây còn lại. Ngoài phần chuẩn bị đầu trận, skill tấn công cần có bóng, skill cướp bóng cần đối thủ trong tầm. Dùng skill xong không có hồi để dùng lại trong cùng trận.
+Người đang chuẩn bị đá phạt có thể dùng Vua đá phạt thay cho skill bình thường; vẫn trừ cùng lượt dùng của cầu thủ đó.
+
+### Cấu trúc dữ liệu gameplay
+
+`PTSCFootball.data` công khai bảng cấu hình `GAME_DATA` trong `ptsc-football.js`: `skills` (id, tên, vị trí, hiệu ứng, icon, tốc độ/tầm), `skillRules` (40%, 70%, 2s, một lượt), `controls` (chuỗi đổi người/nhấn lặp), `restarts` (điều kiện người đá), `corners` (các bài góc), `goalkeeper` (quy tắc lao ra) và `celebrations` (danh mục ăn mừng). Engine đọc các bảng này; trang lấy cùng dữ liệu để vẽ icon và nút, tránh hai danh mục khác nhau.
+
+Trạng thái cầu thủ lưu `specialId`, `specialUsed`, `specialUntil`; trạng thái phạt góc lưu người đá, điểm bóng, thời điểm sẵn sàng và lệnh thực hiện. Trạng thái giao bóng chờ chuyền tách khỏi bóng đang trong cuộc, nên không đá tự động do hết thời gian chờ.
 
 **Toàn màn hình** là một nút biểu tượng ở góc dưới phải sân, giống nút của trình phát video, có cả ở chế độ xem. Bấm cùng nút để thu nhỏ, hoặc Escape để thoát. Nếu trình duyệt không cho phép Fullscreen API, sân vẫn được mở phủ cửa sổ.
 Hướng dẫn trong sân chỉ có nút cơ bản; thao tác nhấn hai lần nằm trong mục nâng cao ngoài sân.
@@ -79,12 +95,17 @@ Hướng dẫn nâng cao ở bên dưới, mở sẵn và chia riêng hai cột 
 ### Trọng tài và kết thúc trận
 
 - Trọng tài có thoại riêng khi giao bóng, ra biên, phạt góc, đá phạt, phát bóng và thay người. Chờ lâu sẽ nhắc luân phiên “Nhanh lên!”, “Đừng có câu giờ!”, “Nhanh không cho đá thiếu một người bây giờ!”; chỉ nói “Tiếp tục!” khi bóng trở lại cuộc chơi.
+- Bong bóng thoại giảm 20% kích thước. Cầu thủ thuộc bên A/B điều khiển nói khi nhận bóng, chuyền, sút, đổi người, áp sát và chạy nhanh; có khoảng nghỉ 2,3 giây giữa các câu để tránh spam.
 - Thúc giục chỉ xuất hiện trong trạng thái chờ, cách nhau ít nhất 6 giây sau câu đầu. Giao bóng tiếp tục ngay khi đội hình sẵn sàng và thay người hoàn tất; không buộc người đã tự di chuyển phải đứng lại đúng điểm máy chỉ định. Có giới hạn chờ 8 giây sau các lượt thay người để tránh kẹt; thời gian thổi tiếp tục không phụ thuộc việc câu thoại đã kết thúc hay chưa.
 - Cầu thủ dự bị ngoài biên cổ vũ theo diễn biến, mừng bàn thắng và đôi lúc chỉ trích cách chơi. Thoại định kỳ cách nhau khoảng 6–11 giây, ưu tiên cổ vũ (80% khi bóng trong cuộc); tránh chen vào thoại trọng tài, cảnh xô xát hoặc nhiều bong bóng đang hiện. Bộ ngẫu nhiên thoại riêng không làm thay đổi kết quả trận.
-- Mỗi trận chọn một lần với xác suất 5% cho tình huống trọng tài đi WC, thực hiện khi bóng đã được kiểm soát và không có một pha sút/chuyền đang diễn ra. Ông ấy thổi dừng, chạy đến WC rồi quay lại; toàn bộ lần nghỉ kéo dài 15 giây, không tính vào đồng hồ trận. Máy, thể lực và các hành động đang chờ tạm dừng; người chơi vẫn được di chuyển cầu thủ đã chọn, bóng đang cầm đi theo cầu thủ và camera vẫn bám bóng. Mỗi trận tối đa một lần, với bộ ngẫu nhiên riêng để không đổi kịch bản bóng đá.
+- Mỗi trận chọn một lần với xác suất 5% cho tình huống trọng tài đi WC, chỉ thực hiện khi bóng chết và không có đường bóng đang bay. Ông ấy chạy đến WC rồi quay lại sau 15 giây. Đồng hồ, thể lực và các lệnh cho bóng vào cuộc chờ; cả hai đội tiếp tục di chuyển/bố trí vị trí, người chơi vẫn điều khiển người đang chọn. Trọng tài quay lại không tự đưa bóng vào cuộc: tình huống giao bóng/phạt góc vẫn phải thực hiện đúng thao tác. Camera tiếp tục bám bóng.
 - Khi ghi bàn nhưng vẫn bị dẫn, cầu thủ nhặt bóng trong lưới, nói “Nhanh lên, vẫn còn thời gian!”, ôm bóng chạy về chấm giữa sân và đặt xuống trước khi chuyển sang giao bóng. Thời gian ăn mừng đủ để hoàn thành đường chạy này, không cộng vào đồng hồ trận.
 - Đội thắng ăn mừng, đội thua thất vọng và có cảnh nâng cúp theo logic cũ, kể cả thắng bằng luân lưu. Tỷ số trận và tỷ số PEN được hiển thị riêng.
 - Nút **Trận mới** ngay trong sân cho phép restart kể cả khi toàn màn hình. Trận mới giữ lựa chọn áo/sân/thời gian hiện có và luôn chờ Space để bắt đầu.
+
+### Các kiểu ăn mừng hiện có
+
+Vung nắm đấm; đập tay/ôm đồng đội; dang tay; máy bay; chỉ tay cảm ơn đồng đội; chỉ huy hiệu áo; nhảy múa; trượt gối; suỵt; SIUU; chỉ lên trời; ôm bóng chạy về giữa sân khi vẫn bị dẫn; ôm cả nhóm; quỳ giơ tay. Kết thúc trận thắng còn có tập trung ăn mừng và nâng cúp.
 
 ### Thời lượng, hiệp phụ và luân lưu
 

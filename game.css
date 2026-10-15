@@ -68,12 +68,18 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .energy-player strong { font-size: 14px; color: #baf399; font-variant-numeric: tabular-nums; }
 .energy-player progress { grid-column: 1 / 3; width: 100%; height: 4px; accent-color: #a1e873; }
 .special-button { grid-column: 3; grid-row: 1 / 3; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1px 3px; padding: 4px; min-height: 40px; border: 1px solid #f7cf63; border-radius: 6px; background: #243b2a; color: #ffe494; pointer-events: auto; cursor: pointer; }
-.special-button svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.special-button svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 3px #37a7eb88); }
+.special-button:disabled svg { filter: grayscale(1); opacity: .65; }
+.special-button.is-active svg { filter: drop-shadow(0 0 4px #70eaffaa); opacity: 1; }
 .special-button kbd { font-size: 10px; }
 .special-button .skill-state { grid-column: 1 / -1; font-size: 9px; white-space: nowrap; }
 .special-button:disabled { cursor: default; opacity: .55; }
 .special-button.is-active { opacity: 1; color: #c7ffac; border-color: #a6f176; box-shadow: 0 0 9px #a6f17666; }
 .special-button.is-used { color: #a7b0ac; border-color: #68736d; }
+.restart-choice { position: absolute; z-index: 3; left: 50%; bottom: 82px; transform: translateX(-50%); max-width: calc(100% - 24px); width: max-content; padding: 8px 12px; border-radius: 10px; background: #10261fee; color: #fff; text-align: center; font-size: 12px; }
+.restart-choice > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.restart-choice button { padding: 6px 9px; background: #e8f2e6; color: #183522; border: 0; border-radius: 5px; cursor: pointer; font-size: 11px; }
+.restart-choice button:disabled { opacity: .45; cursor: default; }
 .energy-player.is-low strong { color: #ffc17a; }
 .energy-player.is-low progress { accent-color: #ff986c; }
 .energy-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

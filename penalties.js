@@ -10,7 +10,7 @@
         <rect width="640" height="360" fill="#356630"/><path d="M0 0H640V133H0Z" fill="#394b56"/>
         <path d="M0 18H640M0 45H640M0 72H640M0 98H640" stroke="#87998e" stroke-width="6"/>
         <path d="M0 9H640M0 35H640M0 61H640M0 87H640" stroke="#f2d8b3" stroke-width="8" stroke-dasharray="2 8" opacity=".6"/>
-        <path d="M0 112H640V144H0Z" fill="#13232c"/><text x="320" y="133" fill="#fff" text-anchor="middle" font-size="16" font-weight="800">PTSC CUP · LUÂN LƯU</text>
+        <path d="M0 112H640V144H0Z" fill="#13232c"/><text data-pen="title" x="320" y="133" fill="#fff" text-anchor="middle" font-size="16" font-weight="800">PTSC CUP · LUÂN LƯU</text>
         <path d="M0 145H640V171H0ZM0 214H640V252H0ZM0 303H640V360H0Z" fill="#427a37"/>
         <path d="M175 148L34 323H606L465 148M256 150L212 212H428L384 150M0 158H640" fill="none" stroke="#e7efcb" stroke-width="2"/>
         <path d="M242 268Q320 291 398 268" fill="none" stroke="#e7efcb" stroke-width="2"/>
@@ -40,9 +40,10 @@
       const p = state.penalty;
       this.host.hidden = !p || p.phase === "finished";
       if (!p || p.phase === "finished") return;
-      const scoreHtml = `<small>Trận: Đỏ ${state.score.R}–${state.score.B} Xanh · PEN</small>` + ["R", "B"].map(team => `<div><b style="color:${colors[team]}">${names[team]} ${p.score[team]}</b><span>${p.history[team].map(goal => `<i class="${goal ? "goal" : "saved"}"></i>`).join("")}${"<i></i>".repeat(Math.max(0, 5 - p.history[team].length))}</span></div>`).join("");
+      this.host.querySelector('[data-pen="title"]').textContent = p.kind === "inMatch" ? "PTSC CUP · PENALTY" : "PTSC CUP · LUÂN LƯU";
+      const scoreHtml = `<small>Trận: Đỏ ${state.score.R}–${state.score.B} Xanh · ${p.kind === "inMatch" ? "Penalty" : "PEN"}</small>` + (p.kind === "inMatch" ? "" : ["R", "B"].map(team => `<div><b style="color:${colors[team]}">${names[team]} ${p.score[team]}</b><span>${p.history[team].map(goal => `<i class="${goal ? "goal" : "saved"}"></i>`).join("")}${"<i></i>".repeat(Math.max(0, 5 - p.history[team].length))}</span></div>`).join(""));
       if (this.scoreHtml !== scoreHtml) { this.host.querySelector(".penalty-score").innerHTML = scoreHtml; this.scoreHtml = scoreHtml; }
-      const message = p.phase === "finished" ? state.note : paused ? "Đang tạm dừng" : p.phase === "result" ? p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!" : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
+      const message = p.phase === "finished" ? state.note : paused ? "Đang tạm dừng" : p.phase === "result" ? p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!" : p.kind === "inMatch" ? `Penalty · Đội ${names[p.attack]} sút` : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
       const messageNode = this.host.querySelector(".penalty-message");
       if (messageNode.textContent !== message) messageNode.textContent = message;
       for (const card of this.controls.children) {
