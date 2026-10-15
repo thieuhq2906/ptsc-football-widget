@@ -28,6 +28,7 @@
       return `<${tag} class="action-key${clickable ? i === 0 ? " switch-action" : " slide-action" : ""}" data-code="Key${key}" data-action="${["switch", "sprint", "pass", "shoot", "press", "challenge"][i]}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}><kbd>${key}</kbd><span><span class="action-label">${actions[i]}</span><small>${gestures[i]}</small></span></${tag}>`;
     }).join("")}</div>`;
   }
+  const cornerKeys = { A: ["KeyF", "KeyG", "KeyV", "KeyB"], B: ["KeyJ", "KeyK", "KeyN", "KeyM"] };
   const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press, ...Object.keys(b.actions)])]);
   const padKeys = [...document.querySelectorAll(".pad-key, .action-key")];
   const writeText = (node, value) => { const text = String(value); if (node.textContent !== text) node.textContent = text; };
@@ -180,14 +181,13 @@
     restartChoice.hidden = state.ended || !(corner?.slot || kickoff?.slot || freeKick?.slot);
     if (!restartChoice.hidden) {
       const restart = corner ?? kickoff ?? freeKick;
-      restartChoice.querySelector(".restart-label").textContent = state.refBreak ? "Chờ trọng tài quay lại" : corner ? `Phạt góc · ${restart.slot} · ${restart.name}${restart.ready ? " · chọn kiểu đá" : " · đang vào vị trí"}` : freeKick ? `Đá phạt · ${restart.slot} · ${restart.name} · ${restart.ready ? `giữ rồi thả ${restart.slot === "A" ? "F/G" : "J/K"}` : "đang vào vị trí"}` : `${restart.slot} · ${restart.name} · ${restart.ready ? `nhấn ${restart.slot === "A" ? "F" : "J"} để giao bóng` : "đang vào vị trí"}`;
-      for (const button of restartChoice.querySelectorAll(".corner-kind")) { button.hidden = !corner; button.disabled = session.paused || !restart.ready; }
-      const passButton = restartChoice.querySelector(".kickoff-pass");
-      passButton.hidden = !kickoff; passButton.disabled = session.paused || !restart.ready;
-      passButton.textContent = `${restart.slot === "A" ? "F" : "J"} · Chuyền giao bóng`;
-      for (const button of restartChoice.querySelectorAll(".free-kick-action")) {
-        button.hidden = !freeKick; button.disabled = session.paused || !restart.ready;
-      }
+      restartChoice.dataset.slot = restart.slot;
+      const label = state.refBreak ? "Chờ trọng tài quay lại" : `${corner ? "Phạt góc" : freeKick ? "Đá phạt" : "Giao bóng"} · ${restart.name}${restart.ready ? "" : " · đang vào vị trí"}`;
+      writeText(restartChoice.querySelector(".restart-label"), label);
+      const hints = corner ? gameData.corners.map((c, i) => `<span><kbd>${cornerKeys[restart.slot][i].slice(3)}</kbd> ${c.name}</span>`).join("") : freeKick ? `<span>Giữ/thả <kbd>${restart.slot === "A" ? "F" : "J"}</kbd> chuyền</span><span><kbd>${restart.slot === "A" ? "G" : "K"}</kbd> sút</span>` : `<span><kbd>${restart.slot === "A" ? "F" : "J"}</kbd> Chuyền giao bóng</span>`;
+      const hintNode = restartChoice.querySelector(".restart-keys");
+      if (hintNode.innerHTML !== hints) hintNode.innerHTML = hints;
+      restartChoice.classList.toggle("is-preparing", !restart.ready || !!state.refBreak);
     }
     const result = q(".arena-result");
     result.hidden = !state.ended;
@@ -220,12 +220,12 @@
         skillButton.dataset.kind = skill.kind ?? "";
         skillButton.querySelector("svg").innerHTML = skillBadge(skill.kind, skill.icon, `skill-${session.options.mode}-${player.slot}`);
       }
-      const skillState = skill.active ? `${Math.ceil(skill.remaining)}s` : skill.primed ? "Đã chuẩn bị" : skill.used ? "Đã dùng" : player.energy < gameData.skillRules.cost ? "Thiếu lực" : skill.defenseOnly && !skill.defending ? "Chỉ phòng thủ" : skill.ready ? "Sẵn sàng" : "Chờ";
+      const skillState = (session.paused && !session.awaitingStart) ? "Tạm dừng" : skill.active ? `${Math.ceil(skill.remaining)}s` : skill.label;
       writeText(skillButton.querySelector(".skill-state"), skillState);
       skillButton.classList.toggle("is-active", skill.active);
       skillButton.classList.toggle("is-used", skill.used && !skill.active);
-      skillButton.disabled = (session.paused && !session.awaitingStart) || state.ended || !skill.ready;
-      skillButton.title = `${skill.name} · ${skillState} · ${Math.round(gameData.skillRules.cost * 100)}% thể lực · ${gameData.skillRules.usesPerMatch} lần/cầu thủ/trận`;
+      skillButton.classList.toggle("is-unavailable", (session.paused && !session.awaitingStart) || state.ended || !skill.ready);
+      skillButton.title = `${skill.name} · ${skillState}${skill.primed ? " · tự dùng khi nhận bóng hoặc tới lượt đá phạt" : ""} · ${Math.round(gameData.skillRules.cost * 100)}% thể lực · ${gameData.skillRules.usesPerMatch} lần/cầu thủ/trận`;
       skillButton.setAttribute("aria-label", `${player.slot}: ${skillButton.title}`);
       const slideButton = q(`.slide-action[data-slot="${player.slot}"]`);
       if (slideButton) {
@@ -283,42 +283,11 @@
     const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
     arena.querySelector(".arena-surface").append(penaltyHost);
     const restartChoice = document.createElement("div"); restartChoice.className = "restart-choice"; restartChoice.hidden = true;
-    restartChoice.innerHTML = `<span class="restart-label"></span><div><button type="button" class="kickoff-pass" hidden>Chuyền giao bóng</button><button type="button" class="free-kick-action" data-action="pass" hidden>Giữ: chuyền</button><button type="button" class="free-kick-action" data-action="shoot" hidden>Giữ: sút</button>${gameData.corners.map(c => `<button type="button" class="corner-kind" data-kind="${c.id}" hidden>${c.name}</button>`).join("")}</div>`;
+    restartChoice.innerHTML = '<span class="restart-label"></span><div class="restart-keys"></div>';
     arena.querySelector(".arena-surface").append(restartChoice);
-    for (const button of restartChoice.querySelectorAll("button")) button.addEventListener("click", () => {
-      if (button.matches(".free-kick-action")) return;
-      const session = sessions.get(panel.dataset.mode);
-      if (!session) return;
-      const state = session.api.status(), slot = state.corner?.slot ?? state.kickoff?.slot ?? state.freeKick?.slot;
-      if (!slot) return;
-      arena.focus({ preventScroll: true });
-      if (!session.paused && button.matches(".corner-kind")) session.api.takeCorner(slot, button.dataset.kind);
-      else if (!session.paused) session.api.action(slot, "pass", { power: .25 });
-      updateHud(session);
-    });
-    for (const button of restartChoice.querySelectorAll(".free-kick-action")) {
-      button.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        const session = sessions.get(panel.dataset.mode), slot = session?.api.status().freeKick?.slot;
-        if (!session || session.paused || !slot) return;
-        arena.focus({ preventScroll: true });
-        if (session.api.beginCharge(slot, button.dataset.action)) { button.chargeSlot = slot; button.setPointerCapture(event.pointerId); updateHud(session); }
-      });
-      button.addEventListener("pointerup", () => {
-        const session = sessions.get(panel.dataset.mode), slot = button.chargeSlot; button.chargeSlot = null;
-        if (session && slot && !session.paused) session.api.releaseCharge(slot);
-        if (session) updateHud(session); arena.focus({ preventScroll: true });
-      });
-      button.addEventListener("pointercancel", () => { sessions.get(panel.dataset.mode)?.api.cancelCharge(button.chargeSlot); button.chargeSlot = null; });
-    }
     const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
-    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><button type="button" class="special-button" data-slot="${slot}" disabled><svg viewBox="0 0 24 24" aria-hidden="true">${defaultSkillIcon}</svg><kbd>${slot === "A" ? "E" : "O"}</kbd><span class="skill-state">Chờ</span></button></div>`).join("");
+    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><div class="special-button is-unavailable" data-slot="${slot}" role="img"><svg viewBox="0 0 24 24" aria-hidden="true">${defaultSkillIcon}</svg><kbd>${slot === "A" ? "E" : "O"}</kbd><span class="skill-state">Sẵn sàng</span></div></div>`).join("");
     arena.querySelector(".arena-surface").append(energy);
-    for (const button of energy.querySelectorAll(".special-button")) button.addEventListener("click", () => {
-      const session = sessions.get(panel.dataset.mode);
-      if (!session || (session.paused && !session.awaitingStart)) return;
-      arena.focus({ preventScroll: true }); session.api.action(button.dataset.slot, "special"); updateHud(session);
-    });
     const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
     result.innerHTML = '<strong></strong><span></span>';
     arena.querySelector(".arena-surface").append(result);
@@ -359,10 +328,7 @@
       const api = window.PTSCFootball.mount(host, options);
       api.pause();
       const session = { panel, api, options, paused: true, awaitingStart: true,
-        penaltyView: new window.PTSCPenaltyView(penaltyHost, (slot, direction) => {
-          const current = sessions.get(mode);
-          if (current === session && !session.paused) { api.choosePenalty(slot, direction); updateHud(session); arena.focus({ preventScroll: true }); }
-        }) };
+        penaltyView: new window.PTSCPenaltyView(penaltyHost, api) };
       sessions.set(mode, session);
       energy.hidden = false;
       form.querySelector(".start").textContent = "Bắt đầu trận mới";
@@ -410,12 +376,20 @@
     }
     if (session.paused || session.api.status().ended) return;
     if (event.repeat && !keys.has(event.code)) return;
-    if (session.api.status().phase === "penalties") {
+    const state = session.api.status();
+    if (state.phase === "penalties") {
       if (!event.repeat) for (const [slot, b] of Object.entries(bindings)) {
-        const direction = event.code === b.left ? "left" : event.code === b.right ? "right" : event.code === b.down || event.code === b.up ? "center" : null;
+        const direction = event.code === b.left ? "left" : event.code === b.right ? "right" : event.code === b.down ? "center" : null;
         if (direction) session.api.choosePenalty(slot, direction);
       }
       updateHud(session); return;
+    }
+    if (state.corner?.slot) {
+      const slot = state.corner.slot, index = cornerKeys[slot].indexOf(event.code);
+      if (index !== -1) {
+        if (!event.repeat && state.corner.ready) session.api.takeCorner(slot, gameData.corners[index].id);
+        updateHud(session); return;
+      }
     }
     keys.add(event.code); applyKeys(session);
     if (!event.repeat) for (const [slot, binding] of Object.entries(bindings)) {
@@ -438,6 +412,7 @@
         session.api.action(slot, action);
       } else if (action) session.api.action(slot, action);
     }
+    updateHud(session);
     highlightPads();
   });
   window.addEventListener("keyup", event => {

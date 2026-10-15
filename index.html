@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PTSC Cup 6v6</title>
-<link rel="stylesheet" href="game.css?v=20261015-restart-input">
+<link rel="stylesheet" href="game.css?v=20261015-keyboard-penalty">
 </head>
 <body>
 <main>
@@ -41,7 +41,7 @@
     <div class="match-toolbar"><p class="match-status" role="status">Chưa bắt đầu</p><div class="match-actions"><button class="secondary pause" disabled>Tạm dừng</button></div></div>
     <div class="player-status"></div>
     <div class="controls"><article><div class="pad-help" data-slot="A"></div></article></div>
-    <div class="advanced-grid"><details class="advanced" data-slot="A" open><summary>Người A · thao tác nâng cao</summary><p><kbd>E</kbd> hoặc icon cạnh thể lực: skill theo vai trò, tốn 40%, một lần/cầu thủ/trận, hiệu quả 70%.</p><p><kbd>G</kbd> ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ <kbd>F</kbd>/<kbd>G</kbd> rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ <kbd>V</kbd> áp sát; bấm <kbd>B</kbd> khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p><kbd>G</kbd> khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p></details></div>
+    <div class="advanced-grid"><details class="advanced" data-slot="A" open><summary>Người A · thao tác nâng cao</summary><p><kbd>E</kbd>: skill theo vai trò, tốn 40%, một lần/cầu thủ/trận, hiệu quả 70%.</p><p><kbd>G</kbd> ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ <kbd>F</kbd>/<kbd>G</kbd> rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ <kbd>V</kbd> áp sát; bấm <kbd>B</kbd> khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p><kbd>G</kbd> khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p></details></div>
     <p class="hint">Lực thấp: bóng thấp; lực mạnh: bóng cao. Thanh dưới chân là lực đang nạp. Tam giác xanh chọn người đang cầm bóng; mũi nhỏ dưới chân giữ hướng ngắm. Thẻ vàng luôn hiển thị trên đầu người đã nhận thẻ. Xoạc có rủi ro thẻ cao.</p>
   </section>
   <section id="panel-local" class="game-panel" role="tabpanel" aria-labelledby="tab-local" data-mode="local" hidden>
@@ -72,14 +72,14 @@
       <article><div class="pad-help" data-slot="B"></div></article>
     </div>
     <div class="advanced-grid">
-      <details class="advanced" data-slot="A" open><summary>Người A · thao tác nâng cao</summary><p><kbd>E</kbd> hoặc icon cạnh thể lực: skill theo vai trò, tốn 40%, một lần/cầu thủ/trận, hiệu quả 70%.</p><p><kbd>G</kbd> ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ <kbd>F</kbd>/<kbd>G</kbd> rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ <kbd>V</kbd> áp sát; bấm <kbd>B</kbd> khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p><kbd>G</kbd> khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p></details>
-      <details class="advanced" data-slot="B" open><summary>Người B · thao tác nâng cao</summary><p><kbd>O</kbd> hoặc icon cạnh thể lực: skill theo vai trò, tốn 40%, một lần/cầu thủ/trận, hiệu quả 70%.</p><p><kbd>K</kbd> ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ <kbd>J</kbd>/<kbd>K</kbd> rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ <kbd>N</kbd> áp sát; bấm <kbd>M</kbd> khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p><kbd>K</kbd> khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p></details>
+      <details class="advanced" data-slot="A" open><summary>Người A · thao tác nâng cao</summary><p><kbd>E</kbd>: skill theo vai trò, tốn 40%, một lần/cầu thủ/trận, hiệu quả 70%.</p><p><kbd>G</kbd> ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ <kbd>F</kbd>/<kbd>G</kbd> rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ <kbd>V</kbd> áp sát; bấm <kbd>B</kbd> khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p><kbd>G</kbd> khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p></details>
+      <details class="advanced" data-slot="B" open><summary>Người B · thao tác nâng cao</summary><p><kbd>O</kbd>: skill theo vai trò, tốn 40%, một lần/cầu thủ/trận, hiệu quả 70%.</p><p><kbd>K</kbd> ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ <kbd>J</kbd>/<kbd>K</kbd> rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ <kbd>N</kbd> áp sát; bấm <kbd>M</kbd> khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p><kbd>K</kbd> khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p></details>
     </div>
     <p class="hint">Thả phím chuyền/sút để đá: lực thấp đi thấp, lực mạnh đi cao. Tam giác trên đầu và vòng dưới chân chọn người; thẻ vàng theo đúng cầu thủ sau thay người. Hỗ trợ ngắm vẫn cho phép thủ môn cứu thua.</p>
   </section>
 </main>
-<script src="ptsc-football.js?v=20261015-restart-input" defer></script>
-<script src="penalties.js?v=20261015-restart-input" defer></script>
-<script src="game.js?v=20261015-restart-input" defer></script>
+<script src="ptsc-football.js?v=20261015-keyboard-penalty" defer></script>
+<script src="penalties.js?v=20261015-keyboard-penalty" defer></script>
+<script src="game.js?v=20261015-keyboard-penalty" defer></script>
 </body>
 </html>

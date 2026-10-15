@@ -37,21 +37,23 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .match-options select { padding: 7px; border: 1px solid #b7bdae; border-radius: 6px; background: #fff; font: inherit; }
 .start-overlay { display: grid; place-items: center; position: absolute; inset: 0; z-index: 2; border-radius: 20px; background: #24272c99; backdrop-filter: blur(3px); color: #fff; font-size: clamp(14px, 2.2vw, 24px); font-weight: 800; text-align: center; padding: 20px; }
 .start-overlay kbd { font-size: .8em; padding: 4px 9px; }
-.penalty-host { position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: 20px; background: #356630; color: #fff; }
+.penalty-host { --color-ink: oklch(25.5% .06 268); --color-card: oklch(99.6% .004 92); --color-sky-soft: oklch(91% .045 255); --color-sun: oklch(90% .11 88); --art-skin: oklch(90% .05 60); --art-hair: oklch(22% .01 260); --art-shorts: oklch(30% .02 250); --art-red: oklch(60% .2 27); --art-blue: oklch(57% .15 255); --art-gk-r: oklch(60% .14 300); --art-gk-b: oklch(78% .15 62); --art-grass: oklch(64% .15 142); --art-grass-2: oklch(59.5% .15 142); --art-stand: oklch(86% .03 255); --art-stand-deep: oklch(72% .04 255); --art-shadow: oklch(24% .07 262); --font-mono: "JetBrains Mono", Consolas, monospace; position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: 20px; background: var(--art-grass); color: var(--color-ink); pointer-events: none; }
 .penalty-scene { display: block; width: 100%; height: 100%; }
 .penalty-scene [data-pen="ball"], .penalty-scene [data-pen="keeper"], .penalty-scene [data-pen="shooter"] { transition: transform .65s ease-out; transform-box: view-box; }
-.penalty-score { position: absolute; top: 12px; left: 12px; background: #12202bea; padding: 9px 12px; border-radius: 8px; font-size: clamp(10px, 1.2vw, 15px); }
+.penalty-score { position: absolute; top: 12px; left: 12px; background: var(--color-card); border: 2px solid var(--color-ink); box-shadow: 2px 3px 0 var(--color-ink); padding: 7px 10px; border-radius: 10px; font-family: var(--font-mono); font-size: clamp(9px, 1.1vw, 13px); }
 .penalty-score > div { display: flex; align-items: center; gap: 12px; margin: 4px 0; }
 .penalty-score span { display: flex; gap: 4px; max-width: 180px; flex-wrap: wrap; }
 .penalty-score i { display: block; width: 9px; height: 9px; background: #eff4e9; border-radius: 2px; }
 .penalty-score i.goal { background: #81f694; }
 .penalty-score i.saved { background: #ff8071; }
-.penalty-message { position: absolute; top: 14px; right: 16px; max-width: 50%; margin: 0; padding: 8px 10px; border-radius: 7px; background: #12202bce; font-size: clamp(10px, 1.4vw, 17px); font-weight: 800; }
-.penalty-choices { position: absolute; bottom: 58px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 12px; }
-.penalty-player { max-width: 48%; padding: 8px; border-radius: 8px; background: #12202bdc; font-size: clamp(9px, 1.2vw, 14px); }
+.penalty-message { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); width: max-content; max-width: 65%; margin: 0; padding: 5px 10px; border: 2px solid var(--color-ink); border-radius: 99px; background: var(--color-card); font-size: clamp(9px, 1.2vw, 13px); font-weight: 800; text-align: center; }
+.penalty-choices { position: absolute; bottom: 82px; left: 16px; right: 68px; display: flex; justify-content: space-between; gap: 12px; }
+.penalty-player { max-width: 48%; padding: 6px 8px; border-radius: 7px; background: #ffffffb0; font-size: clamp(8px, 1vw, 11px); }
 .penalty-player strong, .penalty-player small { display: block; margin-bottom: 5px; }
 .penalty-player div { display: flex; gap: 5px; }
-.penalty-player button { border: 1px solid #e2e7db; padding: 7px 10px; border-radius: 5px; background: #f3f7df; color: #1d2340; font-size: inherit; }
+.penalty-player span { white-space: nowrap; }
+.penalty-player kbd { padding: 1px 4px; font-size: inherit; }
+.penalty-player.is-locked > div { opacity: .4; }
 .penalty-player[data-slot="B"] { text-align: right; margin-left: auto; }
 .arena { position: relative; border-radius: 22px; }
 .arena-surface { position: relative; width: 100%; }
@@ -67,19 +69,22 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .energy-player[data-team="B"] { border-left-color: #397eca; }
 .energy-player strong { font-size: 14px; color: #baf399; font-variant-numeric: tabular-nums; }
 .energy-player progress { grid-column: 1 / 3; width: 100%; height: 4px; accent-color: #a1e873; }
-.special-button { grid-column: 3; grid-row: 1 / 3; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1px 3px; padding: 4px; min-height: 40px; border: 1px solid #f7cf63; border-radius: 6px; background: #243b2a; color: #ffe494; pointer-events: auto; cursor: pointer; }
+.special-button { grid-column: 3; grid-row: 1 / 3; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1px 3px; padding: 4px; min-height: 40px; border: 1px solid #f7cf63; border-radius: 6px; background: #243b2a; color: #ffe494; }
 .special-button svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 3px #37a7eb88); }
-.special-button:disabled svg { filter: grayscale(1); opacity: .65; }
+.special-button.is-unavailable svg { filter: grayscale(1); opacity: .65; }
 .special-button.is-active svg { filter: drop-shadow(0 0 4px #70eaffaa); opacity: 1; }
 .special-button kbd { font-size: 10px; }
-.special-button .skill-state { grid-column: 1 / -1; font-size: 9px; white-space: nowrap; }
-.special-button:disabled { cursor: default; opacity: .55; }
+.special-button .skill-state { grid-column: 1 / -1; font-size: 8px; line-height: 1.1; text-align: center; }
+.special-button.is-unavailable { opacity: .55; }
 .special-button.is-active { opacity: 1; color: #c7ffac; border-color: #a6f176; box-shadow: 0 0 9px #a6f17666; }
 .special-button.is-used { color: #a7b0ac; border-color: #68736d; }
-.restart-choice { position: absolute; z-index: 3; left: 50%; bottom: 82px; transform: translateX(-50%); max-width: calc(100% - 24px); width: max-content; padding: 8px 12px; border-radius: 10px; background: #10261fee; color: #fff; text-align: center; font-size: 12px; }
-.restart-choice > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-.restart-choice button { padding: 6px 9px; background: #e8f2e6; color: #183522; border: 0; border-radius: 5px; cursor: pointer; font-size: 11px; }
-.restart-choice button:disabled { opacity: .45; cursor: default; }
+.restart-choice { position: absolute; z-index: 1; bottom: 82px; left: 16px; max-width: calc(100% - 84px); width: max-content; padding: 5px 8px; border-radius: 7px; background: #10261f80; color: #fff; font-size: 10px; pointer-events: none; }
+.restart-choice[data-slot="B"] { left: auto; right: 68px; text-align: right; }
+.restart-choice > div { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+.restart-choice[data-slot="B"] > div { justify-content: flex-end; }
+.restart-keys span { white-space: nowrap; }
+.restart-keys kbd { padding: 1px 4px; font-size: 9px; }
+.restart-choice.is-preparing .restart-keys { opacity: .4; }
 .energy-player.is-low strong { color: #ffc17a; }
 .energy-player.is-low progress { accent-color: #ff986c; }
 .energy-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -197,7 +202,11 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
   .advanced-grid { grid-template-columns: 1fr; }
   .penalty-choices { bottom: 47px; left: 6px; right: 6px; gap: 6px; }
   .penalty-player { padding: 5px; }
-  .penalty-player button { padding: 5px; }
+  .penalty-player kbd { padding: 1px 3px; }
+  .penalty-message { top: 48px; padding: 3px 6px; border-width: 1.5px; }
+  .restart-choice { bottom: 58px; left: 6px; max-width: calc(100% - 60px); padding: 4px 6px; font-size: 8px; }
+  .restart-choice[data-slot="B"] { right: 54px; }
+  .restart-keys kbd { font-size: 8px; }
   .penalty-score { top: 6px; left: 6px; padding: 4px 6px; }
   .penalty-score span { gap: 3px; max-width: 110px; }
   .penalty-score i { width: 6px; height: 6px; }

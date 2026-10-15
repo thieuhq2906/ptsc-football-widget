@@ -28,7 +28,7 @@ Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi
 | Giữ để chạy nhanh | T | I |
 | Giữ để pressing / áp sát khi phòng ngự | V | N |
 | Bấm để tranh bóng khi đủ gần đối thủ | B | M |
-| Skill đặc biệt: bấm icon cạnh tên/thể lực hoặc phím | E | O |
+| Skill đặc biệt (icon cạnh tên/thể lực là chỉ dẫn) | E | O |
 
 Các phím hành động nằm thành cụm hai cột, ba hàng: A **R/T – F/G – V/B**, B **U/I – J/K – N/M**. Chuyền, pressing và tranh bóng có phím riêng. Hai người dùng các phím không trùng nhau; hướng dẫn trên sân và ngoài sân vẽ đúng cụm phím này.
 
@@ -39,11 +39,18 @@ Phần trăm và thanh thể lực của người đang điều khiển hiện n
 Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
 Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không được điều khiển.
 Giao bóng, đá phạt, phạt góc, đá biên và phát bóng lên luôn trỏ về người thực hiện khi chờ đưa bóng vào cuộc. Người này tự tới vị trí cạnh bóng rồi đứng yên; phím di chuyển chỉ đổi hướng ngắm, R/U giữ điều khiển ở người đá cho đến khi bóng vào cuộc. Khi không bị khóa bởi tình huống này, R/U lần đầu ưu tiên người gần bóng; các lần liên tiếp trong 1 giây luân phiên qua những đồng đội đủ điều kiện. Mỗi lần bấm riêng đổi ngay, không chờ hồi hay kết thúc động tác; giữ phím bắt đầu lặp sau 140ms, rồi lặp mỗi 45ms, không phụ thuộc độ trễ lặp phím của hệ điều hành. Nhả phím, mất focus hoặc đổi chế độ sẽ hủy lặp. Lựa chọn thủ công được giữ đến khi bóng đổi chủ hoặc có tình huống nhận/giao bóng mới.
-Giao bóng phải có cầu thủ đứng trong 1,4m cạnh bóng giữa sân. A dùng **F**, B dùng **J** (giữ rồi thả để chuyền), hoặc bấm **Chuyền giao bóng**. Space chỉ bỏ tạm dừng, không tự chuyền giao bóng. Máy cũng phải tới cạnh bóng trước khi chuyền.
-Phạt góc có người đá đứng trong 1,4m cạnh cờ, luôn điều khiển người đó; người chơi chọn **Tạt bổng / Chuyền ngắn / Đập nhả / Trả tuyến hai** trên sân. Chưa có người cạnh bóng hoặc trọng tài chưa quay lại thì không phát bóng. Người đá đứng yên cạnh cờ cho đến khi thực hiện; máy tự chọn kiểu đá khi đã sẵn sàng.
+Giao bóng phải có cầu thủ đứng trong 1,4m cạnh bóng giữa sân. A dùng **F**, B dùng **J** (giữ rồi thả để chuyền). Space chỉ bỏ tạm dừng, không tự chuyền giao bóng. Máy cũng phải tới cạnh bóng trước khi chuyền.
+Phạt góc có người đá đứng trong 1,4m cạnh cờ, luôn điều khiển người đó. Chỉ dẫn phím nhỏ nằm ở góc tương ứng A/B; không mở bảng chọn chuột. Chưa có người cạnh bóng hoặc trọng tài chưa quay lại thì không phát bóng. Người đá đứng yên cạnh cờ cho đến khi thực hiện; máy tự chọn kiểu đá khi sẵn sàng.
+
+| Kiểu phạt góc | A | B |
+|---|---|---|
+| Tạt bổng | F | J |
+| Chuyền ngắn | G | K |
+| Đập nhả | V | N |
+| Trả tuyến hai | B | M |
 Các cầu thủ khác vẫn có thể di chuyển lúc bóng chết, thay người và trọng tài nghỉ. Với người được điều khiển không phải người thực hiện bóng chết, input di chuyển ngắt đường chạy bố trí tự động; nhấn hướng phản hồi ngay, nhả phím dừng ngay. Space vẫn đóng băng trận. Đồng hồ và thể lực không giảm trong các khoảng chờ.
 Giữ V/N áp sát phản hồi ngay, bỏ đường chạy bố trí tự động không thuộc hành động đang thực hiện; tốc độ tiếp cận cơ bản 6,8m/s, hướng bám người cầm bóng cập nhật mỗi bước. Thả nút dừng áp sát, không tự tranh bóng/xoạc.
-Đá phạt thường ưu tiên cầu thủ có **Vua đá phạt** còn lượt và đủ thể lực, tự điều khiển người đó. Người đá tự vào vị trí cạnh bóng rồi đứng yên chờ thực hiện; không đổi sang người khác trong lúc chờ. Giữ rồi thả **F/J** để chuyền, **G/K** để sút; có nạp lực, hướng ngắm và đường bóng cao/thấp như lúc chơi. Trên sân cũng có nút chuyền/sút giữ để nạp lực bằng chuột. Cú đá tự động của đội người chơi chờ thao tác; máy chỉ đá sau khi người đá và hàng rào chuẩn bị xong, cân nhắc kích hoạt Vua đá phạt.
+Đá phạt thường ưu tiên cầu thủ có **Vua đá phạt** còn lượt và đủ thể lực, tự điều khiển người đó. Người đá tự vào vị trí cạnh bóng rồi đứng yên chờ thực hiện; không đổi sang người khác trong lúc chờ. Giữ rồi thả **F/J** để chuyền, **G/K** để sút; có nạp lực, hướng ngắm và đường bóng cao/thấp như lúc chơi. Trên sân chỉ hiện chỉ dẫn phím nhỏ. Cú đá của đội người chơi chờ thao tác; máy chỉ đá sau khi người đá và hàng rào chuẩn bị xong, cân nhắc kích hoạt Vua đá phạt.
 Phạm lỗi trong vòng cấm bán nguyệt của đội phòng ngự dẫn tới **penalty trong trận**: màn camera từ sau người sút, hai bên chọn trái/giữa/phải. Vào thì cộng bàn thật và chuẩn bị giao bóng; bị cản thì thủ môn ôm bóng tiếp tục. Tình huống này tách khỏi luân lưu cuối trận, không cộng vào tỷ số luân lưu.
 Thủ môn được tăng nhẹ khả năng cản sút thường và bắt dính; sút thần sầu dễ ghi bàn hơn nhưng vẫn có thể bị cứu thua.
 Thủ môn có thể lao ra ôm đường chuyền thấp, bóng rời hoặc áp sát người cầm bóng gần khung thành. Quyết định dựa trên vùng cấm, độ cao, khoảng cách, thời gian tới bóng và đối thủ; tình huống không an toàn giữ vị trí. Bóng được ôm chỉ khi thực sự ở trong tầm tay và vòng cấm, không ép lao ra với mọi pha bóng hay thay thế logic cứu thua các cú sút.
@@ -67,10 +74,10 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 
 ### Skills đặc biệt
 
-Mỗi cầu thủ dùng tối đa **một lần mỗi trận**, tiêu hao **40% thể lực**, cần ít nhất 40% để kích hoạt. Dùng thất bại vẫn tính lượt và trừ thể lực. Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Bấm icon bên cạnh tên/thể lực hoặc **E cho A, O cho B**; icon và trạng thái thay đổi theo cầu thủ đang chọn.
-Skill tấn công dùng được ngay từ màn bắt đầu trước Space hoặc lúc chờ giao bóng đầu trận. Skill tăng tốc được bật sẵn và chỉ đếm hiệu lực khi bóng trong cuộc; skill sút/chuyền có thể chuẩn bị trước, hiển thị **Đã chuẩn bị**, tự thực hiện khi cầu thủ có bóng. Vẫn tiêu hao lượt và thể lực ngay khi chuẩn bị. Tạm dừng giữa trận không cho kích hoạt skill.
+Mỗi cầu thủ dùng tối đa **một lần mỗi trận**, tiêu hao **40% thể lực**, cần ít nhất 40% để kích hoạt. Dùng thất bại vẫn tính lượt và trừ thể lực. Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Nhấn **E cho A, O cho B**; icon cạnh tên/thể lực là chỉ dẫn, không phải nút chuột.
+**Skill tấn công luôn cho kích hoạt khi chưa dùng và đủ thể lực**, kể cả không cầm bóng, đang di chuyển hoặc chuẩn bị trận. Không khóa vì đường chạy tự động hay bộ đếm bận. Tăng tốc có hiệu lực ngay cả khi chạy không bóng; bảo vệ bóng áp dụng khi đang cầm bóng. Skill sút/chuyền thực hiện ngay nếu có bóng; nếu chưa có bóng, đang đá bóng hoặc chờ đưa bóng vào cuộc thì bật sẵn, hiện **Đã bật**, tự thực hiện khi nhận bóng hoặc sẵn sàng đá phạt. Tiêu hao lượt/thể lực ngay khi bật. Hiệu lực 2s chỉ tính khi bóng trong cuộc. Tạm dừng giữa trận vẫn đóng băng thao tác; màn chờ bắt đầu cho dùng skill như trước.
 
-Skill phòng thủ và thủ môn **chỉ kích hoạt khi bóng trong cuộc và đội đang phòng ngự**; không chuẩn bị trước lúc chờ giao bóng, không tiêu hao lượt/thể lực nếu bấm khi đang tấn công. Quyền kiểm soát xét người cầm bóng, hoặc đội đang triển khai khi bóng bay. Icon chuyển xám và ghi **Chỉ phòng thủ** khi sai trạng thái. Máy tuân thủ cùng điều kiện. Có thể đổi sang thủ môn lúc phòng ngự để dùng skill; Siêu phòng thủ chỉ tăng tốc/cản bóng trong giai đoạn phòng ngự, không buff tấn công sau khi đoạt bóng.
+Skill phòng thủ và thủ môn **chỉ kích hoạt khi bóng trong cuộc và đội đang phòng ngự**; không chuẩn bị trước lúc chờ giao bóng, không tiêu hao lượt/thể lực nếu bấm khi đang tấn công. Quyền kiểm soát xét người cầm bóng, hoặc đội đang triển khai khi bóng bay. Icon chuyển xám và ghi **Chỉ phòng thủ** khi sai trạng thái. Khi phòng ngự, skill cướp bóng bật ngay, có cửa sổ 2s để áp sát và lấy bóng trong tầm 5,5–7m; không bắt đứng đúng tầm mới cho kích hoạt. Máy tuân thủ cùng điều kiện và cân nhắc dùng khi ở đủ gần. Có thể đổi sang thủ môn lúc phòng ngự để dùng skill; Siêu phòng thủ chỉ tăng tốc/cản bóng trong giai đoạn phòng ngự, không buff tấn công sau khi đoạt bóng.
 
 Mỗi trận mỗi cầu thủ được phân ngẫu nhiên một trong ba skill phù hợp vị trí. Máy cũng chủ động dùng skill khi đủ thể lực và phù hợp diễn biến. Skill theo thời gian có hiệu lực **2 giây bóng trong cuộc**; skill sút, chuyền và cướp bóng giải quyết một pha bóng. Tỷ lệ hiệu quả 70%; riêng skill sút là 70% ghi bàn, không nhân thêm một lần xác suất kích hoạt.
 
@@ -81,7 +88,7 @@ Mỗi trận mỗi cầu thủ được phân ngẫu nhiên một trong ba skill
 | Hậu vệ | Tường thép / Siêu phòng thủ / Máy quét | Cướp bóng sạch trong 5,5–7m; hoặc tăng tốc các hậu vệ và cướp bóng khi áp sát trong 2s. Không vượt bảo vệ giữ bóng. |
 | Thủ môn | Bàn tay thép / Thủ môn quét / Phản xạ chớp nhoáng | Bật bảo vệ cho cú sút thường kế tiếp trong 2s; thủ môn quét tăng độ chủ động trong tình huống an toàn. Skill sút đặc biệt vẫn giữ 70%. |
 
-Icon skill là huy hiệu tròn nhiều lớp viền xanh, nền màu và hình riêng cho mỗi loại; không khả dụng chuyển xám, đang hiệu lực phát sáng. Nút hiển thị **Sẵn sàng**, **Chỉ phòng thủ**, **Chờ**, **Thiếu lực**, **Đã chuẩn bị**, **Đã dùng** hoặc giây còn lại. Ngoài phần chuẩn bị đầu trận, skill tấn công cần có bóng, skill cướp bóng cần đối thủ trong tầm. Dùng skill xong không có hồi để dùng lại trong cùng trận.
+Icon skill là huy hiệu tròn nhiều lớp viền xanh, nền màu và hình riêng cho mỗi loại; không khả dụng chuyển xám, đang hiệu lực phát sáng. Hiển thị **Sẵn sàng**, **Chỉ phòng thủ**, **Thiếu lực**, **Đã bật**, **Đã dùng**, **Tạm dừng** hoặc giây còn lại; bỏ trạng thái **Chờ** chung chung. Dùng skill xong không có hồi để dùng lại trong cùng trận.
 Người đang chuẩn bị đá phạt có thể dùng Vua đá phạt thay cho skill bình thường; vẫn trừ cùng lượt dùng của cầu thủ đó.
 
 ### Cấu trúc dữ liệu gameplay
@@ -122,7 +129,8 @@ Vung nắm đấm; đập tay/ôm đồng đội; dang tay; máy bay; chỉ tay 
 - Hai chế độ chơi có thể chọn 2, 4, 6 hoặc 10 phút bóng trong cuộc. Hai hiệp chia đều; thời gian bóng chết, thay người và tạm dừng không tính vào thời lượng này. Đồng hồ trận vẫn thể hiện hai hiệp 30 phút mô phỏng; mức tiêu hao thể lực theo đồng hồ này được giữ nguyên.
 - Bật **Hiệp phụ nếu hòa**: thêm hai hiệp 15 phút mô phỏng, tương ứng tổng thời gian bằng một nửa thời lượng chính, đổi sân giữa hai hiệp phụ. Nếu không bật luân lưu, hòa sau hiệp phụ được giữ nguyên.
 - Bật **Luân lưu nếu vẫn hòa**: nếu có hiệp phụ, đá luân lưu sau hiệp phụ; nếu không, đá ngay khi hết thời gian chính.
-- Luân lưu chuyển riêng sang góc nhìn từ sau cầu thủ về khung thành. Cả bên sút và thủ môn chọn trái / giữa / phải bằng nút trên sân, hoặc A/S/D cho người A và ←/↓/→ cho B. Hai hướng được giữ kín đến khi cả hai bên chốt. Máy chọn ngẫu nhiên trước khi người chơi chốt.
+- Penalty và luân lưu dùng góc nhìn từ sau cầu thủ về khung thành, vẽ cùng phong cách SVG hoạt hình với sân chính: viền xanh đậm, đầu tròn, đồng phục, khán đài có người và lưới ô chéo. Màu lấy trực tiếp từ widget, gồm cả áo thủ môn theo đội.
+- Cả bên sút và thủ môn chốt trái / giữa / phải bằng **A/S/D cho A**, **←/↓/→ cho B**. Chỉ dẫn nhỏ nằm riêng hai góc, không có bảng chọn chuột. Hai hướng giữ kín đến khi cả hai bên chốt. Máy chọn ngẫu nhiên trước khi người chơi chốt.
 - Thủ môn chọn cùng hướng sút sẽ cản phá; khác hướng là bàn thắng. Mỗi đội 5 lượt, có thể kết thúc sớm nếu đã phân thắng bại; hòa thì đá tiếp từng cặp. Tỷ số luân lưu được hiển thị riêng với tỷ số trận.
 
 ## Kiểm tra phát triển

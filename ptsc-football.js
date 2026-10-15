@@ -520,35 +520,39 @@
     const specialKind = p => game.deadBallReason === "freeKick" && game.restartTaker === p ? "freeKick" : p?.specialId;
     const specialData = p => GAME_DATA.skills[specialKind(p)];
     const protectedBall = p => specialData(p)?.effect === "shield" && specialActive(p) && ball.owner === p;
+    const speedSkillActive = p => specialData(p)?.effect === "shield" && specialActive(p);
     const specialName = p => specialData(p)?.name ?? "Skill đặc biệt";
     const defendingTeam = t => game.mode === "play" && !game.stoppage && (ball.owner?.team ?? game.poss) !== t;
     const defensiveSkill = p => ["steal", "teamDefense", "keeper"].includes(specialData(p)?.effect);
     const defenseActive = t => defendingTeam(t) && (game.defenseUntil?.[t] ?? 0) > game.clock;
     const openingSkills = () => game.clock === 0 && (game.mode === "reset" || game.restart === "kickoff");
-    function specialReady(p) {
+    function specialAvailability(p) {
       const skill = specialData(p);
-      if (!skill || !p || !on(p) || p.injured || p.specialUsed || p.energy < GAME_DATA.skillRules.cost) return false;
-      if (defensiveSkill(p) && !defendingTeam(p.team)) return false;
-      if (openingSkills()) return true;
-      if (game.mode !== "play") return false;
-      if (game.stoppage && specialKind(p) === "freeKick") return game.restartTaker === p && freeKickReady(humanFor(p));
-      if (game.stoppage || p.script || T < p.busyUntil) return false;
-      if (["shot", "shield", "pass"].includes(skill.effect)) return ball.owner === p && ball.mode === "carried";
-      if (skill.effect === "keeper") return true;
-      const c = ball.owner;
-      if (skill.effect === "teamDefense") return game.poss !== p.team;
-      return !!c && c.team !== p.team && ball.mode === "carried" && !protectedBall(c) && mdist(p.pos, c.pos) <= skill.range;
+      if (!skill || !p || !on(p)) return { ready: false, label: "Ngoài sân" };
+      if (p.injured) return { ready: false, label: "Chấn thương" };
+      if (p.specialPrimed) return { ready: false, label: "Đã bật" };
+      if (p.specialUsed) return { ready: false, label: "Đã dùng" };
+      if (p.energy < GAME_DATA.skillRules.cost) return { ready: false, label: "Thiếu lực" };
+      if (["fulltime", "ceremony", "draw"].includes(game.mode)) return { ready: false, label: "Hết trận" };
+      if (defensiveSkill(p) && !defendingTeam(p.team)) return { ready: false, label: "Chỉ phòng thủ" };
+      return { ready: true, label: "Sẵn sàng" };
     }
+    const specialReady = p => specialAvailability(p).ready;
     function activateSpecial(h, player = h?.selected) {
       const p = player, skill = specialData(p);
       if (!specialReady(p)) return false;
       p.specialUsed = true; p.energy = Math.max(0, p.energy - GAME_DATA.skillRules.cost); if (h) h.charge = null;
       game.stats.specialUses = (game.stats.specialUses ?? 0) + 1;
-      if (openingSkills() && ["shot", "pass", "steal"].includes(skill.effect)) {
+      const freeKick = skill.effect === "shot" && game.deadBallReason === "freeKick" && game.restartTaker === p && freeKickReady(h);
+      if (["shot", "pass"].includes(skill.effect) && !freeKick && (game.mode !== "play" || game.stoppage || ball.owner !== p || ball.mode !== "carried" || kickCommitted(p))) {
         p.specialPrimed = true;
-        say(p, `Sẵn sàng: ${skill.name}!`, "var(--art-gold)", 1.5); return true;
+        say(p, `Đã bật: ${skill.name}!`, "var(--art-gold)", 1.5); return true;
       }
+      if (["shot", "pass"].includes(skill.effect)) { p.script = null; p.busyUntil = T; }
       return executeSpecial(p);
+    }
+    function kickCommitted(p) {
+      return p.keys.some(k => k[1] > T && ["kickBack", "kick", "powerBack", "powerKick", "curlBack", "curlKick", "chipKick", "passBack", "passKick", "throwLoad", "throw", "rollLoad", "roll"].includes(k[2]));
     }
     function executeSpecial(p) {
       const skill = specialData(p);
@@ -564,28 +568,28 @@
       const success = abilityRng() < GAME_DATA.skillRules.success;
       if (!success) { say(p, "Skill chưa thành công!", "var(--color-card)", 1.4); return true; }
       game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
-      if (["shield", "keeper", "teamDefense"].includes(skill.effect)) {
+      if (["shield", "keeper", "teamDefense", "steal"].includes(skill.effect)) {
         p.specialUntil = game.clock + GAME_DATA.skillRules.duration;
         if (skill.effect === "teamDefense") (game.defenseUntil ??= {})[p.team] = p.specialUntil;
+        if (skill.effect === "shield" && humanFor(p)?.selected === p && !game.stoppage && !kickCommitted(p)) { p.script = null; p.busyUntil = T; }
       } else if (skill.effect === "pass") {
         const mate = outfield(team[p.team]).filter(m => m !== p).sort((a, b) => toT(p.team, b.pos)[0] - toT(p.team, a.pos)[0])[0];
         if (mate) playBall(p, mate, inPitch(mate.pos), { speed: 25, windup: .1 });
-      } else {
-        const c = ball.owner;
-        c.script = null; c.busyUntil = T + .3;
-        p.pos = lerp(c.pos, p.pos, .7 / Math.max(.7, mdist(p.pos, c.pos))); p.g = ground(...p.pos);
-        p.keys.push([T, T + .35, "tap"]); p.busyUntil = T + .4;
-        carry(p); game.carrier = p; game.poss = p.team; game.dirty = true;
       }
       say(p, skill.name.toUpperCase(), "var(--art-gold)", 1.5);
       return true;
     }
     function executePrimedSpecials() {
-      if (game.mode !== "play" || game.stoppage) return;
+      if (game.mode !== "play") return;
+      if (game.stoppage) {
+        const p = game.restartTaker;
+        if (p?.specialPrimed && specialData(p)?.effect === "shot" && game.deadBallReason === "freeKick" && freeKickReady(humanFor(p))) executeSpecial(p);
+        return;
+      }
       for (const p of players) {
         if (!p.specialPrimed || !on(p) || p.injured || p.script || T < p.busyUntil) continue;
-        const skill = specialData(p), c = ball.owner;
-        const ready = skill.effect === "steal" ? c && c.team !== p.team && ball.mode === "carried" && !protectedBall(c) && mdist(p.pos, c.pos) <= skill.range : c === p && ball.mode === "carried";
+        const c = ball.owner;
+        const ready = c === p && ball.mode === "carried" && !kickCommitted(p);
         if (ready) executeSpecial(p);
       }
     }
@@ -604,7 +608,8 @@
         p.abilityCheckAt = game.clock + .7;
         const skill = specialData(p);
         const relevant = skill?.effect === "keeper" ? ball.kind === "shot" || toT(p.team, ballUV())[0] < .22 : true;
-        if (relevant && specialReady(p) && abilityRng() < .22) activateSpecial(null, p);
+        const inContext = defensiveSkill(p) ? skill.effect !== "steal" || (ball.owner && ball.owner.team !== p.team && ball.mode === "carried" && mdist(p.pos, ball.owner.pos) <= skill.range) : ball.owner === p && ball.mode === "carried";
+        if (relevant && inContext && specialReady(p) && abilityRng() < .22) activateSpecial(null, p);
       }
     }
     const controllable = p => on(p) && !p.injured && (p.role !== "GK" || defendingTeam(p.team) || ball.owner === p || (game.stoppage && game.restartTaker === p));
@@ -811,7 +816,7 @@
       ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
       players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
-        special: { kind: specialKind(h.selected), icon: specialData(h.selected)?.icon ?? "", name: specialName(h.selected), used: !!h.selected?.specialUsed, primed: !!h.selected?.specialPrimed, opening: openingSkills(), defenseOnly: defensiveSkill(h.selected), defending: defendingTeam(h.team), ready: specialReady(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) },
+        special: { kind: specialKind(h.selected), icon: specialData(h.selected)?.icon ?? "", name: specialName(h.selected), used: !!h.selected?.specialUsed, primed: !!h.selected?.specialPrimed, opening: openingSkills(), defenseOnly: defensiveSkill(h.selected), defending: defendingTeam(h.team), ...specialAvailability(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) },
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
         pressing: !!h.pressing, yellows: h.selected?.yellows ?? 0,
@@ -2156,6 +2161,7 @@
         const takeAutomatically = () => {
           if (game.mode !== "play" || restartPlan.specialTaken || humanFor(taker)) return;
           if (game.refBreak || !freeKickReady()) return at(T + .15, takeAutomatically);
+          if (taker.specialPrimed && specialData(taker)?.effect === "shot") return executeSpecial(taker);
           if (!taker.specialUsed && taker.energy >= GAME_DATA.skillRules.cost && abilityRng() < (taker.specialId === "freeKick" ? .6 : .25)) {
             if (activateSpecial(null, taker)) return;
           }
@@ -2169,6 +2175,7 @@
         at(Tk, function takeIndirect() {
           if (game.mode !== "play" || restartPlan.specialTaken || humanFor(taker)) return;
           if (!freeKickReady()) return at(T + .15, takeIndirect);
+          if (taker.specialPrimed && specialData(taker)?.effect === "shot") return executeSpecial(taker);
           resumePlay(); game.refPlan = null; clearRestartNote();
           carry(taker); game.carrier = taker; game.freeKick = true; taker.busyUntil = T;
         });
@@ -2821,7 +2828,7 @@
         const constrain = game.stoppage && game.restartTaker === p ? uv => [clamp(uv[0], .005, .995), clamp(uv[1], .005, .995)] : inPitch;
         let tgt = h ? constrain([p.pos[0] + (directionLength ? direction[0] / directionLength * advance : 0), p.pos[1] + (directionLength ? direction[1] / directionLength * advance : 0)]) : targetFor(p);
         const dm = [(tgt[0] - p.pos[0]) * LEN, (tgt[1] - p.pos[1]) * WID], dist = Math.hypot(...dm);
-        const top = (protectedBall(p) ? specialData(p).speed : defenseActive(p.team) && p.role === "DF" ? 7.8 : p.keeperRush ? GAME_DATA.goalkeeper.speed : h ? pressing ? 6.8 : h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
+        const top = (speedSkillActive(p) ? specialData(p).speed : defenseActive(p.team) && p.role === "DF" ? 7.8 : p.keeperRush ? GAME_DATA.goalkeeper.speed : h ? pressing ? 6.8 : h.sprint ? 6.2 : 4.5 : speedFor(p, dist)) * (game.mode === "play" && p.team && !p.bench ? 0.7 + 0.3 * fit(p) : 1), sp = Math.min(top, dist * 2.2);
         let des = dist > 0.05 ? mul(dm, sp / dist) : [0, 0];
         // Keep a little space between bodies. Players ignore the referee; he steps around them.
         const dn = Math.hypot(...des) > 0.1 ? mul(des, 1 / Math.hypot(...des)) : null;
@@ -3470,6 +3477,7 @@
       for (const p of people) updatePerson(p, dt);
       updateBall(dt);
       resolveKeeperClaims();
+      resolveDefensiveSpecials();
       resolveSuperDefense();
       updateCamera(dt);
     }
@@ -3534,6 +3542,16 @@
         game.stats.keeperRushClaims = (game.stats.keeperRushClaims ?? 0) + 1;
         say(p, "Ôm gọn!", "var(--color-sky-soft)", 1.2);
       }
+    }
+    function resolveDefensiveSpecials() {
+      const c = ball.owner;
+      if (!c || ball.mode !== "carried" || protectedBall(c)) return;
+      const p = players.find(p => on(p) && !p.injured && specialActive(p) && specialData(p)?.effect === "steal" && defendingTeam(p.team) && mdist(p.pos, c.pos) <= specialData(p).range);
+      if (!p) return;
+      p.specialUntil = 0; p.script = null; c.script = null; c.busyUntil = T + .3;
+      p.pos = lerp(c.pos, p.pos, .7 / Math.max(.7, mdist(p.pos, c.pos))); p.g = ground(...p.pos);
+      p.keys.push([T, T + .35, "tap"]); p.busyUntil = T + .4;
+      carry(p); game.carrier = p; game.poss = p.team; game.dirty = true;
     }
     function resolveSuperDefense() {
       const c = ball.owner;
@@ -4003,6 +4021,10 @@
     
     /* scoreboard */
     const boardNodes = new Map();
+    api.palette = () => {
+      const style = getComputedStyle(root);
+      return Object.fromEntries(["color-ink", "color-card", "color-sky-soft", "color-sun", "art-skin", "art-skin-2", "art-hair", "art-shorts", "art-red", "art-blue", "art-gk-r", "art-gk-b", "art-grass", "art-grass-2", "art-surround", "art-stand", "art-stand-deep", "art-shadow", "font-mono", "font-display"].map(name => ["--" + name, style.getPropertyValue("--" + name).trim()]));
+    };
     const $ = id => {
       if (!boardNodes.has(id)) boardNodes.set(id, root.querySelector('[data-id="' + id + '"]'));
       return boardNodes.get(id);
