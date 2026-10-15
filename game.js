@@ -179,6 +179,8 @@
     q(".arena-hints").hidden = !!state.penalty || state.ended;
     const restartChoice = q(".restart-choice"), corner = state.corner, kickoff = state.kickoff, freeKick = state.freeKick;
     restartChoice.hidden = state.ended || !(corner?.slot || kickoff?.slot || freeKick?.slot);
+    const restartSlot = corner?.slot ?? kickoff?.slot ?? freeKick?.slot;
+    for (const guide of q(".arena-hints").querySelectorAll(".pad-help")) guide.hidden = !restartChoice.hidden && guide.dataset.slot === restartSlot;
     if (!restartChoice.hidden) {
       const restart = corner ?? kickoff ?? freeKick;
       restartChoice.dataset.slot = restart.slot;
