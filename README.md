@@ -24,7 +24,7 @@ Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi
 | Di chuyển theo hướng màn hình | W A S D | Các phím mũi tên |
 | Giữ để nạp lực chuyền, thả để đá (khi có bóng) | F | J |
 | Có bóng: giữ để nạp lực sút, thả để đá; phòng ngự: bấm để xoạc theo hướng | G | K |
-| Đổi cầu thủ khi phòng ngự | R | U |
+| Chọn cầu thủ gần bóng nhất, kể cả lúc chờ | R | U |
 | Giữ để chạy nhanh | T | I |
 | Giữ để pressing / áp sát khi phòng ngự | V | N |
 | Bấm để tranh bóng khi đủ gần đối thủ | B | M |
@@ -32,14 +32,18 @@ Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi
 Các phím hành động nằm thành cụm hai cột, ba hàng: A **R/T – F/G – V/B**, B **U/I – J/K – N/M**. Chuyền, pressing và tranh bóng có phím riêng. Hai người dùng các phím không trùng nhau; hướng dẫn trên sân và ngoài sân vẽ đúng cụm phím này.
 
 Bấm **Bắt đầu trận** hoặc **Bắt đầu trận mới**: sân luôn tạm dừng, phủ nền mờ và hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
+Khi tạm dừng giữa trận, sân phủ xám và hiện **Nhấn Space để tiếp tục trận đấu**.
 Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn cơ bản nằm riêng góc trái/phải sân, độ mờ 30%.
 Phần trăm và thanh thể lực của người đang điều khiển hiện ngay trong sân: A bên trái, B bên phải, vẫn đọc được khi toàn màn hình; chuyển màu cảnh báo khi dưới 35%.
 Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
 Tự chuyển điều khiển ngay sang người cầm bóng, kể cả thủ môn khi bắt bóng hoặc phát bóng; thủ môn tự bảo vệ khung thành khi không cầm bóng.
+Giao bóng, đá phạt, phạt góc, đá biên và phát bóng lên tự chọn đúng người thực hiện. R/U chọn người gần bóng nhất và hoạt động cả khi chờ giao bóng, thay người, bóng chết hoặc tạm dừng; không tự ghi đè lựa chọn trong lúc chờ, trừ khi chọn người thực hiện một tình huống mới.
+Có thể di chuyển lúc chờ giao bóng, bóng chết, thay người và trọng tài nghỉ. Input di chuyển ngắt đường chạy bố trí tự động của cầu thủ đang chọn; nhấn hướng phản hồi ngay, nhả phím dừng ngay. Space vẫn đóng băng trận. Đồng hồ và thể lực không giảm trong các khoảng chờ.
+Thủ môn được tăng nhẹ khả năng cản sút thường và bắt dính; sút thần sầu dễ ghi bàn hơn nhưng vẫn có thể bị cứu thua.
 Thủ môn ôm bóng trên tay tối đa 6 giây trước khi tự phát bóng. Khi đi ra khỏi vòng cấm bán nguyệt, thủ môn tự hạ bóng xuống chân và tiếp tục điều khiển bình thường; không bị ép phá bóng khi bóng đã ở chân. Việc kiểm tra xét cả vị trí bóng trên tay và sân hiện tại sau đổi sân.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
-Sự kiện thả phím được bắt ở mức cửa sổ; mất focus, đổi toàn màn hình, hủy pointer hoặc trọng tài dừng trận sẽ xóa input. Nhả hướng di chuyển thì cầu thủ điều khiển dừng ngay, không tiếp tục trôi do quán tính; các lần lặp phím cũ không tự bật lại input đã xóa.
+Sự kiện thả phím được bắt ở mức cửa sổ; mất focus, đổi toàn màn hình hoặc hủy pointer sẽ xóa input. Trọng tài dừng trận hủy thao tác chuyền/sút đang chờ nhưng giữ các phím di chuyển đang nhấn. Nhả hướng di chuyển thì cầu thủ điều khiển dừng ngay, không tiếp tục trôi do quán tính; các lần lặp phím cũ không tự bật lại input đã xóa.
 Chọn **Tiếp tục** để trở lại. Đổi lựa chọn áo/sân áp dụng ở trận mới. Website chơi cùng máy cần bàn phím.
 
 Lực nạp đầy sau khoảng 0,9 giây, có thanh lực dưới chân và trong bảng cầu thủ. Lực thấp cho đường bóng thấp; lực cao tăng tốc độ, tầm chuyền và độ bổng.
@@ -57,8 +61,9 @@ Hướng dẫn nâng cao ở bên dưới, mở sẵn và chia riêng hai cột 
 
 ### Trọng tài và kết thúc trận
 
-- Trọng tài nói “Đợi tí, thay người!”, “Dừng lại! Phạm lỗi!” và “Tiếp tục!” theo tình huống.
-- Mỗi trận chọn một lần với xác suất 5% cho tình huống trọng tài đi WC, thực hiện khi bóng đã được kiểm soát và không có một pha sút/chuyền đang diễn ra. Ông ấy thổi dừng, chạy đến WC rồi quay lại; toàn bộ lần nghỉ kéo dài 15 giây, không tính vào đồng hồ trận. Cầu thủ, bóng, thể lực và các hành động đang chờ đều tạm dừng; camera vẫn bám bóng. Mỗi trận tối đa một lần, với bộ ngẫu nhiên riêng để không đổi kịch bản bóng đá.
+- Trọng tài có thoại riêng khi giao bóng, ra biên, phạt góc, đá phạt, phát bóng và thay người. Chờ lâu sẽ nhắc luân phiên “Nhanh lên!”, “Đừng có câu giờ!”, “Nhanh không cho đá thiếu một người bây giờ!”; chỉ nói “Tiếp tục!” khi bóng trở lại cuộc chơi.
+- Mỗi trận chọn một lần với xác suất 5% cho tình huống trọng tài đi WC, thực hiện khi bóng đã được kiểm soát và không có một pha sút/chuyền đang diễn ra. Ông ấy thổi dừng, chạy đến WC rồi quay lại; toàn bộ lần nghỉ kéo dài 15 giây, không tính vào đồng hồ trận. Máy, thể lực và các hành động đang chờ tạm dừng; người chơi vẫn được di chuyển cầu thủ đã chọn, bóng đang cầm đi theo cầu thủ và camera vẫn bám bóng. Mỗi trận tối đa một lần, với bộ ngẫu nhiên riêng để không đổi kịch bản bóng đá.
+- Khi ghi bàn nhưng vẫn bị dẫn, cầu thủ nhặt bóng trong lưới, nói “Nhanh lên, vẫn còn thời gian!”, ôm bóng chạy về chấm giữa sân và đặt xuống trước khi chuyển sang giao bóng. Thời gian ăn mừng đủ để hoàn thành đường chạy này, không cộng vào đồng hồ trận.
 - Đội thắng ăn mừng, đội thua thất vọng và có cảnh nâng cúp theo logic cũ, kể cả thắng bằng luân lưu. Tỷ số trận và tỷ số PEN được hiển thị riêng.
 - Nút **Trận mới** ngay trong sân cho phép restart kể cả khi toàn màn hình. Trận mới giữ lựa chọn áo/sân/thời gian hiện có và luôn chờ Space để bắt đầu.
 

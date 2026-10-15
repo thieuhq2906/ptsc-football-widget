@@ -17,8 +17,8 @@
     const actions = ["Đổi người", "Chạy nhanh", "Chuyền", "Sút / xoạc", "Áp sát", "Tranh bóng"];
     const gestures = ["Bấm", "Giữ", "Giữ → thả", "Giữ → thả / bấm", "Giữ", "Bấm"];
     guide.innerHTML = `<div class="movement-help"><strong>NGƯỜI ${slot}</strong><div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${Object.entries(labels).map(([direction, label]) => `<span class="pad-key pad-${direction}" data-code="${b[direction]}">${label}</span>`).join("")}</div></div><div class="action-grid">${actionKeys.map((key, i) => {
-      const clickable = i === 3 && !!guide.closest(".controls"), tag = clickable ? "button" : "div";
-      return `<${tag} class="action-key${clickable ? " slide-action" : ""}" data-code="Key${key}" data-action="${["switch", "sprint", "pass", "shoot", "press", "challenge"][i]}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}><kbd>${key}</kbd><span><span class="action-label">${actions[i]}</span><small>${gestures[i]}</small></span></${tag}>`;
+      const clickable = (i === 0 || i === 3) && !!guide.closest(".controls"), tag = clickable ? "button" : "div";
+      return `<${tag} class="action-key${clickable ? i === 0 ? " switch-action" : " slide-action" : ""}" data-code="Key${key}" data-action="${["switch", "sprint", "pass", "shoot", "press", "challenge"][i]}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}><kbd>${key}</kbd><span><span class="action-label">${actions[i]}</span><small>${gestures[i]}</small></span></${tag}>`;
     }).join("")}</div>`;
   }
   const handledKeys = new Set(["Space", "Escape", ...Object.values(bindings).flatMap(b => [b.up, b.down, b.left, b.right, b.sprint, b.press, ...Object.keys(b.actions)])]);
@@ -30,7 +30,7 @@
     if (!session) return;
     const state = session.api.status();
     const arena = session.panel.querySelector(".arena");
-    const acceptsInput = !session.paused && !state.ended && !state.refBreak && session === sessions.get(activeMode) && document.activeElement === arena;
+    const acceptsInput = !session.paused && !state.ended && session === sessions.get(activeMode) && document.activeElement === arena;
     for (const [slot, b] of Object.entries(bindings)) {
       session.api.setInput(slot, !acceptsInput ? {} : {
         x: Number(keys.has(b.right)) - Number(keys.has(b.left)),
@@ -55,7 +55,9 @@
   function setPaused(session, paused) {
     session.paused = paused;
     if (!paused) session.awaitingStart = false;
-    session.panel.querySelector(".start-overlay").hidden = !session.awaitingStart;
+    const overlay = session.panel.querySelector(".start-overlay");
+    overlay.hidden = !paused;
+    overlay.querySelector("span").innerHTML = session.awaitingStart ? 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu' : 'Nhấn <kbd>Space</kbd> để tiếp tục trận đấu';
     releaseKeys();
     if (paused) session.api.pause(); else session.api.play();
     session.panel.querySelector(".pause").textContent = session.awaitingStart ? "Bắt đầu" : paused ? "Tiếp tục" : "Tạm dừng";
@@ -131,7 +133,14 @@
   }
   function updateHud(session) {
     const state = session.api.status();
-    if (!!state.refBreak !== !!session.refStopped) { session.refStopped = !!state.refBreak; releaseKeys(); }
+    if (!!state.refBreak !== !!session.refStopped) {
+      session.refStopped = !!state.refBreak;
+      // A referee stoppage cancels kicks but preserves held movement keys.
+      for (const [slot, pending] of pendingShots) if (pending.session === session) {
+        clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot);
+      }
+      chargeStarts.clear(); session.api.cancelCharge("A"); session.api.cancelCharge("B");
+    }
     if (session === sessions.get(activeMode)) applyKeys(session);
     session.penaltyView.update(state, session.paused);
     session.panel.querySelector(".arena-hints").hidden = !!state.penalty || state.ended;
@@ -154,6 +163,7 @@
       status.textContent = session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
     }
     for (const player of state.players) {
+      session.panel.querySelector(`.switch-action[data-slot="${player.slot}"]`).disabled = false;
       const onField = session.panel.querySelector(`.arena-energy [data-slot="${player.slot}"]`);
       const percent = Math.round(player.energy * 100);
       onField.dataset.team = player.team; onField.classList.toggle("is-low", player.energy < .35);
@@ -242,6 +252,13 @@
         }
       });
     }
+    for (const button of panel.querySelectorAll(".switch-action")) {
+      button.addEventListener("click", () => {
+        const session = sessions.get(panel.dataset.mode);
+        if (!session) return;
+        session.api.action(button.dataset.slot, "switch"); updateHud(session); arena.focus({ preventScroll: true });
+      });
+    }
     form.addEventListener("submit", event => {
       event.preventDefault(); releaseKeys();
       const mode = panel.dataset.mode;
@@ -260,6 +277,7 @@
       form.querySelector(".start").textContent = "Bắt đầu trận mới";
       panel.querySelector(".pause").textContent = "Bắt đầu";
       overlay.hidden = false;
+      overlay.querySelector("span").innerHTML = 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu';
       playerCards(session); updateHud(session); setupSummary(panel);
       arena.focus({ preventScroll: true });
     });
@@ -285,8 +303,14 @@
       if (!event.repeat && !session.api.status().ended) setPaused(session, event.code === "Escape" ? true : !session.paused);
       return;
     }
+    const switchBinding = Object.entries(bindings).find(([, binding]) => binding.actions[event.code] === "switch");
+    if (switchBinding) {
+      if (!event.repeat) {
+        keys.add(event.code); session.api.action(switchBinding[0], "switch"); updateHud(session); highlightPads();
+      }
+      return;
+    }
     if (session.paused || session.api.status().ended) return;
-    if (session.api.status().refBreak) return;
     if (event.repeat && !keys.has(event.code)) return;
     if (session.api.status().phase === "penalties") {
       if (!event.repeat) for (const [slot, b] of Object.entries(bindings)) {

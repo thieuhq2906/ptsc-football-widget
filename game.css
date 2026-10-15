@@ -35,7 +35,7 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .match-options { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; width: 100%; font-size: 13px; }
 .match-options label { display: flex; gap: 7px; align-items: center; min-height: 36px; cursor: pointer; }
 .match-options select { padding: 7px; border: 1px solid #b7bdae; border-radius: 6px; background: #fff; font: inherit; }
-.start-overlay { display: grid; place-items: center; position: absolute; inset: 0; z-index: 2; border-radius: 20px; background: #12201580; backdrop-filter: blur(3px); color: #fff; font-size: clamp(14px, 2.2vw, 24px); font-weight: 800; text-align: center; padding: 20px; }
+.start-overlay { display: grid; place-items: center; position: absolute; inset: 0; z-index: 2; border-radius: 20px; background: #24272c99; backdrop-filter: blur(3px); color: #fff; font-size: clamp(14px, 2.2vw, 24px); font-weight: 800; text-align: center; padding: 20px; }
 .start-overlay kbd { font-size: .8em; padding: 4px 9px; }
 .penalty-host { position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: 20px; background: #356630; color: #fff; }
 .penalty-scene { display: block; width: 100%; height: 100%; }
@@ -98,7 +98,7 @@ input[type="radio"] { accent-color: #1d2340; margin: 0; }
 .action-key[data-action="pass"], .action-key[data-action="shoot"] { border-color: var(--control-accent); background: var(--control-fill); }
 .action-key.is-held { box-shadow: inset 0 0 0 2px var(--control-accent); }
 .action-key.is-held kbd { background: var(--control-fill); border-color: var(--control-accent); }
-.action-key.slide-action:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--control-accent); }
+.action-key.slide-action:hover:not(:disabled), .action-key.switch-action:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--control-accent); }
 .pad-diagram { position: relative; flex-shrink: 0; width: 98px; height: 98px; text-shadow: none; color: #1d2340; }
 .pad-diagram img { display: block; width: 100%; height: 100%; }
 .pad-player, .pad-key { position: absolute; display: grid; place-items: center; transform: translate(-50%, -50%); font-size: 12px; font-weight: 850; }
