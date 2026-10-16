@@ -570,7 +570,8 @@ const server = http.createServer((req, res) => {
     await page.reload();
     await page.waitForFunction(() => window.PTSCKeymap);
     assert.equal(await page.evaluate(() => PTSCKeymap.assigned("cpu", "A").name), "Bộ phím thử", "Layout choice survives a reload");
-    assert.equal(await page.locator("#panel-cpu .controls .pad-up").textContent(), "Q", "Guides draw the chosen layout");
+    assert.equal(await page.locator("#panel-cpu .arena-hints .pad-up").textContent(), "Q", "Guides draw the chosen layout");
+    assert(await page.evaluate(() => { const key = document.querySelector("#panel-cpu .controls-browser .kb-key[data-code=\"KeyQ\"]"); return !!key && key.hasAttribute("data-slot"); }), "The controls keyboard marks the chosen keys");
     await route("#/local");
     const rowB = page.locator('#panel-local .opt[data-opt="keysB"]'), seenB = new Set();
     for (let i = 0; i < 4; i++) { await rowB.locator(".opt-next").click(); seenB.add(await rowB.getAttribute("data-value")); }
@@ -620,7 +621,16 @@ const server = http.createServer((req, res) => {
     assert.equal(new Set(skillData.map(s => s.icon)).size, skillData.length, "Every skill has its own icon");
     assert(skillData.every(s => s.short && s.short.split(" ").length <= 2), "Every skill has a one- or two-word label");
     assert(skillData.filter(s => s.role === "GK" && s.auto).length === 3, "The three keeper skills are automatic");
-    assert.equal(await page.locator("#screen-info .skill-legend-item").count(), skillData.length);
+    await route("#/info/skills");
+    const listedSkills = new Set();
+    for (const tab of await page.locator("#screen-info .skill-browser .br-tab").all()) { await tab.click(); for (const key of await page.locator("#screen-info .skill-browser .br-item").evaluateAll(items => items.map(i => i.dataset.key))) listedSkills.add(key); }
+    assert.equal(listedSkills.size, skillData.length, "Every skill is in the skill browser");
+    await page.locator("#screen-info .skill-browser .br-item").first().focus();
+    assert(await page.locator("#screen-info .skill-browser .br-detail .bd-badge").isVisible(), "The skill under the cursor has its card");
+    await page.keyboard.press("KeyQ");
+    assert.equal(await page.locator("#screen-info .skill-browser .br-tab.is-current").textContent(), "Đá phạt & góc", "Q goes to the previous group");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.pane), "skills", "Esc goes back to the section list");
     const keeperAuto = await page.evaluate(() => {
       const runs = [];
       for (let seed = 1; seed <= 6; seed++) {
@@ -714,8 +724,8 @@ const server = http.createServer((req, res) => {
     ordered("attack", "pivot", "drill"); ordered("attack", "metronome", "lateArrival"); ordered("attack", "launcher", "stepUp");
     ordered("defense", "shadow", "coiled"); ordered("defense", "shield", "breaker"); ordered("defense", "bulwark", "trap"); ordered("defense", "lineGuard", "libero");
     assert(Object.values(styleTable.attack).concat(Object.values(styleTable.defense)).every(st => st.name && st.tag && st.desc && !("en" in st)), "Every style has its own name, a short tag and a description");
-    assert(await page.locator("#screen-info .style-legend .legend-group").count() === 4, "Styles are grouped by zone");
-    assert(await page.locator("#screen-info .skill-legend .legend-group").count() === 5, "Skills are grouped by situation");
+    assert(await page.locator("#screen-info .style-browser .br-tab").count() === 4, "Styles are grouped by zone");
+    assert(await page.locator("#screen-info .skill-browser .br-tab").count() === 5, "Skills are grouped by situation");
     console.log("PASS attacking and defensive playing styles fit positions, change where players stand, grouped legends");
 
     // Ratings: every player has ten, in range, shaped by his styles; squads can be supplied as data with fixed ratings.
@@ -923,7 +933,7 @@ const server = http.createServer((req, res) => {
     await page.locator('.info-nav [data-pane="stats"]').hover(); await page.keyboard.type("s");
     assert.equal(await page.evaluate(() => document.getElementById("game").dataset.route), "#/info/keys", "Pointing at a tab while typing does not steal the keys");
     assert.match(await page.locator("#screen-info .keymap-name").inputValue(), /xs/, "Typed letters stay in the name field");
-    await page.locator("#screen-info .keymap-edit").selectOption("default-b");
+    await page.locator("#screen-info .keymap-pick .opt-next").click();
     assert(await page.locator(".game-dialog").isVisible(), "Unsaved changes are confirmed in the game");
     for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
     assert(await page.evaluate(() => !!document.activeElement.closest(".game-dialog")), "Tab stays in the dialog");

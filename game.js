@@ -39,36 +39,130 @@
       return `<${tag} class="action-key${clickable ? action === "switch" ? " switch-action" : " slide-action" : ""}" data-code="${escapeHtml(set[action])}" data-action="${action}"${clickable ? ` type="button" tabindex="-1" data-slot="${slot}" disabled` : ""}>${kbd(set[action])}<span><span class="action-label">${GUIDE_LABELS[i]}</span><small>${GUIDE_GESTURES[i]}</small></span></${tag}>`;
     }).join("")}</div>`;
   }
-  function renderAdvanced(details, set) {
-    const slot = details.dataset.slot;
-    details.innerHTML = `<h3>${details.dataset.title ?? "Người " + slot} · thao tác nâng cao</h3><p>${kbd(set.special)}: skill theo tình huống, tốn 40%, chung một lượt/cầu thủ/trận; penalty dùng trước khi chốt hướng.</p><p>${kbd(set.shoot)} ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ ${kbd(set.pass)}/${kbd(set.shoot)} rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ ${kbd(set.press)} áp sát; bấm ${kbd(set.challenge)} khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p>${kbd(set.shoot)} khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p><p>Penalty/luân lưu: ${kbd(set.left)} trái · ${kbd(set.down)} giữa · ${kbd(set.right)} phải.</p>`;
-  }
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  /* ------------------------------ game info: console-style browsers ------------------------------ */
+  // Every section of Game info is a browser like a console's extras menu: groups switched with Q/E, entries picked
+  // with the arrows, and a card with everything about the entry under the cursor.
   const ROLE_GROUPS = { FW: "Tiền đạo", MF: "Tiền vệ", DF: "Hậu vệ", GK: "Thủ môn" };
-  /** Skills grouped by the situation they are for, each with its pictogram, label, name and what it does. */
-  function renderSkillLegend(container) {
-    const situations = [
-      ["Tấn công", skill => skill.contexts.includes("attack")],
-      ["Phòng ngự", skill => skill.contexts.includes("defense") && !skill.auto],
-      ["Thủ môn · tự kích hoạt 5 phút", skill => skill.auto],
-      ["Đá phạt & phạt góc", skill => skill.contexts.some(c => ["directFreeKick", "cornerAttack", "cornerDefense"].includes(c))],
-      ["Penalty", skill => skill.contexts.some(c => ["penaltyAttack", "penaltyDefense"].includes(c))]
-    ];
-    const skillItem = ([kind, skill]) => {
-      const context = skill.auto ? "Tự bật khi bị tấn công" : skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
-      const badge = skillBadge(kind, skill.icon, "legend-" + kind);
-      return '<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">' + badge + '</svg><span><b>' + escapeHtml(skill.short) + ' <em>' + escapeHtml(skill.name) + '</em></b><small>' + escapeHtml(skill.desc ?? "") + '</small><small class="skill-when">' + escapeHtml(context) + "</small></span></div>";
+  const ROLE_COLORS = { FW: "#e05252", MF: "#3db86b", DF: "#3c8dde", GK: "#e8b923" };
+  /** The nearest entry in a direction, by position on screen: works for lists and grids alike. */
+  function spatial(root, from, dir) {
+    const items = [...root.querySelectorAll("[data-br]")].filter(el => !el.disabled && !el.closest("[hidden], [inert]") && el.getClientRects().length);
+    if (!from || !items.includes(from)) return items[0] ?? null;
+    const a = from.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+    let best = null, bestScore = Infinity;
+    for (const el of items) {
+      if (el === from) continue;
+      const b = el.getBoundingClientRect(), dx = b.left + b.width / 2 - ax, dy = b.top + b.height / 2 - ay;
+      const main = dir === "up" ? -dy : dir === "down" ? dy : dir === "left" ? -dx : dx, cross = dir === "up" || dir === "down" ? Math.abs(dx) : Math.abs(dy);
+      if (main <= 4) continue;
+      const score = main + cross * 2.5;
+      if (score < bestScore) { bestScore = score; best = el; }
+    }
+    return best;
+  }
+  /** Keys inside a browser: arrows move, Q/E switch groups, ←/→ change a setting row, Esc (or ← at the edge) leaves. */
+  function browserKeys(root, { onTab, onSide, onLeave } = {}) {
+    const step = dir => {
+      const to = spatial(root, document.activeElement?.closest?.("[data-br]"), dir);
+      if (to) { focusOn(to); to.scrollIntoView?.({ block: "nearest" }); }
+      return !!to;
     };
-    const skills = Object.entries(gameData.skills);
-    container.innerHTML = '<div class="skill-legend"><h2 class="pane-title">Bảng skill</h2><p class="pane-lead">Mỗi cầu thủ một skill trong trận, dùng một lần, tốn 40% thể lực; bấm là luôn kích hoạt. Skill thủ môn tự bật; skill penalty dùng riêng mỗi lượt sút.</p>'
-      + situations.map(([title, test]) => '<section class="legend-group"><h3>' + title + '</h3><div class="skill-legend-grid">' + skills.filter(([, skill]) => test(skill)).map(skillItem).join("") + "</div></section>").join("") + "</div>";
+    root.addEventListener("keydown", event => {
+      if (capture || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target, typing = target.matches?.("input, select, textarea");
+      if (event.code === "Escape") { if (onLeave?.("escape")) event.preventDefault(); return; }
+      if (typing) {
+        if (event.code === "ArrowUp" || event.code === "ArrowDown") { event.preventDefault(); step(event.code === "ArrowUp" ? "up" : "down"); }
+        return;
+      }
+      if ((event.code === "KeyQ" || event.code === "PageUp") && onTab) { event.preventDefault(); if (!event.repeat) onTab(-1); return; }
+      if ((event.code === "KeyE" || event.code === "PageDown") && onTab) { event.preventDefault(); if (!event.repeat) onTab(1); return; }
+      const dir = NAV_KEYS[event.code];
+      if (!dir || (event.code.startsWith("Key") && event.repeat)) return;
+      const row = target.closest?.("[data-side]");
+      if (row && onSide && (dir === "left" || dir === "right")) { event.preventDefault(); onSide(row, dir === "left" ? -1 : 1); return; }
+      event.preventDefault();
+      if (!step(dir) && dir === "left") onLeave?.("left");
+    });
   }
-  /** Playing styles by zone of the pitch, attacking and defensive side by side. */
-  function renderStyleLegend(container) {
-    const styleItem = style => '<div class="style-legend-item"><b>' + escapeHtml(style.name) + " <span>" + escapeHtml(style.tag) + "</span></b><small>" + escapeHtml(style.desc) + "</small></div>";
-    const column = (phase, role) => Object.values(gameData.playstyles[phase]).filter(style => style.roles.includes(role)).map(styleItem).join("");
-    container.innerHTML = '<div class="style-legend"><h2 class="pane-title">Phong cách chơi</h2><p class="pane-lead">Mỗi cầu thủ có 1 kiểu khi đội có bóng và 1 kiểu khi mất bóng. Chúng quyết định cách cầu thủ đứng, chạy và xử lý bóng.</p>'
-      + Object.entries(ROLE_GROUPS).map(([role, title]) => '<section class="legend-group"><h3>' + title + '</h3><div class="style-zone"><div><h4>Khi có bóng · tấn công</h4>' + column("attack", role) + "</div><div><h4>Khi mất bóng · phòng ngự</h4>" + column("defense", role) + "</div></div></section>").join("") + "</div>";
+  const leaveToNav = () => { if (route.name !== "info") return false; focusOn(infoScreen.querySelector(".info-nav .is-current")); return true; };
+  /**
+   * A browser over a container. spec: { cls, title, lead, grid, tabs() → [{ label, items: [{ key, html, group }] }], detail(key, tab) → html, onLeave }.
+   * Entries are buttons with class br-item and data-key; they are rendered by the spec, the cursor and the card by the browser.
+   */
+  function makeBrowser(root, spec) {
+    const state = { tab: 0, key: null };
+    root.classList.add("browser", spec.cls);
+    root.innerHTML = '<header class="br-head">' + (spec.title ? '<h2 class="pane-title">' + spec.title + "</h2>" : "") + (spec.lead ? '<p class="pane-lead">' + spec.lead + "</p>" : "") + '</header><div class="br-tabs" role="tablist"></div><div class="br-body"><div class="br-list' + (spec.grid ? " is-grid" : "") + '"></div><aside class="br-detail" aria-live="polite"></aside></div>';
+    const tabsEl = root.querySelector(".br-tabs"), list = root.querySelector(".br-list"), detail = root.querySelector(".br-detail");
+    let tabs = [];
+    function show(key) {
+      if (!key) { detail.innerHTML = ""; return; }
+      if (key === state.key && detail.dataset.key === key) return;
+      state.key = key; detail.dataset.key = key;
+      detail.innerHTML = spec.detail(key, tabs[state.tab]);
+      detail.scrollTop = 0;
+      for (const item of list.querySelectorAll("[data-key]")) item.classList.toggle("is-current", item.dataset.key === key);
+    }
+    function render(focus = root.contains(document.activeElement)) {
+      tabs = spec.tabs();
+      state.tab = clamp(state.tab, 0, tabs.length - 1);
+      tabsEl.hidden = tabs.length < 2;
+      tabsEl.innerHTML = tabs.map((t, i) => `<button type="button" class="br-tab${i === state.tab ? " is-current" : ""}" role="tab" tabindex="-1" aria-selected="${i === state.tab}" data-i="${i}">${t.label}</button>`).join("") + (tabs.length > 1 ? '<span class="br-tab-keys"><kbd>Q</kbd><kbd>E</kbd></span>' : "");
+      let group = null;
+      list.innerHTML = tabs[state.tab].items.map(item => (item.group && item.group !== group ? `<p class="br-sep">${group = item.group}</p>` : "") + item.html).join("");
+      const target = list.querySelector(`[data-key="${CSS.escape(state.key ?? "")}"]`) ?? list.querySelector("[data-key]");
+      state.key = null; show(target?.dataset.key);
+      if (focus && target) focusOn(target);
+    }
+    const setTab = step => { state.tab = (state.tab + step + tabs.length) % tabs.length; state.key = null; render(true); };
+    tabsEl.addEventListener("click", event => { const tab = event.target.closest(".br-tab"); if (tab) { state.tab = Number(tab.dataset.i); state.key = null; render(true); } });
+    list.addEventListener("focusin", event => show(event.target.closest("[data-key]")?.dataset.key));
+    list.addEventListener("click", event => { const item = event.target.closest("[data-key]"); if (item) { focusOn(item); show(item.dataset.key); } });
+    browserKeys(root, { onTab: setTab, onLeave: spec.onLeave ?? leaveToNav });
+    render(false);
+    return { render, state };
   }
+  const chip = (text, color) => `<span class="bd-chip"${color ? ` style="--chip:${color}"` : ""}>${text}</span>`;
+  const bars = rows => '<div class="bd-bars">' + rows.map(([labelText, value, max, shown, tone]) => `<div class="bd-bar"><span>${labelText}</span><i><i style="width:${Math.round(clamp01(value / max) * 100)}%"${tone ? ` data-tone="${tone}"` : ""}></i></i><b>${shown}</b></div>`).join("") + "</div>";
+  const facts = rows => '<dl class="bd-facts">' + rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") + "</dl>";
+
+  /* Skills */
+  const SKILL_GROUPS = [
+    ["Tấn công", skill => skill.contexts.includes("attack")],
+    ["Phòng ngự", skill => skill.contexts.includes("defense") && !skill.auto],
+    ["Thủ môn", skill => skill.auto],
+    ["Đá phạt & góc", skill => skill.contexts.some(c => ["directFreeKick", "cornerAttack", "cornerDefense"].includes(c))],
+    ["Penalty", skill => skill.contexts.some(c => ["penaltyAttack", "penaltyDefense"].includes(c))]
+  ];
+  const skillRoles = skill => skill.roles ?? [skill.role];
+  function skillTiming(skill) {
+    const rules = gameData.skillRules;
+    if (skill.auto) return rules.keeperAuto.minutes + " phút đồng hồ trận";
+    if (skill.contexts.includes("defense")) return rules.defenseDuration + " giây";
+    if (skill.effect === "shield") return rules.duration + " giây";
+    return "Tức thì";
+  }
+  function renderSkillLegend(container) {
+    const skills = Object.entries(gameData.skills), rules = gameData.skillRules;
+    makeBrowser(container, {
+      cls: "skill-browser", grid: true, title: "Bảng skill",
+      lead: "Mỗi cầu thủ một skill trong trận, dùng một lần. Bấm là kích hoạt; skill thủ môn tự bật; skill penalty dùng riêng cho mỗi lượt sút.",
+      tabs: () => SKILL_GROUPS.map(([labelText, test]) => ({ label: labelText, items: skills.filter(([, skill]) => test(skill)).map(([kind, skill]) => ({ key: kind,
+        html: `<button type="button" class="br-item skill-tile" data-br data-nav data-key="${kind}"><svg viewBox="0 0 24 24" aria-hidden="true">${skillBadge(kind, skill.icon, "tile-" + kind)}</svg><span><b>${escapeHtml(skill.short)}</b><small>${escapeHtml(skill.name)}</small></span></button>` })) })),
+      detail: kind => {
+        const skill = gameData.skills[kind], openPlay = skill.contexts.some(c => c === "attack" || c === "defense"), penalty = skill.contexts.some(c => c.startsWith("penalty"));
+        const keys = bindingsOf("cpu").A ?? {}, keysB = bindingsOf("local").B ?? {};
+        return `<div class="bd-hero"><svg class="bd-badge" viewBox="0 0 24 24" aria-hidden="true">${skillBadge(kind, skill.icon, "hero-" + kind)}</svg><div><span class="bd-kicker">${skill.auto ? "Tự kích hoạt" : "Skill"}</span><h3>${escapeHtml(skill.short)}</h3><p class="bd-sub">${escapeHtml(skill.name)}</p></div></div>`
+          + '<div class="bd-chips">' + skillRoles(skill).map(r => chip(ROLE_GROUPS[r], ROLE_COLORS[r])).join("") + skill.contexts.map(c => chip(gameData.skillContexts[c].label)).join("") + "</div>"
+          + `<p class="bd-text">${escapeHtml(skill.desc)}</p>`
+          + facts([["Kích hoạt", skill.auto || kind === "penaltySaver" ? "Tự động" : `Phím Skill ${kbd(keys.special)} · người B ${kbd(keysB.special)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", openPlay && !skill.auto ? Math.round(rules.cost * 100) + "%" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : rules.usesPerMatch + " lần mỗi trận"]]);
+      }
+    });
+  }
+
+  /* Ratings and build */
   const STAT_EFFECTS = {
     speed: "Tốc chạy của cầu thủ (AI và khi bạn điều khiển).",
     dribbling: "Giữ bóng khi bị áp sát; lách qua pha vào bóng; đấu với thủ môn lao ra.",
@@ -81,47 +175,240 @@
     stamina: "Tốc độ mất thể lực; quyết định khi nào bị thay.",
     goalkeeping: "Cứu thua, ôm bóng khi lao ra."
   };
+  const BODY_ITEMS = {
+    height: ["Chiều cao", "cm", "Cao thắng không chiến và đánh đầu nhiều hơn; thủ môn cao cứu thua rộng hơn. Người thấp (trọng tâm thấp) khó bị cướp bóng hơn và chạy nhanh hơn một chút."],
+    weight: ["Cân nặng", "kg", "Nặng tranh chấp vai khỏe hơn nhưng chậm hơn một chút. Tính từ chiều cao và chỉ số khối cơ thể."],
+    reach: ["Tầm với", "m", "Độ cao với tay qua đầu: giúp không chiến và giúp thủ môn bắt bóng bổng."],
+    sweep: ["Tầm quét chân", "m", "Chân dài với bóng xa hơn khi tranh bóng và khi xoạc."]
+  };
   function renderStatsGuide(container) {
-    const rules = gameData.stats;
-    const rows = rules.keys.map(k => "<tr><td><b>" + rules.short[k] + "</b></td><td>" + rules.labels[k] + "</td><td>" + STAT_EFFECTS[k] + "</td></tr>").join("");
-    const weights = Object.entries(rules.weights).map(([role, w]) => "<li><b>" + ROLE_GROUPS[role] + ":</b> " + Object.entries(w).map(([k, v]) => rules.labels[k] + " " + Math.round(v * 100) + "%").join(", ") + "</li>").join("");
-    const body = gameData.body.height;
-    container.innerHTML = '<h2 class="pane-title">Chỉ số &amp; hình thể</h2><p class="pane-lead">10 chỉ số thang 35–95, sinh từ vị trí sở trường, hai lối chơi và một chút ngẫu nhiên. Ô xanh ≥80, vàng 65–79, đỏ dưới 65.</p>'
-      + '<div class="info-table-wrap"><table class="info-table"><thead><tr><th>Mã</th><th>Chỉ số</th><th>Tác động trong game</th></tr></thead><tbody>' + rows + "</tbody></table></div>"
-      + '<h3>OVR theo vị trí đang đá</h3><ul class="info-list">' + weights + "</ul>"
-      + '<h3>Hình thể</h3><ul class="info-list"><li><b>Chiều cao:</b> thủ môn ' + body.GK.join("–") + " cm, hậu vệ " + body.DF.join("–") + ", tiền vệ " + body.MF.join("–") + ", tiền đạo " + body.FW.join("–") + "; lối chơi cộng/trừ thêm.</li>"
-      + "<li><b>Cao, tay dài:</b> thắng không chiến, đánh đầu nhiều hơn; thủ môn ôm bóng và cứu thua rộng hơn.</li><li><b>Thấp (trọng tâm thấp):</b> khó bị cướp bóng hơn.</li><li><b>Nặng:</b> tranh chấp khỏe hơn, chậm hơn một chút.</li><li><b>Chân dài:</b> tầm tranh bóng và xoạc xa hơn.</li></ul>"
-      + '<p class="pane-lead">Trong trận: giữ <kbd>Tab</kbd> để xem nhanh thẻ chỉ số, hoặc mở menu (<kbd>Esc</kbd>) → Kế hoạch trận để xem từng cầu thủ, thay người và đổi chiến thuật.</p>';
+    const rules = gameData.stats, styles = [...Object.values(gameData.playstyles.attack), ...Object.values(gameData.playstyles.defense)];
+    const tone = v => levelOf(v);
+    makeBrowser(container, {
+      cls: "stats-browser", title: "Chỉ số &amp; hình thể",
+      lead: "10 chỉ số thang 35–95, sinh từ vị trí sở trường, hai lối chơi và một chút ngẫu nhiên. Xanh ≥80, vàng 65–79, đỏ dưới 65.",
+      tabs: () => [
+        { label: "Chỉ số", items: rules.keys.map(k => ({ key: "stat:" + k, html: `<button type="button" class="br-item stat-row" data-br data-nav data-key="stat:${k}"><b class="code-cap">${rules.short[k]}</b><span><b>${rules.labels[k]}</b><small>${STAT_EFFECTS[k]}</small></span></button>` })) },
+        { label: "Hình thể", items: Object.entries(BODY_ITEMS).map(([k, [name, unit]]) => ({ key: "body:" + k, html: `<button type="button" class="br-item stat-row" data-br data-nav data-key="body:${k}"><b class="code-cap">${unit}</b><span><b>${name}</b><small>${BODY_ITEMS[k][2].split(";")[0]}</small></span></button>` })) },
+        { label: "OVR theo vị trí", items: Object.keys(rules.weights).map(r => ({ key: "ovr:" + r, html: `<button type="button" class="br-item stat-row" data-br data-nav data-key="ovr:${r}"><b class="code-cap" style="--cap:${ROLE_COLORS[r]}">${LINE_LABEL[r]}</b><span><b>${ROLE_GROUPS[r]}</b><small>OVR = trung bình có trọng số các chỉ số quan trọng ở vị trí này.</small></span></button>` })) }
+      ],
+      detail: key => {
+        const [kind, id] = key.split(":");
+        if (kind === "stat") {
+          const boosts = styles.filter(s => s.stats[id]).sort((a, b) => b.stats[id] - a.stats[id]);
+          return `<div class="bd-hero"><b class="bd-code">${rules.short[id]}</b><div><span class="bd-kicker">Chỉ số</span><h3>${rules.labels[id]}</h3></div></div><p class="bd-text">${STAT_EFFECTS[id]}</p>`
+            + '<h4 class="bd-h">Mức nền theo vị trí</h4>' + bars(Object.keys(rules.base).map(r => [ROLE_GROUPS[r], rules.base[r][id] - 20, 75, rules.base[r][id], tone(rules.base[r][id])]))
+            + '<h4 class="bd-h">Trọng số trong OVR</h4>' + bars(Object.keys(rules.weights).map(r => [ROLE_GROUPS[r], rules.weights[r][id] ?? 0, .7, rules.weights[r][id] ? Math.round(rules.weights[r][id] * 100) + "%" : "—"]))
+            + (boosts.length ? '<h4 class="bd-h">Lối chơi tăng chỉ số này</h4><div class="bd-chips">' + boosts.map(s => chip(escapeHtml(s.name) + (s.stats[id] > 0 ? " +" : " ") + s.stats[id])).join("") + "</div>" : "");
+        }
+        if (kind === "body") {
+          const [name, unit, text] = BODY_ITEMS[id], body = gameData.body;
+          const ranges = id === "height" ? bars(Object.entries(body.height).map(([r, [lo, hi]]) => [ROLE_GROUPS[r], hi - 150, 55, lo + "–" + hi + " cm"])) : "";
+          const extra = id === "height" ? Object.entries(body.styleHeight) : id === "weight" ? Object.entries(body.styleWeight) : [];
+          const styleName = sid => gameData.playstyles.attack[sid]?.name ?? gameData.playstyles.defense[sid]?.name ?? sid;
+          return `<div class="bd-hero"><b class="bd-code">${unit}</b><div><span class="bd-kicker">Hình thể</span><h3>${name}</h3></div></div><p class="bd-text">${text}</p>`
+            + (ranges ? '<h4 class="bd-h">Theo vị trí</h4>' + ranges : "")
+            + (id === "weight" ? facts([["Chỉ số khối cơ thể", body.bmi.join("–").replace(/\./g, ",")], ["Giới hạn", "45–110 kg"]]) : "")
+            + (id === "reach" || id === "sweep" ? facts([["Tỉ lệ tay/chân", body.limbs.map(v => v.toFixed(2).replace(".", ",")).join("–")], ["Tính từ", id === "reach" ? "Chiều cao × tay" : "Chiều cao × chân"]]) : "")
+            + (extra.length ? '<h4 class="bd-h">Lối chơi thay đổi</h4><div class="bd-chips">' + extra.map(([sid, v]) => chip(escapeHtml(styleName(sid)) + (v > 0 ? " +" : " ") + v + (id === "height" ? " cm" : ""))).join("") + "</div>" : "");
+        }
+        const weights = Object.entries(rules.weights[id]).sort((a, b) => b[1] - a[1]);
+        return `<div class="bd-hero"><b class="bd-code" style="background:${ROLE_COLORS[id]}">${LINE_LABEL[id]}</b><div><span class="bd-kicker">OVR</span><h3>${ROLE_GROUPS[id]}</h3></div></div><p class="bd-text">OVR là trung bình có trọng số; cầu thủ đá trái vị trí bị tính theo vị trí đang đá.</p>`
+          + bars(weights.map(([k, w]) => [rules.labels[k], w, .7, Math.round(w * 100) + "%"]));
+      }
+    });
   }
-  function renderRulesGuide(container) {
-    const rows = Object.values(gameData.difficulty).map(d => "<tr><td><b>" + d.name + "</b></td><td>" + (d.stats > 0 ? "+" : "") + d.stats + "</td><td>×" + d.tackle + "</td><td>×" + d.intercept + "</td><td>×" + d.finishing + "</td><td>" + (d.keeper > 0 ? "+" : "") + Math.round(d.keeper * 100) + "</td><td>×" + d.think + "</td></tr>").join("");
-    container.innerHTML = '<h2 class="pane-title">Độ khó &amp; luật</h2><h3>Độ khó máy</h3><p class="pane-lead">Chỉ áp dụng cho đội máy khi đấu với máy.</p>'
-      + '<div class="info-table-wrap"><table class="info-table"><thead><tr><th>Mức</th><th>Chỉ số</th><th>Tranh bóng</th><th>Đọc chuyền</th><th>Dứt điểm</th><th>Thủ môn (điểm %)</th><th>Thời gian ra quyết định</th></tr></thead><tbody>' + rows + "</tbody></table></div>"
-      + '<h3>Penalty</h3><ul class="info-list"><li>Sút khác hướng thủ môn đoán luôn vào.</li><li>Đoán đúng: thủ môn có <b>Bắt pen</b> bắt 100% (80% nếu người sút bật <b>Sút pen</b>); không có Bắt pen thì bắt 80% (20% nếu người sút bật Sút pen).</li><li>Chỉ khoảng 30% cầu thủ sân có Sút pen, 50% thủ môn có Bắt pen.</li></ul>'
-      + '<h3>Trận đấu</h3><ul class="info-list"><li>Thời lượng 2–10 phút bóng lăn, hai hiệp đổi sân; hiệp phụ và luân lưu tuỳ chọn.</li><li>Phạt góc chỉ khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra.</li><li>Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc.</li><li>Sau bàn thắng, trọng tài chỉ thổi khi hai đội đã về hết nửa sân nhà.</li><li>Chấn thương: xe cấp cứu đưa đi, không vào lại trận đó.</li></ul>';
+
+  /* Playing styles */
+  const STYLE_HOME = { FW: [.53, .27], MF: [.37, .5], DF: [.2, .3], GK: [.03, .5] };
+  function styleTraits(s) {
+    const t = [], attack = s.phase === "attack";
+    if (attack) {
+      if (s.push > .05) t.push("Dâng cao khi có bóng"); if (s.push < -.03) t.push("Lùi về nhận bóng");
+      if (s.width > 1.15) t.push("Ôm sát biên"); if (s.width < .6 && s.width !== 1) t.push("Đá trung lộ");
+      if (s.swing > 0) t.push("Dạt về phía có bóng"); if (s.swing < 0) t.push("Rình phía xa bóng");
+      if (s.lurk) t.push("Chờ ở rìa vòng cấm"); if (s.roam > 1.2) t.push("Đi khắp mặt sân"); if (s.cap > .1) t.push("Được phép dâng lên");
+      if (s.shoot > 0) t.push("Sút sớm, sút xa"); if (s.dribble > .15) t.push("Thích đi bóng"); if (s.dribble < 0) t.push("Ít rê, chơi một chạm");
+      if (s.cross) t.push("Hay tạt bóng"); if (s.combo > 1.5) t.push("Phối hợp nhiều"); if (s.chain > 1) t.push("Chuyền nhiều nhịp");
+      if (s.long > .4) t.push("Chuyền dài"); if (s.short) t.push("Triển khai ngắn"); if (s.header) t.push("Đánh đầu tốt");
+      if (s.target.through) t.push("Được tìm bằng bóng chọc khe"); if (s.target.box) t.push("Được tạt vào"); if (s.target.long) t.push("Được phất dài tới"); if (s.target.short) t.push("Được chuyền ngắn tới");
+      if (s.line > .02) t.push("Thủ môn đứng cao");
+    } else {
+      if (s.drop > .05) t.push("Đứng cao khi mất bóng"); if (s.drop < -.05) t.push("Lùi sâu khi mất bóng");
+      if (s.press > .3) t.push("Áp sát mạnh"); if (s.press < -.3) t.push("Ít áp sát"); if (s.pressHigh) t.push("Pressing từ tuyến đầu");
+      if (s.outlet) t.push("Điểm nhận bóng phản công"); if (s.tackle) t.push("Vào bóng quyết liệt"); if (s.intercept) t.push("Cắt đường chuyền");
+      if (s.mark) t.push("Kèm người"); if (s.screen) t.push("Che đường bóng tới khung thành"); if (s.roam > 1.2) t.push("Lên xuống liên tục");
+      if (s.width < .6 && s.width !== 1) t.push("Thu vào trung lộ");
+      if (s.line > .03) t.push("Dâng tuyến"); if (s.line < 0) t.push("Đứng thấp"); if (s.rush > 0) t.push("Lao ra sớm"); if (s.rush < 0) t.push("Ít lao ra");
+      if (s.save) t.push("Cứu thua tốt hơn"); if (s.confidence) t.push("Tự tin bắt bóng bổng");
+    }
+    return t;
   }
-  /** The controls section of Game info: every mode's players, redrawn when layouts change. */
+  /** Where a style takes a man compared with his plain position, drawn on a small pitch (his goal at the bottom). */
+  function styleDiagram(s, role) {
+    const home = STYLE_HOME[role], attack = s.phase === "attack";
+    let d = home[0] + (role === "GK" ? s.line * 2 : (attack ? .08 + s.push : -.07 + s.drop)), w = .5 + (home[1] - .5) * s.width;
+    if (attack && s.lurk) d += (.64 - d) * s.lurk;
+    if (!attack && s.screen) { d -= .08 * s.screen; w += (.5 - w) * s.screen; }
+    w += s.swing * .3;
+    const P = ([dd, ww]) => [(8 + ww * 104).toFixed(1), (150 - dd / .75 * 138).toFixed(1)], [x0, y0] = P(home), [x1, y1] = P([clamp(d, .02, .8), clamp(w, .06, .94)]);
+    const ball = s.swing ? `<circle class="sd-ball" cx="104" cy="${(Number(y1) - 14).toFixed(1)}" r="5"/><text class="sd-note" x="104" y="${(Number(y1) - 24).toFixed(1)}">bóng</text>` : "";
+    const roam = s.roam > 1.2 ? `<circle class="sd-roam" cx="${x1}" cy="${y1}" r="${(10 * s.roam).toFixed(1)}"/>` : "";
+    const rush = s.rush > 0 ? `<circle class="sd-roam" cx="${x1}" cy="${y1}" r="${(14 + s.rush * 5).toFixed(1)}"/>` : "";
+    return `<svg class="style-diagram" viewBox="0 0 120 160" role="img" aria-label="Vị trí điển hình"><rect x="4" y="4" width="112" height="152" rx="6"/><path d="M4 80h112M40 156v-16h40v16M40 4v16h40V4"/><circle cx="60" cy="80" r="14"/>${roam}${rush}${ball}`
+      + `<circle class="sd-home" cx="${x0}" cy="${y0}" r="6"/><path class="sd-arrow" d="M${x0} ${y0}L${x1} ${y1}"/><circle class="sd-spot" cx="${x1}" cy="${y1}" r="7" style="fill:${ROLE_COLORS[role]}"/></svg>`;
+  }
+  function renderStyleLegend(container) {
+    makeBrowser(container, {
+      cls: "style-browser", title: "Phong cách chơi",
+      lead: "Mỗi cầu thủ có 1 kiểu khi đội có bóng và 1 kiểu khi mất bóng; chúng quyết định cách đứng, chạy và xử lý bóng.",
+      tabs: () => Object.entries(ROLE_GROUPS).map(([role, labelText]) => ({ label: labelText, items: [["attack", "Khi có bóng"], ["defense", "Khi mất bóng"]].flatMap(([phase, group]) =>
+        Object.entries(gameData.playstyles[phase]).filter(([, s]) => s.roles.includes(role)).map(([id, s]) => ({ key: phase + ":" + id + ":" + role, group,
+          html: `<button type="button" class="br-item style-row" data-br data-nav data-key="${phase}:${id}:${role}"><i class="phase-dot" data-phase="${phase}"></i><span><b>${escapeHtml(s.name)}</b><small>${escapeHtml(s.tag)}</small></span></button>` }))) })),
+      detail: key => {
+        const [phase, id, role] = key.split(":"), s = gameData.playstyles[phase][id];
+        const statRows = Object.entries(s.stats).map(([k, v]) => [gameData.stats.labels[k], Math.abs(v), 10, (v > 0 ? "+" : "") + v, v > 0 ? "high" : "low"]);
+        return `<div class="bd-hero bd-hero-style">${styleDiagram(s, role)}<div><span class="bd-kicker">${phase === "attack" ? "Khi có bóng · tấn công" : "Khi mất bóng · phòng ngự"}</span><h3>${escapeHtml(s.name)}</h3><p class="bd-sub">${escapeHtml(s.tag)}</p>${chip(ROLE_GROUPS[role], ROLE_COLORS[role])}</div></div>`
+          + `<p class="bd-text">${escapeHtml(s.desc)}</p><h4 class="bd-h">Cách chơi</h4><div class="bd-chips">${styleTraits(s).map(x => chip(x)).join("")}</div>`
+          + (statRows.length ? '<h4 class="bd-h">Ảnh hưởng chỉ số</h4>' + bars(statRows) : "");
+      }
+    });
+  }
+
+  /* Keyboard picture, shared by the key layouts and the controls */
+  const KB_ROWS = [
+    ["Escape", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9", "Digit0", "Minus", "Equal"],
+    ["Tab", "KeyQ", "KeyW", "KeyE", "KeyR", "KeyT", "KeyY", "KeyU", "KeyI", "KeyO", "KeyP", "BracketLeft", "BracketRight"],
+    ["KeyA", "KeyS", "KeyD", "KeyF", "KeyG", "KeyH", "KeyJ", "KeyK", "KeyL", "Semicolon", "Quote", "Enter"],
+    ["KeyZ", "KeyX", "KeyC", "KeyV", "KeyB", "KeyN", "KeyM", "Comma", "Period", "Slash"]
+  ];
+  const KB_NAMES = { Escape: "Esc", Tab: "Tab", Enter: "Enter", Space: "Space", ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→" };
+  /** marks: code → { text, slot, hot } */
+  function keyboardHtml(marks, caption = "") {
+    const key = code => {
+      const m = marks.get(code);
+      return `<span class="kb-key" data-code="${code}"${m ? ` data-slot="${m.slot ?? "A"}"` : ""}${m?.hot ? " data-hot" : ""}${code === "Space" ? ' data-wide' : ""}><b>${escapeHtml(KB_NAMES[code] ?? label(code))}</b>${m ? `<small>${escapeHtml(m.text)}</small>` : ""}</span>`;
+    };
+    const missing = [...marks.keys()].filter(code => !KB_ROWS.flat().includes(code) && !["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code));
+    return '<div class="kb" aria-hidden="true">' + KB_ROWS.map((row, i) => `<div class="kb-row" style="--indent:${[0, 0, 1.2, 1.8][i]}">${row.map(key).join("")}</div>`).join("")
+      + `<div class="kb-row kb-bottom"><span class="kb-gap"></span>${key("Space")}<span class="kb-arrows">${key("ArrowUp")}${key("ArrowLeft")}${key("ArrowDown")}${key("ArrowRight")}</span></div></div>`
+      + (missing.length ? `<p class="kb-more">Phím khác: ${missing.map(code => kbd(code) + " " + escapeHtml(marks.get(code).text)).join(" · ")}</p>` : "") + (caption ? `<p class="kb-caption">${caption}</p>` : "");
+  }
+  const SHORT_ACTION = { up: "Lên", down: "Xuống", left: "Trái", right: "Phải", switch: "Đổi", sprint: "Chạy", pass: "Chuyền", shoot: "Sút", press: "Bám", challenge: "Tranh", special: "Skill" };
+  function marksFor(sets, hot = []) {
+    const marks = new Map();
+    for (const [slot, set] of sets) for (const action of keymap.ACTIONS) if (set?.[action]) marks.set(set[action], { text: SHORT_ACTION[action], slot, hot: hot.includes(action) && sets.length === 1 });
+    return marks;
+  }
+
+  /* Controls: one tab per player of each mode, and the menus */
+  const MOVE_GROUP = ["up", "left", "down", "right"];
+  const ACTION_NOTES = {
+    move: "Di chuyển theo hướng màn hình; giữ hướng khi tạm dừng vẫn được nhớ. Penalty và luân lưu: trái, giữa (xuống), phải để chọn hướng sút hoặc đổ người.",
+    switch: "Bấm: chọn cầu thủ gần bóng nhất, kể cả lúc chờ; giữ để đổi liên tục. Khi đang cầm bóng: gọi đồng đội theo hướng mũi tên chạy chỗ thẳng về khung thành.",
+    sprint: "Giữ để chạy nhanh; tốn thể lực nhanh hơn.",
+    pass: "Giữ để nạp lực, thả để chuyền; lực mạnh cho bóng bổng hơn. Cũng dùng để giao bóng và đá phạt. Phạt góc: chọn kiểu " + gameData.corners[0].name.toLowerCase() + ".",
+    shoot: "Có bóng: giữ nạp lực, thả để sút; bấm hai lần nhanh để sút thần sầu (cần 23% thể lực, tốn 18%). Không có bóng: xoạc, tự bám đối thủ trong 5,5 m; trúng thì 50% cướp bóng, 50% thẻ đỏ. Phạt góc: " + gameData.corners[1].name.toLowerCase() + ".",
+    press: "Giữ để bám người cầm bóng, người sắp nhận bóng hoặc bóng tự do; thả là dừng. Phạt góc: " + gameData.corners[2].name.toLowerCase() + ".",
+    challenge: "Bấm khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng. Phạt góc: " + gameData.corners[3].name.toLowerCase() + ".",
+    special: "Dùng skill theo tình huống, tốn 40% thể lực, một lần mỗi trận; penalty dùng trước khi chốt hướng."
+  };
+  const MENU_KEYS = [
+    ["nav", "Chọn trong menu", ["ArrowUp", "ArrowDown", "KeyW", "KeyS"], "↑ ↓ (hoặc W S) di chuyển con trỏ trong mọi menu."],
+    ["side", "Đổi giá trị · đổi đội · đổi trang", ["ArrowLeft", "ArrowRight", "KeyA", "KeyD"], "← → đổi giá trị ở hàng cài đặt, đổi đội trong Kế hoạch trận, đổi trang thông tin cầu thủ."],
+    ["enter", "Xác nhận", ["Enter"], "Mở mục đang chọn; ở màn chuẩn bị là vào sân."],
+    ["space", "Bắt đầu · tạm dừng · tiếp tục", ["Space"], "Trong trận: bắt đầu, tạm dừng và tiếp tục."],
+    ["esc", "Menu trận · quay lại", ["Escape"], "Trong trận mở menu trận; ở các màn khác quay lại màn trước."],
+    ["tabs", "Đổi nhóm", ["KeyQ", "KeyE"], "Q E đổi nhóm trong Thông tin game và đổi mục trong Kế hoạch trận."],
+    ["sub", "Thay người", ["KeyX"], "Trong Kế hoạch trận: chọn người ra và người vào."],
+    ["peek", "Xem nhanh chỉ số", ["Tab"], "Giữ Tab khi đang đá để xem hai thẻ chỉ số mà không dừng trận."]
+  ];
+  function controlsItems(set) {
+    if (!set) return MENU_KEYS.map(([id, title, codes]) => ({ key: "menu:" + id, html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="menu:${id}"><span class="km-cap">${codes.slice(0, 2).map(c => `<kbd>${escapeHtml(KB_NAMES[c] ?? label(c))}</kbd>`).join("")}</span><span><b>${title}</b></span></button>` }));
+    return [{ key: "move", html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="move"><span class="km-cap">${MOVE_GROUP.map(a => kbd(set[a])).join("")}</span><span><b>Di chuyển</b><small>Theo hướng màn hình</small></span></button>` },
+      ...[...GUIDE_ACTIONS, "special"].map(a => ({ key: a, html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="${a}"><span class="km-cap">${kbd(set[a])}</span><span><b>${a === "special" ? "Skill" : GUIDE_LABELS[GUIDE_ACTIONS.indexOf(a)]}</b><small>${a === "special" ? "Bấm" : GUIDE_GESTURES[GUIDE_ACTIONS.indexOf(a)]}</small></span></button>` }))];
+  }
+  function controlsDetail(key, tab) {
+    const set = tab.set;
+    if (!set) {
+      const [, id] = key.split(":"), [, title, codes, text] = MENU_KEYS.find(m => m[0] === id);
+      return `<h3 class="bd-title">${title}</h3><p class="bd-text">${text}</p>` + keyboardHtml(new Map(codes.map(c => [c, { text: title.split(" ")[0], slot: "M", hot: true }])));
+    }
+    const actions = key === "move" ? MOVE_GROUP : [key], title = key === "move" ? "Di chuyển" : key === "special" ? "Skill" : GUIDE_LABELS[GUIDE_ACTIONS.indexOf(key)];
+    return `<h3 class="bd-title">${title} ${actions.map(a => kbd(set[a])).join("")}</h3><p class="bd-text">${ACTION_NOTES[key === "move" ? "move" : key]}</p>` + keyboardHtml(marksFor([[tab.slot, set]], actions), tab.caption ?? "");
+  }
+  function makeControlsBrowser(container, sources, { title = "Điều khiển", lead = "", onLeave } = {}) {
+    return makeBrowser(container, {
+      cls: "controls-browser", title, lead, onLeave,
+      tabs: () => sources().map(src => ({ ...src, items: controlsItems(src.set) })),
+      detail: controlsDetail
+    });
+  }
+  let controlsInfo = null;
   function renderControlsGuide() {
     const pane = document.querySelector('#screen-info .info-pane[data-pane="controls"]');
     if (!pane) return;
     refreshControls("cpu"); refreshControls("local");
-    const cpu = bindingsOf("cpu"), local = bindingsOf("local");
-    if (!pane.dataset.built) {
-      pane.dataset.built = "1";
-      pane.innerHTML = '<h2 class="pane-title">Điều khiển</h2><p class="pane-lead"><kbd>Space</kbd> bắt đầu, tạm dừng, tiếp tục · <kbd>Esc</kbd> mở menu trận, quay lại màn trước · giữ <kbd>Tab</kbd> trong trận: xem nhanh chỉ số · trong menu: <kbd>↑</kbd><kbd>↓</kbd> chọn, <kbd>←</kbd><kbd>→</kbd> đổi, <kbd>Enter</kbd> xác nhận · đổi phím ở mục Layout phím.</p>'
-        + '<div class="guide-block"><h3>Đấu với máy · Bạn</h3><div class="controls"><article><div class="pad-help" data-slot="A" data-mode="cpu"></div></article></div><div class="advanced" data-slot="A" data-mode="cpu" data-title="Bạn"></div></div>'
-        + '<div class="guide-block"><h3>Hai người</h3><div class="controls"><article><div class="pad-help" data-slot="A" data-mode="local"></div></article><article><div class="pad-help" data-slot="B" data-mode="local"></div></article></div><div class="advanced-grid"><div class="advanced" data-slot="A" data-mode="local"></div><div class="advanced" data-slot="B" data-mode="local"></div></div></div>';
-    }
-    for (const guide of pane.querySelectorAll(".pad-help")) renderGuide(guide, (guide.dataset.mode === "cpu" ? cpu : local)[guide.dataset.slot]);
-    for (const notes of pane.querySelectorAll(".advanced")) renderAdvanced(notes, (notes.dataset.mode === "cpu" ? cpu : local)[notes.dataset.slot]);
+    if (!controlsInfo) controlsInfo = makeControlsBrowser(pane, () => [
+      { label: "Đấu với máy", slot: "A", set: bindingsOf("cpu").A, caption: "Bạn · đấu với máy" },
+      { label: "Hai người · A", slot: "A", set: bindingsOf("local").A, caption: "Người A" },
+      { label: "Hai người · B", slot: "B", set: bindingsOf("local").B, caption: "Người B" },
+      { label: "Trong menu", slot: "M", set: null }
+    ], { lead: "Đổi phím ở mục Layout phím. Space: bắt đầu, tạm dừng, tiếp tục · Esc: menu trận, quay lại · giữ Tab: xem nhanh chỉ số." });
+    else controlsInfo.render();
   }
+
+  /* Difficulty and rules */
+  const RULE_ITEMS = [
+    ["time", "Thời lượng", "2–10 phút bóng lăn, hai hiệp, đổi sân giữa hiệp. Hiệp phụ và luân lưu tuỳ chọn ở màn chuẩn bị."],
+    ["corner", "Phạt góc", "Chỉ có phạt góc khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra. Người đá góc chọn một trong bốn kiểu: " + gameData.corners.map(c => c.name.toLowerCase()).join(", ") + "."],
+    ["free", "Đá phạt", "Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc, dù người đá chờ bao lâu."],
+    ["goal", "Sau bàn thắng", "Trọng tài chỉ thổi giao bóng khi hai đội đã về hết nửa sân nhà."],
+    ["cards", "Thẻ phạt", "Tranh bóng: 30% lỗi nhẹ, 15% lỗi đáng thẻ vàng, 5% lỗi nặng. Xoạc trúng người: 50% cướp bóng, 50% thẻ đỏ."],
+    ["injury", "Chấn thương", "Xe cấp cứu đưa đi, không vào lại trận đó; đôi khi quay lại ngồi ghế dự bị với băng gạc. Luôn có người dự bị vào thay nếu còn."],
+    ["subs", "Thay người", "Chỉ lúc bóng chết. Tự động thay người là tùy chọn; tự chọn trong Kế hoạch trận (trước giờ bóng lăn đổi ngay)."],
+    ["tactics", "Chiến thuật", "Sơ đồ bạn chọn được giữ nguyên; bật Tự động đổi chiến thuật để máy đổi theo tỉ số. Bị đuổi người thì đội tự bớt một vị trí cùng kiểu."]
+  ];
+  const PEN_ITEMS = [
+    ["wrong", "Thủ môn đoán sai hướng", 100, "Sút khác hướng thủ môn đổ người luôn vào lưới."],
+    ["saver", "Đoán đúng · thủ môn có Bắt pen", 0, "Thủ môn có Bắt pen đoán đúng thì bắt được 100%; nếu người sút bật Sút pen thì còn bắt 80% (20% vào)."],
+    ["plain", "Đoán đúng · không có Bắt pen", 20, "Thủ môn không có Bắt pen đoán đúng thì bắt 80%; người sút bật Sút pen thì chỉ còn bắt 20% (80% vào)."],
+    ["who", "Ai có skill penalty", 30, "Chỉ khoảng 30% cầu thủ sân có Sút pen và 50% thủ môn có Bắt pen."]
+  ];
+  function renderRulesGuide(container) {
+    const levels = gameData.difficulty;
+    makeBrowser(container, {
+      cls: "rules-browser", title: "Độ khó &amp; luật",
+      lead: "Độ khó chỉ áp dụng cho đội máy khi đấu với máy; đội của bạn không đổi.",
+      tabs: () => [
+        { label: "Độ khó", items: Object.entries(levels).map(([id, d]) => ({ key: "level:" + id, html: `<button type="button" class="br-item level-row" data-br data-nav data-key="level:${id}" data-level-id="${id}"><b class="level-dot"></b><span><b>${d.name}</b><small>${(d.stats > 0 ? "+" : "") + d.stats} chỉ số đội máy</small></span></button>` })) },
+        { label: "Penalty", items: PEN_ITEMS.map(([id, title]) => ({ key: "pen:" + id, html: `<button type="button" class="br-item rule-row" data-br data-nav data-key="pen:${id}"><span><b>${title}</b></span></button>` })) },
+        { label: "Trận đấu", items: RULE_ITEMS.map(([id, title]) => ({ key: "rule:" + id, html: `<button type="button" class="br-item rule-row" data-br data-nav data-key="rule:${id}"><span><b>${title}</b></span></button>` })) }
+      ],
+      detail: key => {
+        const [kind, id] = key.split(":");
+        if (kind === "level") {
+          const d = levels[id];
+          return `<div class="bd-hero"><b class="bd-code" data-level-id="${id}">${d.name.slice(0, 1)}</b><div><span class="bd-kicker">Độ khó máy</span><h3>${d.name}</h3></div></div>`
+            + bars([["Chỉ số cả đội", d.stats + 10, 20, (d.stats > 0 ? "+" : "") + d.stats], ["Tranh bóng", d.tackle, 1.6, "×" + d.tackle], ["Đọc đường chuyền", d.intercept, 1.6, "×" + d.intercept], ["Dứt điểm", d.finishing, 1.3, "×" + d.finishing], ["Thủ môn", d.keeper + .1, .2, (d.keeper > 0 ? "+" : "") + Math.round(d.keeper * 100) + " điểm %"], ["Ra quyết định", 2 - d.think, 1.6, d.think === 1 ? "bình thường" : d.think > 1 ? "chậm " + Math.round((d.think - 1) * 100) + "%" : "nhanh " + Math.round((1 - d.think) * 100) + "%"]]);
+        }
+        if (kind === "pen") {
+          const [, title, goal, text] = PEN_ITEMS.find(p => p[0] === id);
+          return `<h3 class="bd-title">${title}</h3><div class="bd-gauge" style="--v:${goal}"><b>${goal}%</b><small>${id === "who" ? "cầu thủ sân có Sút pen" : "khả năng vào lưới"}</small></div><p class="bd-text">${text}</p>`;
+        }
+        const [, title, text] = RULE_ITEMS.find(r => r[0] === id);
+        return `<h3 class="bd-title">${title}</h3><p class="bd-text">${text}</p>`;
+      }
+    });
+  }
+
   /** Redraws every key hint in a mode's panel (pitch guide, controls sheet, skill keys) from the layouts in use. */
   function renderPanelKeys(panel) {
     const mode = panel.dataset.mode;
     refreshControls(mode);
     const bindings = bindingsOf(mode);
     for (const guide of panel.querySelectorAll(".pad-help")) if (bindings[guide.dataset.slot]) renderGuide(guide, bindings[guide.dataset.slot]);
-    for (const details of panel.querySelectorAll(".advanced")) if (bindings[details.dataset.slot]) renderAdvanced(details, bindings[details.dataset.slot]);
+    panel.controlsBrowser?.render();
     for (const special of panel.querySelectorAll(".special-button kbd")) {
       const slot = special.closest("[data-slot]").dataset.slot;
       if (bindings[slot]) special.textContent = label(bindings[slot].special);
@@ -400,7 +687,7 @@
   const PROMPTS = {
     menu: [["↑ ↓", "Chọn"], ["Enter", "Vào", "enter"]],
     setup: [["↑ ↓", "Chọn mục"], ["← →", "Đổi"], ["Enter", "Vào sân", "start"], ["Esc", "Quay lại", "back"]],
-    info: [["↑ ↓", "Chọn mục"], ["→", "Đọc nội dung"], ["Esc", "Quay lại", "back"]]
+    info: [["↑ ↓ ← →", "Chọn"], ["Q E", "Đổi nhóm"], ["Enter", "Chọn / đổi phím"], ["Esc", "Quay lại", "back"]]
   };
   const promptBar = game.querySelector(".prompt-bar");
   function renderPrompts(screen) {
@@ -1074,49 +1361,65 @@
   const renderKeymaps = () => { for (const render of keymapRenders) render(); };
   /** The key-layout editor (Game info · Layout phím): pick a layout, rebind, overwrite or save as new, assign. */
   function setupKeymapEditor(container) {
-    const targets = [["cpu", "A", "Đấu máy · Bạn"], ["local", "A", "Hai người · A"], ["local", "B", "Hai người · B"]];
-    const editor = document.createElement("div"); editor.className = "keymap";
-    editor.innerHTML = '<h2 class="pane-title">Layout phím</h2><p class="pane-lead">Lưu trong trình duyệt này. Chọn layout, bấm vào ô phím rồi nhấn phím mới (<kbd>Esc</kbd> để hủy). Không dùng được Space, Esc, Tab, Ctrl/Alt và F1–F12; phím trùng trong layout sẽ được hoán đổi.</p>'
-      + '<div class="keymap-head"><label>Layout đang sửa <select class="keymap-edit" aria-label="Chọn layout để sửa"></select></label><label>Tên <input class="keymap-name" maxlength="40" autocomplete="off"></label></div>'
-      + '<div class="keymap-grid">' + keymap.ACTIONS.map(action => '<div class="keymap-row"><span>' + keymap.LABELS[action] + '</span><button type="button" class="keymap-key" data-action="' + action + '"></button></div>').join("") + "</div>"
+    const targets = [["cpu", "A", "Đấu với máy · Bạn"], ["local", "A", "Hai người · A"], ["local", "B", "Hai người · B"]];
+    const arrow = (cls, text, d) => `<button type="button" class="opt-arrow ${cls}" tabindex="-1" aria-label="${text}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg></button>`;
+    const editor = document.createElement("div"); editor.className = "keymap browser keymap-browser";
+    editor.innerHTML = '<header class="br-head"><h2 class="pane-title">Layout phím</h2><p class="pane-lead">Lưu trong trình duyệt này. Chọn một phím, nhấn <kbd>Enter</kbd> rồi bấm phím mới (<kbd>Esc</kbd> để hủy). Không dùng được Space, Esc, Tab, Ctrl/Alt và F1–F12; phím đã có trong layout sẽ được hoán đổi.</p></header>'
+      + '<div class="br-body"><div class="br-list keymap-list">'
+      + '<div class="opt keymap-pick" data-br data-nav data-side tabindex="0" role="slider" aria-label="Layout đang sửa"><span class="opt-label">Layout đang sửa</span>' + arrow("opt-prev", "Layout trước", "M15 5l-7 7 7 7") + '<span class="opt-value"></span>' + arrow("opt-next", "Layout sau", "M9 5l7 7-7 7") + "</div>"
+      + '<label class="opt keymap-name-row"><span class="opt-label">Tên layout</span><input class="keymap-name" data-br data-nav maxlength="40" autocomplete="off" aria-label="Tên layout"></label>'
+      + '<p class="br-sep">Phím</p><div class="keymap-grid">' + keymap.ACTIONS.map(action => `<button type="button" class="br-item keymap-key" data-br data-nav data-action="${action}"><span class="km-label">${keymap.LABELS[action]}</span><span class="km-cap"></span></button>`).join("") + "</div>"
       + '<p class="keymap-status" role="status"></p>'
-      + '<div class="keymap-actions"><button type="button" class="secondary keymap-save">Ghi đè layout</button><button type="button" class="secondary keymap-save-new">Lưu thành layout mới</button><button type="button" class="secondary keymap-restore">Khôi phục gốc</button><button type="button" class="secondary keymap-delete">Xóa layout</button></div>'
-      + '<h3>Dùng layout đang sửa cho</h3><div class="keymap-actions keymap-targets">' + targets.map(([mode, slot, name]) => '<button type="button" class="secondary keymap-use" data-mode="' + mode + '" data-slot="' + slot + '">' + name + "</button>").join("") + "</div>";
+      + '<p class="br-sep">Lưu</p><div class="keymap-actions"><button type="button" class="menu-item keymap-save" data-br data-nav>Ghi đè layout</button><button type="button" class="menu-item keymap-save-new" data-br data-nav>Lưu thành layout mới</button><button type="button" class="menu-item keymap-restore" data-br data-nav>Khôi phục gốc</button><button type="button" class="menu-item keymap-delete" data-br data-nav>Xóa layout</button></div>'
+      + '<p class="br-sep">Dùng layout này cho</p><div class="keymap-actions keymap-targets">' + targets.map(([mode, slot, name]) => `<button type="button" class="menu-item keymap-use" data-br data-nav data-mode="${mode}" data-slot="${slot}" data-name="${name}"><span class="menu-item-text">${name}<b class="toggle-state"></b></span></button>`).join("") + "</div>"
+      + '</div><aside class="br-detail keymap-preview" aria-hidden="true"></aside></div>';
     container.append(editor);
-    const editSelect = editor.querySelector(".keymap-edit"), nameInput = editor.querySelector(".keymap-name"), status = editor.querySelector(".keymap-status");
-    let editingId = keymap.assigned("cpu", "A").id, draft = null, dirty = false;
+    const pick = editor.querySelector(".keymap-pick"), nameInput = editor.querySelector(".keymap-name"), status = editor.querySelector(".keymap-status"), preview = editor.querySelector(".keymap-preview");
+    let editingId = keymap.assigned("cpu", "A").id, draft = null, dirty = false, hot = null;
     const say = (message, tone = "") => { status.textContent = message; status.dataset.tone = tone; };
+    const layoutName = layout => layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : "");
     function loadDraft(id) {
       const layout = keymap.get(id) ?? keymap.assigned("cpu", "A");
       editingId = layout.id; draft = { ...layout.keys }; dirty = false; nameInput.value = layout.name;
     }
+    function drawPreview() {
+      const used = targets.filter(([mode, slot]) => keymap.assigned(mode, slot)?.id === editingId).map(t => t[2]);
+      preview.innerHTML = `<h3 class="bd-title">${escapeHtml(nameInput.value || "Layout")}${dirty ? ' <span class="bd-chip" style="--chip:#d29b10">Chưa lưu</span>' : ""}</h3>`
+        + keyboardHtml(marksFor([["A", draft]], hot ? [hot] : []))
+        + '<div class="bd-chips">' + (used.length ? used.map(u => chip("Đang dùng: " + u, "#3db86b")).join("") : chip("Chưa dùng cho chế độ nào")) + "</div>";
+    }
     function render() {
       if (!keymap.get(editingId)) loadDraft(keymap.assigned("cpu", "A").id);
-      editSelect.replaceChildren(...keymap.list().map(layout => new Option(layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : ""), layout.id)));
-      editSelect.value = editingId;
+      const layouts = keymap.list(), at = layouts.findIndex(l => l.id === editingId), layout = keymap.get(editingId);
+      writeText(pick.querySelector(".opt-value"), layoutName(layout));
+      pick.dataset.value = editingId; pick.setAttribute("aria-valuetext", layoutName(layout)); pick.setAttribute("aria-valuenow", String(at)); pick.setAttribute("aria-valuemax", String(layouts.length - 1));
       for (const button of editor.querySelectorAll(".keymap-key")) {
         const listening = capture?.button === button;
         button.classList.toggle("is-listening", listening);
-        button.innerHTML = listening ? "Nhấn phím…" : kbd(draft[button.dataset.action]);
+        button.querySelector(".km-cap").innerHTML = listening ? "Nhấn phím…" : kbd(draft[button.dataset.action]);
       }
-      const layout = keymap.get(editingId);
       editor.querySelector(".keymap-delete").hidden = layout.builtIn;
       editor.querySelector(".keymap-restore").hidden = !layout.builtIn;
       editor.querySelector(".keymap-restore").disabled = keymap.isOriginal(editingId) && !dirty;
       editor.querySelector(".keymap-save").textContent = dirty ? "Ghi đè layout *" : "Ghi đè layout";
-      for (const use of editor.querySelectorAll(".keymap-use")) use.classList.toggle("is-current", keymap.assigned(use.dataset.mode, use.dataset.slot).id === editingId);
+      for (const use of editor.querySelectorAll(".keymap-use")) {
+        const on = keymap.assigned(use.dataset.mode, use.dataset.slot).id === editingId;
+        use.classList.toggle("is-current", on); use.setAttribute("aria-pressed", String(on));
+        writeText(use.querySelector(".toggle-state"), on ? "Đang dùng" : "Dùng");
+      }
+      drawPreview();
+    }
+    async function stepLayout(dir) {
+      const layouts = keymap.list(), at = layouts.findIndex(l => l.id === editingId), next = layouts[(at + dir + layouts.length) % layouts.length];
+      if (!next || next.id === editingId) return;
+      if (dirty && !await gameConfirm("Bỏ các thay đổi chưa lưu của layout đang sửa?", "Bỏ thay đổi")) return;
+      loadDraft(next.id); say(""); render();
     }
     loadDraft(editingId);
     keymapRenders.add(render);
-    editSelect.addEventListener("change", async () => {
-      const chosen = editSelect.value;
-      if (dirty) {
-        editSelect.value = editingId;
-        if (!await gameConfirm("Bỏ các thay đổi chưa lưu của layout đang sửa?", "Bỏ thay đổi")) return;
-      }
-      loadDraft(chosen); say(""); render();
-    });
+    pick.addEventListener("click", event => { focusOn(pick); stepLayout(event.target.closest(".opt-prev") ? -1 : 1); });
     nameInput.addEventListener("input", () => { dirty = true; render(); });
+    editor.addEventListener("focusin", event => { const key = event.target.closest(".keymap-key"); const next = key?.dataset.action ?? null; if (next !== hot) { hot = next; drawPreview(); } });
     for (const button of editor.querySelectorAll(".keymap-key")) button.addEventListener("click", () => {
       capture = capture?.button === button ? null : { button, assign: code => {
         const action = button.dataset.action, previous = draft[action];
@@ -1124,7 +1427,7 @@
         draft[action] = code;
         if (other) draft[other] = previous;
         dirty = true;
-        say(other ? "Đã hoán đổi: " + keymap.LABELS[action] + " = " + label(code) + ", " + keymap.LABELS[other] + " = " + label(previous) + "." : keymap.LABELS[action] + " = " + label(code) + ". Nhớ bấm “Ghi đè layout” để lưu.");
+        say(other ? "Đã hoán đổi: " + keymap.LABELS[action] + " = " + label(code) + ", " + keymap.LABELS[other] + " = " + label(previous) + "." : keymap.LABELS[action] + " = " + label(code) + ". Nhớ chọn “Ghi đè layout” để lưu.");
       } };
       render();
     });
@@ -1147,7 +1450,7 @@
       if (dirty) store(editingId);
       if (dirty) return;
       const result = keymap.assign(use.dataset.mode, use.dataset.slot, editingId);
-      say(result.ok ? use.textContent + " dùng “" + keymap.get(editingId).name + "”." : "Không dùng được: trùng phím " + result.clash.map(label).join(", ") + " với người còn lại.", result.ok ? "ok" : "error");
+      say(result.ok ? use.dataset.name + " dùng “" + keymap.get(editingId).name + "”." : "Không dùng được: trùng phím " + result.clash.map(label).join(", ") + " với người còn lại.", result.ok ? "ok" : "error");
     });
     editor.querySelector(".keymap-restore").addEventListener("click", () => {
       const result = keymap.restore(editingId);
@@ -1159,7 +1462,9 @@
       if (!layout || layout.builtIn || !await gameConfirm("Xóa layout “" + layout.name + "”?", "Xóa")) return;
       if (editingId !== layout.id) return;
       keymap.remove(editingId); loadDraft(keymap.assigned("cpu", "A").id); say("Đã xóa “" + layout.name + "”.", "ok"); render();
+      focusOn(pick);
     });
+    browserKeys(editor, { onSide: (row, dir) => stepLayout(dir), onLeave: leaveToNav });
     render();
   }
   // While a key cell is listening, the next key press is the new binding and nothing else sees it.
@@ -1195,7 +1500,10 @@
     buildSheet(arena, "squad", "Chỉ số nhanh", SQUAD_SHEET);
     panel.planView = { panel, arena, planUI: null, get api() { return sessions.get(mode)?.api; }, get options() { return sessions.get(mode)?.options; } };
     buildPlanSheet(panel.planView);
-    buildSheet(arena, "controls", "Điều khiển trận này", '<div class="controls">' + slots.map(slot => '<article><div class="pad-help" data-slot="' + slot + '"></div></article>').join("") + '</div><div class="advanced-grid">' + slots.map(slot => '<div class="advanced" data-slot="' + slot + '"' + (mode === "cpu" ? ' data-title="Bạn"' : "") + "></div>").join("") + '</div><p class="sheet-tip">Giữ <kbd>Tab</kbd> trong trận để xem nhanh chỉ số · <kbd>Space</kbd> tạm dừng / tiếp tục · đổi phím ở Thông tin game → Layout phím.</p>');
+    const controlsSheet = buildSheet(arena, "controls", "Điều khiển trận này", '<div class="sheet-controls"></div>');
+    controlsSheet.classList.add("browser-sheet");
+    panel.controlsBrowser = makeControlsBrowser(controlsSheet.querySelector(".sheet-controls"), () => [...slots.map(slot => ({ label: mode === "cpu" ? "Bạn" : "Người " + slot, slot, set: bindingsOf(mode)[slot], caption: mode === "cpu" ? "Bạn" : "Người " + slot })), { label: "Trong menu", slot: "M", set: null }],
+      { title: "", lead: "Giữ <kbd>Tab</kbd> trong trận để xem nhanh chỉ số · <kbd>Space</kbd> tạm dừng, tiếp tục · đổi phím ở Thông tin game → Layout phím.", onLeave: () => false });
     syncSupport(panel);
     panel.overlay.addEventListener("click", event => {
       const button = event.target.closest("[data-act]"), act = button?.dataset.act, session = sessions.get(mode);
@@ -1206,7 +1514,7 @@
         session.api.setSupport(panel.setup.values.support);
         syncSupport(panel); renderSetup(panel);
       } else if (act === "plan") openPlan(panel.planView, button);
-      else if (act === "controls") openSheet(session, act, button);
+      else if (act === "controls") { openSheet(session, act, button); panel.controlsBrowser.render(false); focusOn(arena.querySelector('.sheet[data-sheet="controls"] .br-item')); }
       else if (act === "restart") startMatch(panel);
       else if (act === "setup") go(mode);
       else if (act === "info") go("info/skills");
@@ -1317,7 +1625,7 @@
       const nav = infoScreen.querySelector(".info-nav"), panes = infoScreen.querySelector(".info-panes");
       if (nav.contains(active) || active === document.body || !active) {
         if (vertical) { handled(); const tab = moveFocus(nav, delta); if (tab) go("info/" + tab.dataset.pane); }
-        else if (dir === "right") { handled(); focusOn(panes); }
+        else if (dir === "right") { handled(); const pane = infoScreen.querySelector(".info-pane:not([hidden])"); focusOn(spatial(pane, null, "down") ?? panes); }
       } else if (active === panes && dir === "left") { handled(); focusOn(nav.querySelector(".is-current")); }
     }
   });
@@ -1329,7 +1637,7 @@
     if (event.pointerType !== "mouse" || at === lastPointer) return;
     lastPointer = at;
     if (document.activeElement?.matches?.("input, select, textarea")) return;
-    const item = event.target.closest(".menu-item, .opt, .info-nav a, .setup .start, .sheet-back, .plan-row, .plan-shape[data-nav], .plan-toggle");
+    const item = event.target.closest(".menu-item, .opt, .info-nav a, .setup .start, .sheet-back, .plan-row, .plan-shape[data-nav], .plan-toggle, .br-item, .keymap-pick");
     if (item && item !== document.activeElement && !item.closest("[hidden]") && !capture) focusOn(item);
   });
 
