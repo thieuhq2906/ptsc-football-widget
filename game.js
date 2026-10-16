@@ -57,7 +57,7 @@
     const skillItem = ([kind, skill]) => {
       const context = skill.auto ? "Tự bật khi bị tấn công" : skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
       const badge = skillBadge(kind, skill.icon, `legend-${panel.dataset.mode}-${kind}`);
-      return `<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">${badge}</svg><span><b>${escapeHtml(skill.short)}</b><small>${escapeHtml(skill.name)} · ${skill.roles.map(r => roles[r]).join(", ")} · ${escapeHtml(context)}</small></span></div>`;
+      return `<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">${badge}</svg><span><b>${escapeHtml(skill.short)} <em>${escapeHtml(skill.name)}</em></b><small>${escapeHtml(skill.desc ?? "")}</small><small class="skill-when">${escapeHtml(context)}</small></span></div>`;
     };
     const skills = Object.entries(gameData.skills);
     const legend = document.createElement("details"); legend.className = "advanced skill-legend"; legend.open = true;
@@ -79,7 +79,7 @@
     session.rosterKey = key;
     const roles = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" }, keys = gameData.stats.keys;
     const cell = v => `<td data-level="${v >= 80 ? "high" : v >= 65 ? "mid" : "low"}">${v}</td>`;
-    const table = (t, list) => `<div class="roster-team" data-team="${t}"><h3>Đội ${names[t]}</h3><div class="roster-scroll"><table><thead><tr><th>#</th><th>Cầu thủ</th><th>VT</th><th>OVR</th>${keys.map(k => `<th title="${gameData.stats.labels[k]}">${gameData.stats.short[k]}</th>`).join("")}<th>Lối chơi (tấn công · phòng ngự)</th></tr></thead><tbody>${list.map(p => `<tr class="${p.onPitch ? "" : "is-bench"}"><td>${p.num}</td><td>${escapeHtml(p.name)}${p.onPitch ? "" : " <small>dự bị</small>"}</td><td>${roles[p.role] ?? p.role}</td><td class="ovr">${p.ovr ?? "–"}</td>${keys.map(k => cell(p.stats[k])).join("")}<td class="styles">${escapeHtml(p.attack)} · ${escapeHtml(p.defense)}</td></tr>`).join("")}</tbody></table></div></div>`;
+    const table = (t, list) => `<div class="roster-team" data-team="${t}"><h3>Đội ${names[t]}</h3><div class="roster-scroll"><table><thead><tr><th>#</th><th>Cầu thủ</th><th>VT</th><th>OVR</th><th title="Chiều cao">CAO</th><th title="Cân nặng">NẶNG</th>${keys.map(k => `<th title="${gameData.stats.labels[k]}">${gameData.stats.short[k]}</th>`).join("")}<th>Skill</th><th>Lối chơi (tấn công · phòng ngự)</th></tr></thead><tbody>${list.map(p => `<tr class="${p.onPitch ? "" : "is-bench"}"><td>${p.num}</td><td>${escapeHtml(p.name)}${p.onPitch ? "" : " <small>dự bị</small>"}</td><td>${roles[p.role] ?? p.role}</td><td class="ovr">${p.ovr ?? "–"}</td><td>${p.body.height}</td><td>${p.body.weight}</td>${keys.map(k => cell(p.stats[k])).join("")}<td class="styles">${escapeHtml(p.skillName)}${p.penaltySkill ? " · " + escapeHtml(gameData.skills[p.penaltySkill].short) : ""}</td><td class="styles">${escapeHtml(p.attack)} · ${escapeHtml(p.defense)}</td></tr>`).join("")}</tbody></table></div></div>`;
     session.panel.querySelector(".roster-body").innerHTML = Object.entries(roster).map(([t, list]) => table(t, list)).join("");
     session.panel.querySelector(".roster").hidden = false;
   }
@@ -330,7 +330,8 @@
         writeText(cell.querySelector("i"), value);
         cell.dataset.level = value >= 80 ? "high" : value >= 65 ? "mid" : "low";
       }
-      writeText(card.querySelector(".style-description"), player.style ? `Tấn công: ${player.style.attack.name} (${player.style.attack.en}) · Phòng ngự: ${player.style.defense.name} (${player.style.defense.en})` : "");
+      const build = player.body ? ` · ${(player.body.height / 100).toFixed(2).replace(".", "m")} · ${player.body.weight}kg` : "";
+      writeText(card.querySelector(".style-description"), player.style ? `Tấn công: ${player.style.attack.name} (${player.style.attack.en}) · Phòng ngự: ${player.style.defense.name} (${player.style.defense.en})${build}` : "");
       card.querySelector(".style-description").title = player.style ? `${player.style.attack.desc} ${player.style.defense.desc}` : "";
       writeText(card.querySelector(".skill-description"), `${set ? label(set.special) : ""} · ${skill.name} · ${category} · ${skillState}`);
       const side = state.leftTeam === player.team ? "trái" : "phải";

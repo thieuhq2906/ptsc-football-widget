@@ -217,6 +217,9 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
 .skill-legend-item svg { flex: none; width: 40px; height: 40px; }
 .skill-legend-item b { display: block; font-size: 13px; }
 .skill-legend-item small { display: block; font-size: 11px; line-height: 1.4; color: #586072; }
+.skill-legend-item b em { font-style: normal; font-weight: 600; font-size: 11px; color: #788172; }
+.skill-legend-item .skill-when { margin-top: 2px; font-weight: 700; color: #48693a; }
+.skill-legend-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; }
 .style-legend { margin-top: 16px; }
 .legend-group h3 { margin: 16px 0 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #48693a; }
 .style-zone { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 16px; margin-top: 8px; }

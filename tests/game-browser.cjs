@@ -541,7 +541,7 @@ const server = http.createServer((req, res) => {
     assert(penaltyScene.shooter && penaltyScene.keeper, "Penalty actors are drawn with the match rig and shirt numbers");
     assert(penaltyScene.restartHidden, "Restart hints must not overlap the penalty choices");
     assert.equal(earlyMessage, "Sút…", "The result stays hidden while the ball is in flight");
-    assert.match(await page.locator("#panel-local .penalty-message").textContent(), /VÀO|CẢN|CỨU/);
+    assert.match(await page.locator("#panel-local .penalty-message").textContent(), /VÀO|CẢN|CỨU|BẮT/);
     await page.locator("#panel-local .arena").screenshot({ path: path.join(artifacts, "penalty.png") });
     console.log("PASS penalty scene in match style, hidden result until the ball arrives, no overlapping hints");
 
@@ -676,6 +676,127 @@ const server = http.createServer((req, res) => {
     assert(ratings.roster.B.some(p => p.name === "Vũ"), "A team without custom data keeps the default squad");
     assert(await page.locator("#panel-local .roster table").count() === 2, "Both squads are listed with ratings");
     console.log("PASS player ratings: ten per player in range, shaped by playing styles, squads as data with fixed ratings, roster tables");
+
+    // Skills: always work, defensive ones last half as long again, and positions sometimes get the other kind.
+    const skillMix = await page.evaluate(() => {
+      const rules = PTSCFootball.data.skillRules, skills = PTSCFootball.data.skills, rows = [];
+      let uses = 0, successes = 0;
+      for (let seed = 1; seed <= 30; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { seed, still: 0, fonts: "none" });
+        for (const list of Object.values(api.roster())) rows.push(...list.filter(p => p.onPitch).map(p => ({ role: p.role, skill: p.skill, pen: p.penaltySkill })));
+        if (seed <= 6) { for (let i = 0; i < 1200 && !api.status().ended; i++) api.__step(.25); const st = api.__stats(); uses += st.specialUses ?? 0; successes += st.specialFired ?? 0; }
+        api.destroy(); host.remove();
+      }
+      const isAttack = id => skills[id]?.contexts.includes("attack");
+      return { rules, rows, uses, successes, attackingDefenders: rows.filter(r => r.role === "DF" && isAttack(r.skill)).length, attackingKeepers: rows.filter(r => r.role === "GK" && isAttack(r.skill)).length,
+        keepers: rows.filter(r => r.role === "GK").length, savers: rows.filter(r => r.role === "GK" && r.pen === "penaltySaver").length,
+        outfield: rows.filter(r => r.role !== "GK").length, shooters: rows.filter(r => r.role !== "GK" && r.pen === "penaltyFinisher").length };
+    });
+    assert.equal(skillMix.rules.defenseDuration, skillMix.rules.duration * 1.5, "Defensive skills last 50% longer than attacking ones");
+    assert(skillMix.uses > 0 && skillMix.successes === skillMix.uses, "Every skill used fires: " + JSON.stringify({ uses: skillMix.uses, successes: skillMix.successes }));
+    assert(skillMix.attackingDefenders > 0 && skillMix.attackingKeepers > 0, "Defenders and keepers sometimes carry attacking skills");
+    const saverShare = skillMix.savers / skillMix.keepers, shooterShare = skillMix.shooters / skillMix.outfield;
+    assert(saverShare > .3 && saverShare < .7 && shooterShare > .15 && shooterShare < .45, "Penalty specialists are a minority: " + JSON.stringify({ saverShare, shooterShare }));
+    console.log("PASS skills always work, defensive skills last longer, mixed skills by position, rare penalty specialists");
+
+    // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
+    const skillShots = await page.evaluate(() => {
+      const results = [];
+      for (let seed = 1; seed <= 160 && results.length < 40; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none" });
+        for (let i = 0; i < 300; i++) {
+          __stepPlay(api, .05);
+          const p = api.status().players.find(x => x.hasBall && x.ready && x.special.ready && x.special.kind === "finisher");
+          if (!p) continue;
+          const before = api.status().score, fired = api.action(p.slot, "special");
+          let goal = false, said = [];
+          for (let k = 0; k < 40 && !goal; k++) { api.__step(.1); const st = api.__state(); if (st.callout) said.push(st.callout); goal = api.status().score.R + api.status().score.B > before.R + before.B; }
+          results.push({ fired, goal, failed: said.some(t => /không thành công|chưa thành công/i.test(t)) });
+          break;
+        }
+        api.destroy(); host.remove();
+      }
+      return { n: results.length, fired: results.filter(r => r.fired).length, goals: results.filter(r => r.goal).length, failed: results.filter(r => r.failed).length };
+    });
+    assert(skillShots.n >= 10, "Enough skill shots sampled: " + JSON.stringify(skillShots));
+    assert.equal(skillShots.fired, skillShots.n, "Pressing a ready skill always fires it");
+    assert.equal(skillShots.failed, 0, "No 'skill failed' message");
+    const goalRate = skillShots.goals / skillShots.n;
+    assert(goalRate > .4 && goalRate < .95, "Skill shots score about 70% of the time, not always: " + JSON.stringify(skillShots));
+    console.log(`PASS skill shots always fire and score ${Math.round(goalRate * 100)}% (${skillShots.goals}/${skillShots.n})`);
+
+    // Penalties: wrong guess always scores; a right guess is saved 100/80% by a skilled keeper, 80/20% otherwise.
+    const penaltyOdds = await page.evaluate(() => {
+      const kicks = [];
+      for (let seed = 1; seed <= 40; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none" });
+        api.__step(1); api.__penalties();
+        for (let i = 0; i < 400 && !api.status().ended; i++) {
+          const s = api.status(), p = s.penalty;
+          if (p?.phase === "choose") {
+            const shooter = p.players.find(x => x.role === "attack");
+            if (i % 2) api.action(shooter.slot, "special");
+            const dir = ["left", "center", "right"][i % 3];
+            api.choosePenalty("A", dir); api.choosePenalty("B", i % 5 === 0 ? (dir === "left" ? "right" : "left") : dir);
+          }
+          api.__step(.5);
+        }
+        kicks.push(...(api.__stats().penaltyKicks ?? []));
+        api.destroy(); host.remove();
+      }
+      const rate = filter => { const list = kicks.filter(filter); return { n: list.length, saved: list.filter(k => !k.goal).length / (list.length || 1) }; };
+      return { wrong: rate(k => !k.guessed), saverPlain: rate(k => k.guessed && k.saver && !k.attackSkill), saverSkill: rate(k => k.guessed && k.saver && k.attackSkill),
+        plain: rate(k => k.guessed && !k.saver && !k.attackSkill), plainSkill: rate(k => k.guessed && !k.saver && k.attackSkill) };
+    });
+    assert(penaltyOdds.wrong.n > 0 && penaltyOdds.wrong.saved === 0, "A wrong guess always concedes");
+    if (penaltyOdds.saverPlain.n) assert.equal(penaltyOdds.saverPlain.saved, 1, "A penalty-saving keeper who guesses right always saves an ordinary penalty");
+    const near = (r, p, tol) => r.n < 8 || Math.abs(r.saved - p) <= tol;
+    assert(near(penaltyOdds.saverSkill, .8, .25) && near(penaltyOdds.plain, .8, .2) && near(penaltyOdds.plainSkill, .2, .2), "Penalty odds follow the rules: " + JSON.stringify(penaltyOdds));
+    console.log("PASS penalty odds: wrong guess scores; right guess 100/80% with the keeper skill, 80/20% without");
+
+    // A skill in use shows its badge over the player's head and it goes when the skill ends.
+    const badge = await page.evaluate(() => {
+      for (let seed = 1; seed <= 30; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none" });
+        let result = null;
+        for (let i = 0; i < 400 && !result; i++) {
+          __stepPlay(api, .05);
+          const p = api.status().players.find(x => x.hasBall && x.ready && x.special.ready && ["burst", "phantom", "maestro"].includes(x.special.kind));
+          if (p && api.action(p.slot, "special")) {
+            api.__step(.05);
+            const icon = () => [...host.shadowRoot.querySelectorAll('[data-id^="skill-icon-"]')].filter(n => n.getAttribute("opacity") === "1").map(n => n.getAttribute("data-skill"));
+            const during = icon(); api.__step(4); result = { kind: p.special.kind, during, after: icon() };
+          }
+        }
+        api.destroy(); host.remove();
+        if (result) return result;
+      }
+      return null;
+    });
+    assert(badge && badge.during.includes(badge.kind) && !badge.after.includes(badge.kind), "A skill badge shows over the head while the skill lasts: " + JSON.stringify(badge));
+    console.log("PASS skill badge over the head while active, gone afterwards");
+
+    // Build: height and weight by position, drawn taller or shorter; keepers come off their line.
+    const builds = await page.evaluate(() => {
+      const rows = []; let rushes = 0;
+      for (let seed = 1; seed <= 12; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { seed, still: 0, fonts: "none" });
+        for (const list of Object.values(api.roster())) rows.push(...list.map(p => ({ role: p.role, ...p.body })));
+        if (seed <= 6) { for (let i = 0; i < 1200 && !api.status().ended; i++) api.__step(.25); const st = api.__stats(); rushes += st.keeperRushes ?? 0; }
+        api.destroy(); host.remove();
+      }
+      const mean = role => { const list = rows.filter(r => r.role === role); return list.reduce((s, r) => s + r.height, 0) / list.length; };
+      return { rows, gk: mean("GK"), mf: mean("MF"), rushes };
+    });
+    assert(builds.rows.every(r => r.height >= 150 && r.height <= 205 && r.weight >= 45 && r.weight <= 110 && r.reach > 1.8 && r.sweep > .8), "Builds stay realistic");
+    assert(builds.gk > builds.mf + 5, "Keepers are taller than midfielders on average");
+    assert(builds.rushes >= 6, "Keepers come off their line regularly: " + builds.rushes);
+    console.log("PASS player builds by position and keepers sweeping off their line");
 
     const watcherTime = await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().T);
     await page.waitForTimeout(200);

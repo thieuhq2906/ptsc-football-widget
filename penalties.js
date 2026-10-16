@@ -139,7 +139,7 @@
       // The result stays hidden until the ball arrives.
       const reveal = p.phase !== "result" || this.revealed || this.turn !== p.turn;
       if (reveal && this.scoreHtml !== scoreHtml) { this.host.querySelector(".penalty-score").innerHTML = scoreHtml; this.scoreHtml = scoreHtml; }
-      const message = paused ? "Đang tạm dừng" : p.phase === "result" && !reveal ? "Sút…" : p.phase === "result" ? p.last.skillWinner === "attack" ? "VÀO! BẢN LĨNH CHẤM PHẠT!" : p.last.skillWinner === "defense" ? "SKILL THỦ MÔN CỨU THUA!" : p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!"
+      const message = paused ? "Đang tạm dừng" : p.phase === "result" && !reveal ? "Sút…" : p.phase === "result" ? p.last.skillWinner === "attack" ? "VÀO! BẢN LĨNH CHẤM PHẠT!" : p.last.skillWinner === "defense" ? "NGƯỜI HÙNG BẮT PEN!" : p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!"
         : p.kind === "inMatch" ? `Penalty · Đội ${names[p.attack]} sút` : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
       text(this.host.querySelector(".penalty-message"), message);
       for (const card of this.controls.children) {
@@ -154,7 +154,7 @@
         if (keyNode.innerHTML !== keyHtml) keyNode.innerHTML = keyHtml;
         text(card.querySelector(".penalty-lock"), paused ? "Tạm dừng" : player.locked && p.phase === "choose" ? "Đã chốt · đợi đối thủ" : p.phase === "choose" ? "Bấm phím để chốt hướng" : "");
         const skill = state.players.find(item => item.slot === player.slot)?.special;
-        text(card.querySelector(".penalty-skill"), skill ? `${keys.special} · ${skill.name} · ${skill.label}` : "");
+        text(card.querySelector(".penalty-skill"), !skill?.kind ? "Không có skill pen" : player.role === "attack" ? `${keys.special} · ${skill.name} · ${skill.label}` : `${skill.name} · tự động`);
         card.classList.toggle("is-locked", paused || player.locked || p.phase !== "choose");
       }
       const cast = `${p.actors?.taker?.id}:${p.actors?.keeper?.id}`;

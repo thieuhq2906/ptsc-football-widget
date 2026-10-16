@@ -63,7 +63,7 @@ Giữ V/N áp sát phản hồi ngay, bỏ đường chạy bố trí tự độ
 Đá phạt thường ưu tiên cầu thủ có **Vua đá phạt** còn lượt và đủ thể lực, tự điều khiển người đó. Người đá tự vào vị trí cạnh bóng rồi đứng yên chờ thực hiện; không đổi sang người khác trong lúc chờ. Giữ rồi thả **F/J** để chuyền, **G/K** để sút; có nạp lực, hướng ngắm và đường bóng cao/thấp như lúc chơi. Trên sân chỉ hiện chỉ dẫn phím nhỏ. Đội phòng ngự (kể cả người điều khiển) luôn lùi cách bóng 5 m từ lúc thổi còi cho tới khi bóng được đá, dù người chơi chờ bao lâu. Cú đá của đội người chơi chờ thao tác; máy chỉ đá sau khi người đá và hàng rào chuẩn bị xong, cân nhắc kích hoạt Vua đá phạt.
 Phạm lỗi trong vòng cấm bán nguyệt của đội phòng ngự dẫn tới **penalty trong trận**: màn camera từ sau người sút, hai bên chọn trái/giữa/phải. Vào thì cộng bàn thật và chuẩn bị giao bóng; bị cản thì thủ môn ôm bóng tiếp tục. Tình huống này tách khỏi luân lưu cuối trận, không cộng vào tỷ số luân lưu.
 Thủ môn được tăng nhẹ khả năng cản sút thường và bắt dính; sút thần sầu dễ ghi bàn hơn nhưng vẫn có thể bị cứu thua.
-Thủ môn có thể lao ra ôm đường chuyền thấp, bóng rời hoặc áp sát người cầm bóng gần khung thành. Quyết định dựa trên vùng cấm, độ cao, khoảng cách, thời gian tới bóng và đối thủ; tình huống không an toàn giữ vị trí. Bóng được ôm chỉ khi thực sự ở trong tầm tay và vòng cấm, không ép lao ra với mọi pha bóng hay thay thế logic cứu thua các cú sút.
+Thủ môn băng ra thường xuyên: cắt bóng ở điểm sớm nhất trên đường bay mà kịp tới (bóng đủ thấp, trong vòng cấm), xét lại mỗi 0,35 giây, tầm lao ra 9 m. Gặp tiền đạo thoát xuống đối mặt, thủ môn lao ra sớm từ mép vòng cấm; người cầm bóng trong 5 m bị lao vào chân. Khi chạm bóng ở chân đối phương là một pha tranh chấp: chỉ số Bắt bóng đấu Rê bóng (30–85%), thua thì thủ môn bị qua người và nằm sân. Thủ môn đang lao ra và đã áp sát dưới 6 m làm giảm khả năng thủng lưới của cú sút (càng gần càng giảm, tới 55%). Thủ môn ôm bóng khi bóng trong tầm tay (1,5 m, theo sải tay) và trong vòng cấm.
 Thủ môn ôm bóng trên tay tối đa 6 giây trước khi tự phát bóng. Khi đi ra khỏi vòng cấm bán nguyệt, thủ môn tự hạ bóng xuống chân và tiếp tục điều khiển bình thường; không bị ép phá bóng khi bóng đã ở chân. Việc kiểm tra xét cả vị trí bóng trên tay và sân hiện tại sau đổi sân.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
@@ -86,8 +86,8 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 
 ### Skills đặc biệt
 
-Mỗi cầu thủ dùng tối đa **một lần mỗi trận**, tiêu hao **40% thể lực**, cần ít nhất 40% để kích hoạt. Dùng thất bại vẫn tính lượt và trừ thể lực. Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Nhấn **E cho A, O cho B**; icon cạnh tên/thể lực là chỉ dẫn, không phải nút chuột.
-Mỗi cầu thủ có một skill trận thường phân ngẫu nhiên theo vị trí, cùng chuyên môn bóng chết phù hợp vai trò. Icon tự chuyển theo tình huống; **tất cả chuyên môn dùng chung một lượt của cầu thủ**, không phải mỗi loại có một lượt. Bấm sai tình huống không mất lượt hay thể lực. Máy dùng cùng bộ điều kiện với người chơi.
+Mỗi cầu thủ dùng tối đa **một lần mỗi trận**, tiêu hao **40% thể lực**, cần ít nhất 40% để kích hoạt. **Bấm skill là skill luôn được kích hoạt** (không còn thông báo kích hoạt thất bại); kết quả của pha bóng vẫn tùy tình huống. Skill tấn công kéo dài 2 giây bóng trong cuộc; **skill phòng ngự kéo dài 3 giây (hơn 50%)**; skill thủ môn tự bật 5 phút. Khi skill đang hiệu lực, **icon của skill hiện trên đầu cầu thủ** và mất khi hết (skill tức thời như sút/chuyền hiện 1,6 giây). Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Nhấn **E cho A, O cho B**; icon cạnh tên/thể lực là chỉ dẫn, không phải nút chuột.
+Mỗi cầu thủ có một skill trận thường, phần lớn theo vị trí nhưng không cố định: tiền đạo 85% skill tấn công/15% phòng ngự, tiền vệ 60/40, **hậu vệ 30% có skill tấn công**, **thủ môn 25% có skill tấn công** (Chọc khe, Cầm nhịp, Bứt tốc; không có skill sút). Kèm chuyên môn bóng chết phù hợp vai trò. Chỉ khoảng 30% cầu thủ sân có skill sút pen và 50% thủ môn có skill bắt pen. Icon tự chuyển theo tình huống; **tất cả chuyên môn trong trận dùng chung một lượt của cầu thủ** (riêng skill penalty tính riêng). Bấm sai tình huống không mất lượt hay thể lực. Máy dùng cùng bộ điều kiện với người chơi. Bảng skill ngoài sân có mô tả ngắn từng skill.
 
 | Tình huống | Skill / vai trò | Khi nào dùng và hiệu quả |
 |---|---|---|
@@ -98,10 +98,10 @@ Mỗi cầu thủ có một skill trận thường phân ngẫu nhiên theo vị
 | Đá phạt trực tiếp | Vua đá phạt (MF), Đại bác bóng chết (FW) | Chỉ người thực hiện, đã đứng cạnh bóng và trọng tài cho phép. E/O thực hiện cú sút đặc biệt 70% ghi bàn. Không dùng ở phạt gián tiếp. |
 | Đá phạt góc | Đường cong góc cờ (MF/FW) | Chỉ người đá đã sẵn sàng. E/O tạt bổng; kích hoạt thành công đưa bóng đến người tấn công đánh đầu, không bảo đảm bàn thắng. Các phím F/G/V/B hoặc J/K/N/M vẫn đá góc thường. |
 | Chống phạt góc | Lá chắn không chiến (DF) | Lúc đối thủ chờ đá góc. E/O chuẩn bị cản đúng quả góc đó, tối đa một lá chắn mỗi đội/tình huống. Thành công ưu tiên phá bóng; hết tình huống hủy hiệu ứng. |
-| Sút penalty | Bản lĩnh chấm phạt (cầu thủ sân) | Đúng lượt sút, trước khi chốt trái/giữa/phải. Kích hoạt thành công thắng thủ môn dù đoán đúng hướng. |
-| Bắt penalty | Người hùng bắt pen (GK) | Đúng lượt bắt, trước khi chốt hướng. Kích hoạt thành công cứu thua dù đoán khác hướng; hoạt ảnh thủ môn đổi hướng theo bóng. |
+| Sút penalty | Bản lĩnh chấm phạt (khoảng 30% cầu thủ sân) | E/O trước khi chốt hướng, mỗi lượt sút, không tốn thể lực, không tính vào lượt skill trong trận. |
+| Bắt penalty | Người hùng bắt pen (50% thủ môn) | Bị động, tự áp dụng. |
 
-Các hiệu ứng kích hoạt có tỷ lệ thành công 70%; riêng sút đặc biệt là 70% ghi bàn, không rút thêm xác suất kích hoạt. Khi cả hai bên cùng kích hoạt thành công ở phạt góc/penalty, hai lợi thế triệt tiêu nhau và quay về cách xử lý thường. Không sử dụng skill thì penalty giữ luật cùng hướng cản, khác hướng vào. Cả penalty trong trận và luân lưu đều áp dụng.
+Skill sút (Dứt điểm, Đá phạt, Đại bác) luôn tung ra cú sút đặc biệt trúng khung với **70% vào lưới**; nếu thủ môn đối phương đang bật skill thủ môn thì tỷ lệ giảm theo mức của skill đó (Bàn tay thép còn 42%, Phản xạ 38,5%, Thủ môn quét 56%). Khi hai skill đối nhau cùng bật ở phạt góc (Phạt góc và Không chiến), hai lợi thế triệt tiêu, quay về cách xử lý thường. Penalty: sút khác hướng thủ môn đoán là vào. Thủ môn đoán đúng hướng: có Bắt pen thì luôn bắt được, trừ khi người sút dùng Sút pen (80% bắt được); không có Bắt pen thì bắt được 80%, nhưng chỉ 20% nếu người sút dùng Sút pen. Áp dụng cả penalty trong trận và luân lưu.
 
 Đội triển khai được xác định bằng người cầm bóng; lúc bóng bay dùng quyền triển khai gần nhất. Không có thời gian hồi đầu trận: tăng tốc có thể bật khi đội mình chuẩn bị giao bóng, nhưng skill sút/chuyền cần người đó thực sự có bóng. Đường chạy tự động không khóa skill. Động tác đang ra chân hiển thị **Đang ra chân**; chờ vào vị trí đá phạt hiển thị **Vào vị trí**. Tạm dừng giữa trận không nhận lệnh kích hoạt.
 
@@ -138,6 +138,20 @@ Mỗi cầu thủ có 10 chỉ số (35–95): **Tốc độ, Rê bóng, Chuyề
 
 Tranh bóng bằng phím (B/M) vẫn giữ tỷ lệ cố định 30/50/15/5% như mô tả ở trên. Chế độ xem vẫn theo kịch bản bàn thắng. Thẻ cầu thủ hiện OVR và 10 chỉ số; HUD trên sân ghi OVR cạnh tên; bảng **Đội hình & chỉ số** liệt kê cả hai đội, kể cả dự bị.
 
+### Hình thể cầu thủ (player model)
+
+Mỗi cầu thủ có chiều cao, cân nặng, tỉ lệ chân và tay; từ đó tính sải với tay (m) và tầm quét chân khi tranh bóng (m). Chiều cao theo vị trí (thủ môn 182–196 cm, hậu vệ 174–192, tiền vệ 164–184, tiền đạo 165–191) và lối chơi (Mục tiêu +8 cm, Cánh săn bàn −4 cm…); cân nặng theo chỉ số khối cơ thể 20,5–25. Hình vẽ cao/thấp, to/gầy, chân tay dài/ngắn theo đúng số đo.
+
+| Yếu tố | Tác động |
+|---|---|
+| Chiều cao, sải tay, Đánh đầu, Sức mạnh | Không chiến: tranh chấp quả phạt góc (khi không bên nào dùng skill), tỷ lệ đánh đầu khi đón bóng tạt. |
+| Chiều cao thấp (trọng tâm thấp) | Khó bị cướp bóng hơn khi rê. |
+| Cân nặng | Thêm sức mạnh khi tranh chấp; nặng hơn thì chậm hơn một chút. |
+| Tầm quét chân | Tầm tranh bóng, tầm xoạc tự bám và tầm chạm khi xoạc. |
+| Thủ môn cao, tay dài | Tầm ôm bóng rộng hơn, cứu thua tốt hơn. |
+
+Thẻ cầu thủ ghi chiều cao và cân nặng; bảng đội hình có cột CAO/NẶNG. Có thể ghi `height`, `weight` cho từng cầu thủ trong dữ liệu squads.
+
 ### Đội hình tùy chỉnh (squads)
 
 Đội hình là dữ liệu (`PTSCFootball.data.squads`). Truyền `squads` (object hoặc chuỗi JSON, cũng dùng được `data-squads`) khi mount để đá với đội khác. Mỗi đội cần đúng 6 người đá chính theo thứ tự thủ môn, hai hậu vệ, tiền vệ, hai tiền đạo; dự bị tùy ý (tối đa 3 người ngồi ghế mỗi trận). Đội nào thiếu dữ liệu hợp lệ thì giữ đội mặc định. Chỉ số không ghi sẽ được sinh tự động; lối chơi không ghi hoặc không hợp vị trí sẽ được chọn tự động.
@@ -168,6 +182,8 @@ Lưới khung thành chia lớp theo chiều sâu: lưới sau và lưới hông
 Trạng thái cầu thủ lưu `specialId`, `specialSituations`, `specialUsed`, `specialActiveId`, `specialUntil`; các trường theo danh tính khi thay người. Phạt góc và penalty lưu hiệu ứng theo đúng tình huống/lượt, không mang buff sang lần tiếp theo. Trạng thái giao bóng chờ chuyền tách khỏi bóng trong cuộc, nên không tự đá do hết thời gian chờ.
 
 ### Hiệu năng
+
+- Khán đài, mặt sân và băng ghế nằm trên một lớp nền riêng do GPU dịch chuyển theo camera, không phải vẽ lại mỗi khung hình (chỉ vẽ lại khi đổi mức zoom hoặc khán giả ăn mừng). Khán giả đứng yên khi không có bàn thắng. Trong thử nghiệm, công việc raster giảm khoảng 3–5 lần, khung hình p99 từ 33 ms xuống 16,8 ms.
 
 - Mô phỏng giữ bước 60Hz; chỉ vẽ lại khi có bước mô phỏng mới, tránh vẽ trùng trên màn hình 120/144Hz. Dừng vòng lặp khi widget khuất hoặc tab trình duyệt ẩn; xóa listener khi hủy trận.
 - SVG chỉ ghi thuộc tính thay đổi; tái dùng hình dáng khi tư thế không đổi và bỏ cập nhật nhân vật ngoài khung hình camera. Camera và đội hình vẫn tính như trước.
@@ -201,7 +217,7 @@ Vung nắm đấm; đập tay/ôm đồng đội; dang tay; máy bay; chỉ tay 
 - Bật **Luân lưu nếu vẫn hòa**: nếu có hiệp phụ, đá luân lưu sau hiệp phụ; nếu không, đá ngay khi hết thời gian chính.
 - Penalty và luân lưu dùng góc nhìn từ sau lưng người sút về khung thành. Người sút và thủ môn là đúng cầu thủ trên sân, vẽ bằng cùng khung xương, nét viền, kiểu tóc, màu da và số áo như trận chính (người sút nhìn từ phía sau). Bảng tỷ số cùng kiểu bảng trong trận; tam giác A/B đánh dấu người đang điều khiển. Khi cả hai chốt hướng: chạy đà, sút, thủ môn bay người, bóng vào lưới hoặc bị đẩy ra; kết quả chỉ hiện khi bóng tới đích.
 - Cả bên sút và thủ môn chốt trái / giữa / phải bằng **A/S/D cho A**, **←/↓/→ cho B**. Chỉ dẫn nhỏ nằm riêng hai góc, không có bảng chọn chuột. Hai hướng giữ kín đến khi cả hai bên chốt. Máy chọn ngẫu nhiên trước khi người chơi chốt.
-- Không có lợi thế skill thì thủ môn chọn cùng hướng cản phá, khác hướng là bàn thắng. E/O dùng chuyên môn sút/bắt penalty trước khi chốt hướng; trường hợp hai skill cùng thành công quay về luật chọn hướng. Mỗi đội 5 lượt, có thể kết thúc sớm nếu đã phân thắng bại; hòa thì đá tiếp từng cặp. Tỷ số luân lưu hiển thị riêng với tỷ số trận.
+- Sút khác hướng thủ môn đoán luôn vào. Đoán đúng: thủ môn có Bắt pen bắt 100% (80% nếu người sút bật Sút pen); thủ môn không có Bắt pen bắt 80% (20% nếu người sút bật Sút pen). E/O bật Sút pen trước khi chốt hướng; Bắt pen tự áp dụng. Mỗi đội 5 lượt, có thể kết thúc sớm nếu đã phân thắng bại; hòa thì đá tiếp từng cặp. Tỷ số luân lưu hiển thị riêng với tỷ số trận.
 
 ## Kiểm tra phát triển
 

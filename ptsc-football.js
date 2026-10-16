@@ -26,23 +26,23 @@
     rendering: { crowdFps: 20, cullMargin: 120 },
     speech: { scale: .56, humanInterval: 2.3, lines: { receive: ["Có bóng rồi!", "Để tôi triển khai!", "Lên nào anh em!"], pass: ["Nhận bóng nhé!", "Chạy chỗ đi!", "Chuyền đây!"], shoot: ["Sút đây!", "Có cơ hội rồi!", "Thử cú này!"], press: ["Tôi áp sát!", "Bám người đi!", "Không cho qua!"], sprint: ["Tăng tốc nào!", "Mở đường giúp tôi!"], switch: ["Để tôi!", "Tôi bọc lót!", "Có tôi đây!"], win: ["Lấy bóng rồi!", "Phản công nào!"] } },
     skills: {
-      burst: { name: "Bứt tốc bất khả cản", role: "FW", effect: "shield", speed: 9.8, short: "Bứt tốc", icon: '<path d="M2 8h5M1 12h6M2 16h5"/><path d="m10 6 6 6-6 6M15 6l6 6-6 6"/>' },
-      finisher: { name: "Sát thủ vòng cấm", role: "FW", effect: "shot", short: "Dứt điểm", icon: '<path d="M2 19V5h20v14"/><path d="M7 5v14M12 5v14M17 5v14M2 10h20M2 15h20" stroke-width="1" opacity=".5"/><circle cx="15.5" cy="13.5" r="3.6" fill="#fff"/>' },
-      phantom: { name: "Bóng ma sân cỏ", role: "FW", effect: "shield", speed: 8.4, short: "Lách người", icon: '<path d="M7 21V11a5 5 0 0 1 10 0v10l-1.7-1.7L13.6 21l-1.6-1.7-1.6 1.7-1.7-1.7z"/><path d="M10 11h.01M14 11h.01M1.5 9h3M1 13h3.5M1.5 17h3"/>' },
-      freeKick: { name: "Vua đá phạt", role: "MF", effect: "shot", contexts: ["directFreeKick"], short: "Đá phạt", icon: '<path d="m5 10-1-6 4 3 4-4 4 4 4-3-1 6z"/><circle cx="12" cy="17" r="4.6" fill="#fff"/>' },
-      maestro: { name: "Nhạc trưởng", role: "MF", effect: "shield", speed: 7.8, short: "Cầm nhịp", icon: '<path d="M9 18V6l10-2.5V16"/><path d="M9 9.5l10-2.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>' },
-      laserPass: { name: "Chuyền xuyên tuyến", role: "MF", effect: "pass", short: "Chọc khe", icon: '<circle cx="11" cy="4.5" r="2.5"/><circle cx="11" cy="19.5" r="2.5"/><path d="M1.5 12h19m-4-4 4 4-4 4" stroke-dasharray="3 2.2"/>' },
-      wall: { name: "Tường thép", role: "DF", effect: "steal", range: 5.5, short: "Chặn đứng", icon: '<path d="M3 5h18v15H3zM3 10h18M3 15h18M9 5v5M15 5v5M6 10v5M12 10v5M18 10v5M9 15v5M15 15v5"/>' },
-      superDefense: { name: "Siêu phòng thủ", role: "DF", effect: "teamDefense", range: 7, short: "Tổng thủ", icon: '<path d="M12 2 20 5v6c0 6-8 11-8 11S4 17 4 11V5z"/><circle cx="9.3" cy="10" r="1.8"/><circle cx="14.7" cy="10" r="1.8"/><path d="M6.8 15.6c.8-1.8 4.2-1.8 5.2 0 1-1.8 4.4-1.8 5.2 0"/>' },
-      interceptor: { name: "Máy quét", role: "DF", effect: "steal", range: 7, short: "Cắt bóng", icon: '<path d="M3 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3zM3 7h4m4 0h4"/><path d="m16.5 15.5 2 1M17 12l2.3-.2" stroke-width="1.4"/><circle cx="20.5" cy="19.5" r="2.6" fill="#fff"/>' },
-      keeperHands: { name: "Bàn tay thép", role: "GK", effect: "keeper", auto: true, save: .4, hold: true, short: "Bắt dính", icon: '<path d="M7 22v-4.5L3.5 12l1.8-1.2L9 14.5V4.5h2.5v7-9H14v9-8h2.5v8-6H19V15c0 4-2.5 7-5 7z"/>' },
-      sweeper: { name: "Thủ môn quét", role: "GK", effect: "keeper", auto: true, save: .2, rush: true, short: "Lao ra", icon: '<path d="M8 3.5H3v17h5"/><path d="M10 12h11m-4.5-4.5L21 12l-4.5 4.5"/><path d="M11.5 6.5h4M11.5 17.5h4" stroke-width="1.5"/>' },
-      reflex: { name: "Phản xạ chớp nhoáng", role: "GK", effect: "keeper", auto: true, save: .45, quick: true, short: "Phản xạ", icon: '<path d="M1.5 13S5.5 7 12 7s10.5 6 10.5 6-4 6-10.5 6S1.5 13 1.5 13z"/><circle cx="12" cy="13" r="2.8"/><path d="M12 1.5v2.5M4.5 3.5l1.7 1.7M19.5 3.5l-1.7 1.7"/>' },
-      deadBallCannon: { name: "Đại bác bóng chết", role: "FW", effect: "shot", contexts: ["directFreeKick"], short: "Đại bác", icon: '<circle cx="7" cy="17.5" r="3.5"/><path d="M5.5 13.5 16 5.5l3.2 4.4L9.7 17"/><path d="M3 21h8"/><circle cx="21.2" cy="3.5" r="2" fill="#fff"/>' },
-      cornerCurve: { name: "Đường cong góc cờ", roles: ["MF", "FW"], effect: "corner", contexts: ["cornerAttack"], short: "Phạt góc", icon: '<path d="M4 22V2.5l8 3.2-8 3.2"/><path d="M4 20.5c8.5 0 14-4 15-11.5"/><path d="m15.6 11.2 3.4-2.6 2.6 3.4"/>' },
-      aerialFort: { name: "Lá chắn không chiến", role: "DF", effect: "cornerBlock", contexts: ["cornerDefense"], short: "Không chiến", icon: '<circle cx="12" cy="14.5" r="3.8"/><path d="M5 22.5c1.2-2.4 3.7-3.5 7-3.5s5.8 1.1 7 3.5M5.5 7.5 3.5 6.5M18.5 7.5l2-1"/><circle cx="12" cy="5" r="2.8" fill="#fff"/>' },
-      penaltyFinisher: { name: "Bản lĩnh chấm phạt", roles: ["FW", "MF", "DF"], effect: "penaltyShot", contexts: ["penaltyAttack"], short: "Sút pen", icon: '<path d="M2 17V4h20v13"/><circle cx="12" cy="10.5" r="3.4"/><path d="M12 5.5v2M12 13.5v2M7 10.5h2M15 10.5h2M12 21.5h.01"/>' },
-      penaltySaver: { name: "Người hùng bắt pen", role: "GK", effect: "penaltySave", contexts: ["penaltyDefense"], short: "Bắt pen", icon: '<path d="M2 20V4h20v16"/><path d="M9.2 18v-6.6h1.6V8.6h1.6v3V7.7H14v3.9V9h1.6v6c0 1.9-1.2 3-3 3z"/>' }
+      burst: { name: "Bứt tốc bất khả cản", desc: "2 giây bứt tốc 9,8 m/s, không thể bị cướp bóng.", role: "FW", effect: "shield", speed: 9.8, short: "Bứt tốc", icon: '<path d="M2 8h5M1 12h6M2 16h5"/><path d="m10 6 6 6-6 6M15 6l6 6-6 6"/>' },
+      finisher: { name: "Sát thủ vòng cấm", desc: "Khi có bóng: tung ngay cú sút đặc biệt luôn trúng khung, 70% vào lưới (thấp hơn nếu thủ môn đang bật skill).", role: "FW", effect: "shot", short: "Dứt điểm", icon: '<path d="M2 19V5h20v14"/><path d="M7 5v14M12 5v14M17 5v14M2 10h20M2 15h20" stroke-width="1" opacity=".5"/><circle cx="15.5" cy="13.5" r="3.6" fill="#fff"/>' },
+      phantom: { name: "Bóng ma sân cỏ", desc: "2 giây lướt đi 8,4 m/s, không thể bị cướp bóng.", role: "FW", effect: "shield", speed: 8.4, short: "Lách người", icon: '<path d="M7 21V11a5 5 0 0 1 10 0v10l-1.7-1.7L13.6 21l-1.6-1.7-1.6 1.7-1.7-1.7z"/><path d="M10 11h.01M14 11h.01M1.5 9h3M1 13h3.5M1.5 17h3"/>' },
+      freeKick: { name: "Vua đá phạt", desc: "Đá phạt trực tiếp: cú sút cong luôn trúng khung, 70% vào lưới (thấp hơn nếu thủ môn đang bật skill).", role: "MF", effect: "shot", contexts: ["directFreeKick"], short: "Đá phạt", icon: '<path d="m5 10-1-6 4 3 4-4 4 4 4-3-1 6z"/><circle cx="12" cy="17" r="4.6" fill="#fff"/>' },
+      maestro: { name: "Nhạc trưởng", desc: "2 giây cầm nhịp: chạy 7,8 m/s, giữ bóng chắc, không bị cướp.", role: "MF", effect: "shield", speed: 7.8, short: "Cầm nhịp", icon: '<path d="M9 18V6l10-2.5V16"/><path d="M9 9.5l10-2.5"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>' },
+      laserPass: { name: "Chuyền xuyên tuyến", desc: "Khi có bóng: chuyền xuyên tuyến cực nhanh tới đồng đội đứng cao nhất.", role: "MF", effect: "pass", short: "Chọc khe", icon: '<circle cx="11" cy="4.5" r="2.5"/><circle cx="11" cy="19.5" r="2.5"/><path d="M1.5 12h19m-4-4 4 4-4 4" stroke-dasharray="3 2.2"/>' },
+      wall: { name: "Tường thép", desc: "3 giây: tự lao vào cướp bóng người cầm bóng trong bán kính 5,5 m.", role: "DF", effect: "steal", range: 5.5, short: "Chặn đứng", icon: '<path d="M3 5h18v15H3zM3 10h18M3 15h18M9 5v5M15 5v5M6 10v5M12 10v5M18 10v5M9 15v5M15 15v5"/>' },
+      superDefense: { name: "Siêu phòng thủ", desc: "3 giây: các hậu vệ cả đội chạy 7,8 m/s và tự cướp bóng khi áp sát dưới 1,8 m.", role: "DF", effect: "teamDefense", range: 7, short: "Tổng thủ", icon: '<path d="M12 2 20 5v6c0 6-8 11-8 11S4 17 4 11V5z"/><circle cx="9.3" cy="10" r="1.8"/><circle cx="14.7" cy="10" r="1.8"/><path d="M6.8 15.6c.8-1.8 4.2-1.8 5.2 0 1-1.8 4.4-1.8 5.2 0"/>' },
+      interceptor: { name: "Máy quét", desc: "3 giây: tự lao vào cướp bóng người cầm bóng trong bán kính 7 m.", role: "DF", effect: "steal", range: 7, short: "Cắt bóng", icon: '<path d="M3 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3zM3 7h4m4 0h4"/><path d="m16.5 15.5 2 1M17 12l2.3-.2" stroke-width="1.4"/><circle cx="20.5" cy="19.5" r="2.6" fill="#fff"/>' },
+      keeperHands: { name: "Bàn tay thép", desc: "Tự bật 5 phút đồng hồ trận: giảm 40% khả năng thủng lưới, luôn bắt dính.", role: "GK", effect: "keeper", auto: true, save: .4, hold: true, short: "Bắt dính", icon: '<path d="M7 22v-4.5L3.5 12l1.8-1.2L9 14.5V4.5h2.5v7-9H14v9-8h2.5v8-6H19V15c0 4-2.5 7-5 7z"/>' },
+      sweeper: { name: "Thủ môn quét", desc: "Tự bật 5 phút đồng hồ trận: lao ra xa thêm 3 m, giảm 20% khả năng thủng lưới.", role: "GK", effect: "keeper", auto: true, save: .2, rush: true, short: "Lao ra", icon: '<path d="M8 3.5H3v17h5"/><path d="M10 12h11m-4.5-4.5L21 12l-4.5 4.5"/><path d="M11.5 6.5h4M11.5 17.5h4" stroke-width="1.5"/>' },
+      reflex: { name: "Phản xạ chớp nhoáng", desc: "Tự bật 5 phút đồng hồ trận: phản xạ nhanh hơn, giảm 45% khả năng thủng lưới.", role: "GK", effect: "keeper", auto: true, save: .45, quick: true, short: "Phản xạ", icon: '<path d="M1.5 13S5.5 7 12 7s10.5 6 10.5 6-4 6-10.5 6S1.5 13 1.5 13z"/><circle cx="12" cy="13" r="2.8"/><path d="M12 1.5v2.5M4.5 3.5l1.7 1.7M19.5 3.5l-1.7 1.7"/>' },
+      deadBallCannon: { name: "Đại bác bóng chết", desc: "Đá phạt trực tiếp: cú sút như trái phá luôn trúng khung, 70% vào lưới (thấp hơn nếu thủ môn đang bật skill).", role: "FW", effect: "shot", contexts: ["directFreeKick"], short: "Đại bác", icon: '<circle cx="7" cy="17.5" r="3.5"/><path d="M5.5 13.5 16 5.5l3.2 4.4L9.7 17"/><path d="M3 21h8"/><circle cx="21.2" cy="3.5" r="2" fill="#fff"/>' },
+      cornerCurve: { name: "Đường cong góc cờ", desc: "Phạt góc: tạt bổng chính xác tới đầu đồng đội để đánh đầu, trừ khi đối phương bật Không chiến.", roles: ["MF", "FW"], effect: "corner", contexts: ["cornerAttack"], short: "Phạt góc", icon: '<path d="M4 22V2.5l8 3.2-8 3.2"/><path d="M4 20.5c8.5 0 14-4 15-11.5"/><path d="m15.6 11.2 3.4-2.6 2.6 3.4"/>' },
+      aerialFort: { name: "Lá chắn không chiến", desc: "Chống phạt góc: hậu vệ chắc chắn phá được quả góc đó, trừ khi đối phương bật Phạt góc.", role: "DF", effect: "cornerBlock", contexts: ["cornerDefense"], short: "Không chiến", icon: '<circle cx="12" cy="14.5" r="3.8"/><path d="M5 22.5c1.2-2.4 3.7-3.5 7-3.5s5.8 1.1 7 3.5M5.5 7.5 3.5 6.5M18.5 7.5l2-1"/><circle cx="12" cy="5" r="2.8" fill="#fff"/>' },
+      penaltyFinisher: { name: "Bản lĩnh chấm phạt", desc: "Sút penalty: thủ môn đoán đúng hướng chỉ còn 20% cản phá (80% nếu thủ môn có Bắt pen).", roles: ["FW", "MF", "DF"], effect: "penaltyShot", contexts: ["penaltyAttack"], short: "Sút pen", icon: '<path d="M2 17V4h20v13"/><circle cx="12" cy="10.5" r="3.4"/><path d="M12 5.5v2M12 13.5v2M7 10.5h2M15 10.5h2M12 21.5h.01"/>' },
+      penaltySaver: { name: "Người hùng bắt pen", desc: "Bắt penalty, tự động: đoán đúng hướng là bắt được; người sút dùng Sút pen thì còn 80%.", role: "GK", effect: "penaltySave", contexts: ["penaltyDefense"], short: "Bắt pen", icon: '<path d="M2 20V4h20v16"/><path d="M9.2 18v-6.6h1.6V8.6h1.6v3V7.7H14v3.9V9h1.6v6c0 1.9-1.2 3-3 3z"/>' }
     },
     skillContexts: {
       attack: { label: "Tấn công", unavailable: "Chỉ tấn công" },
@@ -53,7 +53,10 @@
       penaltyAttack: { label: "Sút penalty", unavailable: "Chỉ sút pen" },
       penaltyDefense: { label: "Bắt penalty", unavailable: "Chỉ bắt pen" }
     },
-    skillRules: { cost: .4, success: .7, duration: 2, usesPerMatch: 1, keeperAuto: { minutes: 5, chancePerMinute: .07 }, colors: { FW: "#f7a42c", MF: "#edcf49", DF: "#39d88c", GK: "#ed5353" } },
+    skillRules: { cost: .4, shotGoal: .7, duration: 2, defenseDuration: 3, usesPerMatch: 1,
+      // Which kind of open-play skill a man gets by position: defenders and keepers sometimes get an attacking one.
+      mix: { FW: { attack: .85, defense: .15 }, MF: { attack: .6, defense: .4 }, DF: { attack: .3, defense: .7 }, GK: { keeper: .75, attack: .25 } },
+      keeperAttack: ["laserPass", "maestro", "burst"], penaltyShooters: .3, penaltyKeepers: .5, keeperAuto: { minutes: 5, chancePerMinute: .07 }, colors: { FW: "#f7a42c", MF: "#edcf49", DF: "#39d88c", GK: "#ed5353" } },
     restarts: { kickoff: { action: "pass", takerRange: 1.4 }, corner: { takerRange: 1.4 }, freeKick: { takerRange: 1.4 }, penalty: { distance: 6 } },
     corners: [{ id: "cross", name: "Tạt bổng" }, { id: "short", name: "Chuyền ngắn" }, { id: "oneTwo", name: "Đập nhả" }, { id: "edge", name: "Trả tuyến hai" }],
     /**
@@ -134,7 +137,19 @@
         bench: [{ name: "Sơn", head: "spiky", skin: 1, num: 13 }, { name: "Tài", head: "quiff", skin: 2, num: 15 }, { name: "Lộc", head: "beard", skin: 1, num: 16 }, { name: "Kiên", head: "sidepart", skin: 2, num: 18 }]
       }
     },
-    goalkeeper: { claimHeight: 1.6, rushRange: 6.5, claimRange: 1.25, speed: 7.2, decisionInterval: .7, confidence: .7 },
+    /**
+     * Player build: height (cm) by position and style, weight from a body-mass index, and limb proportions. It is
+     * drawn (taller, broader, longer legs and arms) and it plays: height and arm reach win headers and help keepers,
+     * a low centre of gravity keeps the ball, weight adds strength in duels, long legs reach further in a tackle.
+     */
+    body: {
+      height: { GK: [182, 196], DF: [174, 192], MF: [164, 184], FW: [165, 191] },
+      styleHeight: { targetMan: 8, foxInTheBox: 3, prolificWinger: -4, classicNo10: -3, deepDefender: 3, toughMarker: 3, anchorMan: 3, destroyer: 2, highLineGK: 2 },
+      styleWeight: { targetMan: 6, destroyer: 5, toughMarker: 4, anchorMan: 3, prolificWinger: -3, classicNo10: -2 },
+      bmi: [20.5, 25], limbs: [0.94, 1.06]
+    },
+    // Keepers come off their line often: loose balls and through balls within 9 m, and a man running at goal within 5 m.
+    goalkeeper: { claimHeight: 1.6, rushRange: 9, smotherRange: 5, claimRange: 1.5, speed: 7.2, decisionInterval: .35, confidence: .85 },
     celebrations: { fist: "Vung nắm đấm", mate: "Đập tay, ôm đồng đội", arms: "Dang tay", airplane: "Máy bay", pointMate: "Chỉ tay cảm ơn đồng đội", badge: "Chỉ huy hiệu áo", dance: "Nhảy múa", kneeSlide: "Trượt gối", shush: "Suỵt", siu: "SIUU", sky: "Chỉ lên trời", hurry: "Ôm bóng về giữa sân khi vẫn bị dẫn", groupHug: "Ôm cả nhóm", kneelBrief: "Quỳ giơ tay" }
   };
   // Every style lists every parameter, so behaviour code can read them without checks.
@@ -172,7 +187,15 @@
       cost: special ? 0.18 : 0.005 + power * 0.025 };
   }
   const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  // Three layers: the ground (one polygon), a static backdrop of stands and pitch that the compositor moves with the
+  // camera without repainting, and the scene (people, ball, goals, effects) drawn on top.
   const template = (UID, caption) => `<div class="tv" data-id="tv">
+  <svg data-id="ground-svg" class="ground-layer" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true" fill="none" stroke="var(--color-ink)" stroke-linecap="round" stroke-linejoin="round">
+    <g data-id="ground-world"><g data-id="ground"></g></g>
+  </svg>
+  <div class="backdrop" data-id="backdrop" aria-hidden="true">
+    <svg data-id="backdrop-svg" fill="none" stroke="var(--color-ink)" stroke-linecap="round" stroke-linejoin="round"><g data-id="crowd"></g><g data-id="pitch"></g></svg>
+  </div>
   <svg data-id="scene" viewBox="0 0 640 360" role="img" preserveAspectRatio="xMidYMid slice"
     aria-label="Trận bóng đá sân 6 người giữa đội Đỏ và đội Xanh, máy quay rộng bám theo bóng"
     fill="none" stroke="var(--color-ink)" stroke-linecap="round" stroke-linejoin="round">
@@ -183,9 +206,6 @@
       <clipPath id="${UID}-ball-clip"><circle r="5.6" /></clipPath>
     </defs>
     <g data-id="world">
-      <g data-id="ground"></g>
-      <g data-id="crowd"></g>
-      <g data-id="pitch"></g>
       <g data-id="shadows"></g>
       <g data-id="dyn"></g>
       <g data-id="wfx"></g>
@@ -287,6 +307,7 @@
     const keeperRng = mulberry32(SEED ^ 0x61ee9a);
     const styleRng = mulberry32(SEED ^ 0x5717e5);
     const statRng = mulberry32(SEED ^ 0x57a75);
+    const penaltyRng = mulberry32(SEED ^ 0x9e7a1);
     const pick = list => list[Math.floor(rng() * list.length)];
     
     /* ---------------------------------- poses and rig ---------------------------------- */
@@ -426,12 +447,12 @@
     };
     const SMILE = "M1 8 Q5 11 9 8";
     MOUTH.handsKnees = "M3 7 Q5 11 7 7 Z"; MOUTH.hurt = "M1 10 Q5 6 9 10"; MOUTH.limp = "M1 10 Q5 6 9 10"; MOUTH.onStretcher = "M2 9 H8";
-    const TH = 16, SH = 17, TORSO = 27, UA = 13, FA = 12, HR = 14;
+    const TH0 = 16, SH0 = 17, TORSO = 27, UA0 = 13, FA0 = 12, HR = 14;
     const rad = d => d * Math.PI / 180;
     const legDir = a => [Math.sin(rad(a)), Math.cos(rad(a))];
     const armDir = a => [Math.cos(rad(a)), Math.sin(rad(a))];
-    function rig(q) {
-      const hip = [0, 0];
+    function rig(q, body) {
+      const hip = [0, 0], leg = body?.leg ?? 1, arm = body?.arm ?? 1, TH = TH0 * leg, SH = SH0 * leg, UA = UA0 * arm, FA = FA0 * arm;
       const kneeF = add(hip, mul(legDir(q.hF), TH)), footF = add(kneeF, mul(legDir(q.hF - q.kF), SH));
       const kneeB = add(hip, mul(legDir(q.hB), TH)), footB = add(kneeB, mul(legDir(q.hB - q.kB), SH));
       const up = [Math.sin(rad(q.L)), -Math.cos(rad(q.L))];
@@ -548,12 +569,32 @@
       people.push(m);
       return m;
     });
-    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural"];
+    const IDENT = ["name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural", "body"];
+    /** Open-play skills a man in this position may have: keeper skills for keepers only, no shooting skill for a keeper. */
+    function skillFits(id, role) {
+      const skill = GAME_DATA.skills[id];
+      if (!skill) return false;
+      if (skill.auto) return role === "GK";
+      if (role === "GK") return GAME_DATA.skillRules.keeperAttack.includes(id);
+      return true;
+    }
     function assignSpecial(p) {
-      const choices = Object.keys(GAME_DATA.skills).filter(id => GAME_DATA.skills[id].roles.includes(p.role));
+      const role = p.role === "SUB" ? p.natural ?? "MF" : p.role, rules = GAME_DATA.skillRules, skills = GAME_DATA.skills;
       const draw = pool => pool.length ? pool[Math.floor(abilityRng() * pool.length)] : null;
-      p.specialId = draw(choices.filter(id => GAME_DATA.skills[id].contexts.some(c => ["attack", "defense"].includes(c))));
-      p.specialSituations = Object.fromEntries(Object.keys(GAME_DATA.skillContexts).filter(c => !["attack", "defense"].includes(c)).map(c => [c, draw(choices.filter(id => GAME_DATA.skills[id].contexts.includes(c)))]));
+      const pools = {
+        attack: Object.keys(skills).filter(id => skills[id].contexts.includes("attack") && skillFits(id, role)),
+        defense: Object.keys(skills).filter(id => skills[id].contexts.includes("defense") && !skills[id].auto),
+        keeper: Object.keys(skills).filter(id => skills[id].auto)
+      };
+      // Mostly a skill of his own trade, now and then one from the other side of the game.
+      const mix = rules.mix[role] ?? rules.mix.MF, roll = abilityRng();
+      let kind = Object.keys(mix).find((k, i, list) => roll < list.slice(0, i + 1).reduce((s, x) => s + mix[x], 0)) ?? Object.keys(mix)[0];
+      p.specialId = draw(pools[kind]) ?? draw(pools.attack);
+      const choices = Object.keys(skills).filter(id => skills[id].roles.includes(role));
+      p.specialSituations = Object.fromEntries(Object.keys(GAME_DATA.skillContexts).filter(c => !["attack", "defense"].includes(c)).map(c => [c, draw(choices.filter(id => skills[id].contexts.includes(c)))]));
+      // Penalty specialists are rare: about a third of outfield players can strike one, half of the keepers save one.
+      if (p.specialSituations.penaltyAttack && abilityRng() >= rules.penaltyShooters) p.specialSituations.penaltyAttack = null;
+      if (p.specialSituations.penaltyDefense && abilityRng() >= rules.penaltyKeepers) p.specialSituations.penaltyDefense = null;
     }
     /** An attacking and a defensive style for his position; a man who comes on in another position gets ones that suit it. */
     function ensureStyle(p) {
@@ -588,9 +629,28 @@
         injured: false, bandage: null, tiredSaid: false, lastSkill: null, specialUsed: false, specialPrimed: false, specialPrimedId: null, specialActiveId: null, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
       assignSpecial(p); p.abilityCheckAt = 0; p.attackStyleId = entry.attack ?? null; p.defenseStyleId = entry.defense ?? null; ensureStyle(p);
       p.stats = makeStats(p, entry.stats);
+      p.body = makeBody(p, entry);
       p.stamina = 0.35 + p.stats.stamina * 0.0095 + (p.pillar ? 0.25 : 0) + jitter * 0.12;
       if (p.sprite) restyle(p);
     }
+    /** Height, weight and limb proportions; fixed `height`/`weight` in the squad data win. */
+    function makeBody(p, entry = {}) {
+      const rules = GAME_DATA.body, [lo, hi] = rules.height[p.natural] ?? rules.height.MF;
+      const dh = (rules.styleHeight[p.attackStyleId] ?? 0) + (rules.styleHeight[p.defenseStyleId] ?? 0);
+      const dw = (rules.styleWeight[p.attackStyleId] ?? 0) + (rules.styleWeight[p.defenseStyleId] ?? 0);
+      const height = clamp(Math.round(Number(entry.height) || lo + statRng() * (hi - lo) + dh), 150, 205);
+      const bmi = rules.bmi[0] + statRng() * (rules.bmi[1] - rules.bmi[0]) + dw / 4;
+      const weight = clamp(Math.round(Number(entry.weight) || bmi * (height / 100) ** 2), 45, 110);
+      const limb = () => rules.limbs[0] + statRng() * (rules.limbs[1] - rules.limbs[0]);
+      const leg = limb(), arm = limb();
+      // Reach overhead (m) and how far a leg goes out in a tackle (m).
+      return { height, weight, leg, arm, reach: +(height / 100 * 1.32 * arm).toFixed(2), sweep: +(1.05 * height / 178 * leg).toFixed(2) };
+    }
+    const bodyOf = p => p?.body ?? { height: 178, weight: 74, leg: 1, arm: 1, reach: 2.35, sweep: 1.05 };
+    /** How far his tackle reaches compared with an average man. */
+    const sweepOf = p => bodyOf(p).sweep / 1.05;
+    /** In the air: heading ability, height, arm reach (for a keeper's hands) and strength. */
+    const aerialRating = p => { const b = bodyOf(p); return stat(p, "heading") * .6 + (b.height - 180) * 1.2 + (b.arm - 1) * 25 + stat(p, "strength") * .2; };
     const stat = (p, key) => p?.stats?.[key] ?? 70;
     /** A rating's distance from an ordinary 70, as a fraction (85 → +0.15). */
     const edge = (p, key) => (stat(p, key) - 70) / 100;
@@ -601,9 +661,10 @@
       return Math.round(Object.entries(weights).reduce((sum, [k, w]) => sum + stat(p, k) * w, 0));
     }
     // Ball-carrying against ball-winning: dribbling and strength against defending and strength.
-    const carryRating = p => stat(p, "dribbling") * .7 + stat(p, "strength") * .3;
-    const duelRating = p => stat(p, "defending") * .7 + stat(p, "strength") * .3;
-    const pace = p => p?.team && !p.bench && p.stats ? 1 + edge(p, "speed") * .6 : 1;
+    // A short man's low centre of gravity keeps the ball; weight adds strength; long legs win the ball from further away.
+    const carryRating = p => stat(p, "dribbling") * .7 + stat(p, "strength") * .3 + (180 - bodyOf(p).height) * .35 + (bodyOf(p).weight - 75) * .1;
+    const duelRating = p => stat(p, "defending") * .7 + stat(p, "strength") * .3 + (bodyOf(p).weight - 75) * .25 + (sweepOf(p) - 1) * 25;
+    const pace = p => p?.team && !p.bench && p.stats ? (1 + edge(p, "speed") * .6) * (1 + (178 - bodyOf(p).height) * .0015 - (bodyOf(p).weight - 75) * .002) : 1;
     /** A fresh line-up: the usual six on the pitch and one to three of the others on the bench. */
     function pickSquads() {
       for (const t of TEAMS) {
@@ -695,7 +756,10 @@
       if (!p) return null;
       if (p.specialPrimed) return p.specialPrimedId ?? p.specialId;
       if (specialActive(p)) return p.specialActiveId ?? p.specialId;
-      return p.specialSituations?.[skillContext(p)] ?? p.specialId;
+      const context = skillContext(p);
+      // At a penalty only a penalty specialist has anything to use.
+      if (context === "penaltyAttack" || context === "penaltyDefense") return p.specialSituations?.[context] ?? null;
+      return p.specialSituations?.[context] ?? p.specialId;
     }
     const specialData = p => GAME_DATA.skills[specialKind(p)];
     const activeSpecialData = p => GAME_DATA.skills[p?.specialActiveId ?? p?.specialId];
@@ -707,7 +771,16 @@
     const defenseActive = t => defendingTeam(t) && (game.defenseUntil?.[t] ?? 0) > game.clock;
     const openingSkills = () => game.clock === 0 && (game.mode === "reset" || game.restart === "kickoff");
     function specialAvailability(p) {
-      const skill = specialData(p);
+      const skill = specialData(p), context = skillContext(p);
+      if (p && on(p) && (context === "penaltyAttack" || context === "penaltyDefense")) {
+        // Penalty skills are their own thing: no stamina, not the match's one use, the keeper's works by itself.
+        if (!skill) return { ready: false, label: "Không có skill pen" };
+        if (context === "penaltyDefense") return { ready: false, label: "Tự động" };
+        if (game.penalty.skillEffects?.[p.team]) return { ready: false, label: "Đã bật" };
+        if (game.penalty.phase !== "choose") return { ready: false, label: "Hết lượt" };
+        if (game.penalty.choices[p.team]) return { ready: false, label: "Đã chốt hướng" };
+        return { ready: true, label: "Sẵn sàng" };
+      }
       if (!skill || !p || !on(p)) return { ready: false, label: "Ngoài sân" };
       if (p.injured) return { ready: false, label: "Chấn thương" };
       if (p.specialPrimed) return { ready: false, label: "Đã bật" };
@@ -715,7 +788,6 @@
       if (skill.auto) return { ready: false, label: specialActive(p) ? "Đang bật" : "Tự kích hoạt" };
       if (p.energy < GAME_DATA.skillRules.cost) return { ready: false, label: "Thiếu lực" };
       if (["fulltime", "ceremony", "draw"].includes(game.mode)) return { ready: false, label: "Hết trận" };
-      const context = skillContext(p);
       if (!skill.contexts.includes(context)) return { ready: false, label: GAME_DATA.skillContexts[skill.contexts[0]].unavailable };
       if (game.refBreak) return { ready: false, label: "Đợi trọng tài" };
       if (context === "penaltyAttack" || context === "penaltyDefense") {
@@ -732,6 +804,11 @@
     function activateSpecial(h, player = h?.selected) {
       const p = player, skill = specialData(p);
       if (!specialReady(p)) return false;
+      if (skill.effect === "penaltyShot") {
+        (game.penalty.skillEffects ??= {})[p.team] = { kind: specialKind(p), success: true };
+        p.skillIconUntil = T + 2.5; say(p, `Đã bật: ${skill.name}!`, "var(--art-gold)", 1.3);
+        return true;
+      }
       p.specialUsed = true; p.energy = Math.max(0, p.energy - GAME_DATA.skillRules.cost); if (h) h.charge = null;
       game.stats.specialUses = (game.stats.specialUses ?? 0) + 1;
       if (["shot", "pass"].includes(skill.effect)) { p.script = null; p.busyUntil = T; }
@@ -741,12 +818,15 @@
       return p.keys.some(k => k[1] > T && ["kickBack", "kick", "powerBack", "powerKick", "curlBack", "curlKick", "chipKick", "passBack", "passKick", "throwLoad", "throw", "rollLoad", "roll"].includes(k[2]));
     }
     function executeSpecial(p) {
+      // Every skill that is used fires (its outcome, like a shot going in, still depends on the play).
+      game.stats.specialFired = (game.stats.specialFired ?? 0) + 1;
       const kind = p.specialPrimedId ?? specialKind(p), skill = GAME_DATA.skills[kind];
       p.specialPrimed = false;
       p.specialPrimedId = null; p.specialActiveId = kind;
       if (["corner", "cornerBlock", "penaltyShot", "penaltySave"].includes(skill.effect)) {
-        const success = abilityRng() < GAME_DATA.skillRules.success;
-        if (success) game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
+        // A skill that is used always works; two that meet (corner against corner defence) cancel out.
+        const success = true;
+        game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
         if (skill.effect === "corner") {
           say(p, skill.name.toUpperCase(), "var(--art-gold)", 1.3);
           return game.corner.execute("cross", { attackSkill: success });
@@ -764,13 +844,18 @@
           p.pos = [...game.fk.spot]; p.g = ground(...p.pos); carry(p); game.carrier = p;
           game.fk.specialTaken = true; resumePlay(); clearRestartNote();
         }
-        return shoot(p, { style: "knuckle", onTarget: true, goalProbability: GAME_DATA.skillRules.success, manual: true, windup: .6, label: skill.name.toUpperCase() });
+        // The skill always fires: an on-target special shot that goes in 70% of the time, less against a keeper whose
+        // own skill is switched on (by that skill's usual reduction).
+        const keeper = GK[otherTeam(p.team)], keeperSkill = specialActive(keeper) ? activeSpecialData(keeper) : null;
+        const goalProbability = GAME_DATA.skillRules.shotGoal * (keeperSkill?.auto ? 1 - keeperSkill.save : 1);
+        p.skillIconUntil = T + 1.6;
+        return shoot(p, { style: "knuckle", onTarget: true, goalProbability, manual: true, windup: .6, label: skill.name.toUpperCase() });
       }
-      const success = abilityRng() < GAME_DATA.skillRules.success;
-      if (!success) { say(p, "Skill chưa thành công!", "var(--color-card)", 1.4); return true; }
       game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
+      p.skillIconUntil = T + 1.6;
       if (["shield", "keeper", "teamDefense", "steal"].includes(skill.effect)) {
-        p.specialUntil = game.clock + GAME_DATA.skillRules.duration;
+        // Defending is harder than attacking: defensive skills last half as long again.
+        p.specialUntil = game.clock + (skill.effect === "shield" ? GAME_DATA.skillRules.duration : GAME_DATA.skillRules.defenseDuration);
         if (skill.effect === "teamDefense") (game.defenseUntil ??= {})[p.team] = p.specialUntil;
         if (skill.effect === "shield" && humanFor(p)?.selected === p && !game.stoppage && !kickCommitted(p)) { p.script = null; p.busyUntil = T; }
       } else if (skill.effect === "pass") {
@@ -793,7 +878,7 @@
         if (gk.keeperRollMinute === minuteNow) continue;
         gk.keeperRollMinute = minuteNow;
         if (abilityRng() >= rules.chancePerMinute) continue;
-        gk.specialUsed = true; gk.specialActiveId = gk.specialId; gk.specialUntil = game.clock + rules.minutes / PACE;
+        gk.specialUsed = true; gk.specialActiveId = gk.specialId; gk.specialUntil = game.clock + rules.minutes / PACE; gk.skillIconUntil = T + 1.6;
         game.stats.keeperAutoSkills = (game.stats.keeperAutoSkills ?? 0) + 1;
         say(gk, skill.name.toUpperCase(), "var(--art-gold)", 1.5);
       }
@@ -904,7 +989,7 @@
       const c = game.carrier;
       if (game.mode !== "play" || game.stoppage || !c || !humanFor(c) || c.script || ball.mode !== "carried" || T < c.busyUntil) return;
       const d = nearest(outfield(opponents(c.team)).filter(p => !manual(p) && !p.script && T >= p.busyUntil), c.pos);
-      if (d.p && d.d < 2.1 + defOf(d.p).tackle * 1.5 && T - (game.manualChallengeAt ?? -99) > 1.2) {
+      if (d.p && d.d < (2.1 + defOf(d.p).tackle * 1.5) * sweepOf(d.p) && T - (game.manualChallengeAt ?? -99) > 1.2) {
         game.manualChallengeAt = T;
         tackle(c, d.p, T + 0.3);
       }
@@ -1009,7 +1094,7 @@
         const c = ball.owner, direction = aimFor(h, p).world;
         h.tackleAt = T; p.energy = Math.max(0.05, p.energy - 0.035);
         game.stats.slides = (game.stats.slides ?? 0) + 1;
-        if (c && on(c) && !c.injured && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) <= SLIDE_ASSIST_RANGE) {
+        if (c && on(c) && !c.injured && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) <= SLIDE_ASSIST_RANGE * sweepOf(p)) {
           tackle(c, p, T + clamp(mdist(p.pos, c.pos) / 12, .18, .5), { slide: true });
         }
         else {
@@ -1022,7 +1107,7 @@
       }
       if (["challenge", "tackle"].includes(action) && T - h.tackleAt > 1.2) {
         const c = game.carrier;
-        if (c && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 2.7) {
+        if (c && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 2.7 * sweepOf(p)) {
           h.tackleAt = T;
           p.energy = Math.max(0.05, p.energy - 0.015);
           p.keys.push([T, T + 0.35, "tap"]); p.busyUntil = T + 0.45;
@@ -1062,7 +1147,7 @@
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
         pressing: !!h.pressing && defendingTeam(h.team), yellows: h.selected?.yellows ?? 0,
-        ovr: overall(h.selected), stats: h.selected?.stats ? { ...h.selected.stats } : null,
+        ovr: overall(h.selected), stats: h.selected?.stats ? { ...h.selected.stats } : null, body: h.selected?.body ? { ...h.selected.body } : null,
         style: h.selected?.attackStyleId ? Object.fromEntries([["attack", atkOf(h.selected)], ["defense", defOf(h.selected)]].map(([phase, s]) => [phase, { name: s.name, en: s.en, desc: s.desc }])) : null,
         charge: h.charge ? { action: h.charge.action, power: chargePower(h) } : null,
         aim: aimFor(h).screen, role: h.selected?.role ?? null,
@@ -1494,7 +1579,7 @@
       // Headers only happen close in, in front of the posts; a low cross gets a first-time volley; an overhead kick is rare.
       const [td, tw] = toT(c.team, tgt);
       const aerial = cross && td >= 0.85 && tw > 0.3 && tw < 0.7 && rng() < 0.8
-        ? (m.star && rng() < 0.05 ? "bicycle" : rng() < 0.6 + atkOf(m).header + edge(m, "heading") * 0.5 ? "header" : "volley") : null;
+        ? (m.star && rng() < 0.05 ? "bicycle" : rng() < 0.6 + atkOf(m).header + edge(m, "heading") * 0.5 + (bodyOf(m).height - 180) * 0.008 ? "header" : "volley") : null;
       // A defender may read a ground pass. The side whose goal is due gets the better of it, within reason.
       let thief = null;
       const f = 0.55, mom = game.momentum, next = game.story.goals[game.storyIdx], overdue = game.golden ? 8 : next ? Math.max(0, minute() - next[1]) : 0;
@@ -1755,7 +1840,9 @@
           return true;
         }
         const marker = nearest(outfield(team[def]), target.pos).p;
-        if (roll < 0.55 && marker) {
+        // Without skills the aerial duel decides: height, reach, heading and strength against the man he marks.
+        const duel = attackSkill || defenseSkill ? 0.55 : clamp(0.55 + (aerialRating(marker ?? target) - aerialRating(target)) * 0.01, 0.25, 0.85);
+        if (roll < duel && marker) {
           // A defender gets his head to it first and clears (facing out, towards the corner); sometimes it flies out for a kick-in.
           const mSpot = [...marker.pos];
           mkScript(marker, [T, mSpot], [T + flight + 0.4, mSpot]);
@@ -2130,7 +2217,7 @@
         const contact = trackSlide(d); d.slideTarget = null;
         if (!contact) return;
         d.pos = scriptPos(d, contactAt); d.g = ground(...d.pos);
-        if (mdist(d.pos, c.pos) > SLIDE_CONTACT_RANGE) return;
+        if (mdist(d.pos, c.pos) > SLIDE_CONTACT_RANGE * sweepOf(d)) return;
         const win = rng() < .5, injured = rng() < .3;
         game.stats.slideContacts = (game.stats.slideContacts ?? 0) + 1;
         game.stats.slideWins = (game.stats.slideWins ?? 0) + Number(win);
@@ -2524,10 +2611,13 @@
       const keeperBonus = interactive && !o.special ? .04 * fit(gk) : 0;
       const roll = o.goalProbability != null ? abilityRng() : rng();
       let gc = o.goalProbability ?? clamp(goalChance(c, style) - keeperBonus + (o.special ? .24 : 0), 0, .95);
-      if (o.goalProbability != null && roll < gc) game.stats.specialSuccesses = (game.stats.specialSuccesses ?? 0) + 1;
+      if (o.goalProbability != null && roll < gc) game.stats.specialGoals = (game.stats.specialGoals ?? 0) + 1;
       const keeperSkill = specialActive(gk) ? activeSpecialData(gk) : null;
       if (keeperSkill?.auto && o.goalProbability == null) gc *= 1 - keeperSkill.save;
-      if (o.goalProbability == null) gc = Math.max(0, gc - defOf(gk).save - (interactive ? edge(gk, "goalkeeping") * 0.4 : 0));
+      // A keeper already rushing out narrows the angle: the closer he gets, the harder it is to beat him.
+      const closing = gk.keeperRush && on(gk) ? mdist(gk.pos, c.pos) : Infinity;
+      if (closing < 6 && o.goalProbability == null) { gc *= clamp(0.45 + closing * 0.08, 0.45, 0.93); game.stats.keeperRushBlocks = (game.stats.keeperRushBlocks ?? 0) + 1; }
+      if (o.goalProbability == null) gc = Math.max(0, gc - defOf(gk).save - (interactive ? edge(gk, "goalkeeping") * 0.4 + (bodyOf(gk).reach - 2.45) * 0.25 : 0));
       // Misses: mostly saved or off target; the woodwork is rare (and at most twice a match per side).
       let outcome = roll < gc ? "goal" : roll < gc + (1 - gc) * 0.55 ? "save" : roll < gc + (1 - gc) * 0.6 ? "post" : "wide";
       if (o.onTarget) outcome = roll < gc ? "goal" : "save";
@@ -3134,7 +3224,8 @@
         // Keep a little space between bodies. Players ignore the referee; he steps around them.
         const dn = Math.hypot(...des) > 0.1 ? mul(des, 1 / Math.hypot(...des)) : null;
         for (const o of people) {
-          if (lockedRestart || o === p || o.off || (o === ref && p !== ref)) continue;
+          // A keeper coming out goes right in at the ball carrier's feet instead of keeping his distance.
+          if (lockedRestart || o === p || o.off || (o === ref && p !== ref) || (p.keeperRush && (o === ball.owner || p === ball.owner))) continue;
           const ox = (p.pos[0] - o.pos[0]) * LEN, oy = (p.pos[1] - o.pos[1]) * WID, od = Math.hypot(ox, oy);
           if (p === ref) {
             if (od < 2.5 && od > 0.001) { des[0] += ox / od * (2.5 - od) * 2; des[1] += oy / od * (2.5 - od) * 2; }
@@ -3288,7 +3379,7 @@
     /** The two swap who they are and where they stand at the same moment, so nothing jumps on screen. */
     function swapPlaces(p, b) {
       for (const k of IDENT) [p[k], b[k]] = [b[k], p[k]];
-      if (!p.specialUsed && !GAME_DATA.skills[p.specialId]?.roles.includes(p.role)) assignSpecial(p);
+      if (!p.specialUsed && !skillFits(p.specialId, p.role)) assignSpecial(p);
       ensureStyle(p);
       p.keeperRush = null; p.rushCheckAt = 0;
       for (const k of ["pos", "g", "vel", "face", "faceDir", "pose", "poseName", "stride", "keys", "faceLock", "script"]) [p[k], b[k]] = [b[k], p[k]];
@@ -3534,7 +3625,7 @@
       if (settings.mode !== "cpu") return;
       const p = game.penalty, cpu = otherTeam(humans[0].team);
       const actor = p.actors[cpu];
-      if (specialReady(actor) && abilityRng() < .5) activateSpecial(null, actor);
+      if (specialReady(actor) && abilityRng() < .7) activateSpecial(null, actor);
       p.choices[cpu] = pick(["left", "center", "right"]);
     }
     api.choosePenalty = (slot, direction) => {
@@ -3548,10 +3639,16 @@
       const p = game.penalty;
       if (p?.phase === "choose" && p.choices.R && p.choices.B) {
         const attack = p.attack, defend = otherTeam(attack);
-        const attackSkill = !!p.skillEffects?.[attack]?.success, defenseSkill = !!p.skillEffects?.[defend]?.success;
-        const goal = attackSkill === defenseSkill ? p.choices[attack] !== p.choices[defend] : attackSkill;
+        // A wrong guess is always a goal. A right guess: a keeper with the penalty-saving skill saves it (80% against a
+        // taker using his penalty skill); a keeper without it saves 80% of ordinary penalties but only 20% of skilled ones.
+        const attackSkill = !!p.skillEffects?.[attack], keeper = p.actors?.[defend], saver = keeper?.specialSituations?.penaltyDefense === "penaltySaver";
+        const guessed = p.choices[attack] === p.choices[defend];
+        const saveChance = !guessed ? 0 : saver ? (attackSkill ? .8 : 1) : (attackSkill ? .2 : .8);
+        const goal = !(penaltyRng() < saveChance);
         p.history[attack].push(goal); if (goal) p.score[attack]++;
-        p.phase = "result"; p.last = { attack, shot: p.choices[attack], dive: p.choices[defend], actualDive: defenseSkill && !attackSkill ? p.choices[attack] : p.choices[defend], goal, turn: p.turn, skillWinner: attackSkill === defenseSkill ? null : attackSkill ? "attack" : "defense" };
+        const skillWinner = guessed && goal && attackSkill ? "attack" : guessed && !goal && saver ? "defense" : null;
+        game.stats.penaltyKicks = (game.stats.penaltyKicks ?? []); game.stats.penaltyKicks.push({ attackSkill, saver, guessed, goal });
+        p.phase = "result"; p.last = { attack, shot: p.choices[attack], dive: p.choices[defend], actualDive: p.choices[defend], goal, turn: p.turn, skillWinner, attackSkill, saver };
         if (p.kind === "inMatch") {
           at(T + 3, () => {
             if (game.penalty !== p || game.mode !== "penalties") return;
@@ -3835,10 +3932,25 @@
       if (game.mode !== "play" || game.stoppage || !on(p) || p.script || T < p.busyUntil || ball.owner?.team === p.team || ball.kind === "shot") return null;
       let target = ballUV();
       if (ball.mode === "fly" && ball.seg) {
-        target = courtUV(ball.seg.b.g);
-        if (ball.seg.b.h > rules.claimHeight || mdist(p.pos, target) / rules.speed > ball.seg.t1 - T + .25) return null;
+        // Cut it out at the earliest point of its flight he can reach while it is low enough to take.
+        const s = ball.seg, reach = rules.claimRange * bodyOf(p).reach / 2.45;
+        if (ball.h <= rules.claimHeight && mdist(p.pos, target) <= reach) return { target, kind: "fly" };
+        let best = null;
+        for (let k = 1; k <= 12 && !best; k++) {
+          const t = T + (s.t1 - T) * k / 12;
+          let f = clamp((t - s.t0) / (s.t1 - s.t0 || 1), 0, 1);
+          if (s.roll) f = 1 - (1 - f) * (1 - f);
+          const h = s.a.h + (s.b.h - s.a.h) * f + 4 * s.arc * f * (1 - f), uv = courtUV(lerp(s.a.g, s.b.g, f));
+          if (h <= rules.claimHeight && insideKeeperArea(p.team, uv) && Math.max(0, mdist(p.pos, uv) - reach) / rules.speed <= t - T + .1) best = uv;
+        }
+        if (!best) return null;
+        target = best;
       } else if (ball.mode === "carried") {
-        if (protectedBall(ball.owner) || mdist(p.pos, target) > 2.2) return null;
+        // A man through on goal is met early, at the edge of the area; otherwise only one right on top of him.
+        const through = throughOnGoal(ball.owner), [depth] = toT(ball.owner.team, target);
+        const range = through ? rules.rushRange + 2 : rules.smotherRange;
+        if (protectedBall(ball.owner) || mdist(p.pos, target) > range + defOf(p).rush * .5) return null;
+        if (through && depth > .7) return { target: lerp(p.pos, target, .85), kind: "carried" };
       } else if (ball.mode !== "dead") return null;
       const rushRange = rules.rushRange + defOf(p).rush + (specialActive(p) && activeSpecialData(p)?.rush ? 3 : 0);
       if (!insideKeeperArea(p.team, target) || mdist(p.pos, target) > rushRange) return null;
@@ -3850,13 +3962,13 @@
     function updateKeeperDecisions() {
       for (const p of [GK.R, GK.B]) {
         const decision = keeperDecision(p);
-        if (!decision) { p.keeperRush = null; continue; }
+        if (!decision) { if (p.keeperRush) { const why = game.mode !== "play" ? "mode" : game.stoppage ? "stop" : p.script ? "script" : T < p.busyUntil ? "busy" : ball.owner?.team === p.team ? "own" : ball.kind === "shot" ? "shot" : ball.mode + ":" + mdist(p.pos, ballUV()).toFixed(1) + ":" + (insideKeeperArea(p.team, ballUV()) ? "in" : "out"); (game.stats.rushLog ??= []).push(why); } p.keeperRush = null; continue; }
         if (p.keeperRush) { p.keeperRush.target = decision.target; continue; }
         if (game.clock < (p.rushCheckAt ?? 0)) continue;
         p.rushCheckAt = game.clock + GAME_DATA.goalkeeper.decisionInterval;
         const confidence = GAME_DATA.goalkeeper.confidence + defOf(p).confidence + (specialActive(p) && specialData(p)?.rush ? .2 : 0);
         if (keeperRng() < confidence) {
-          p.keeperRush = decision;
+          p.keeperRush = decision; game.stats.keeperRushes = (game.stats.keeperRushes ?? 0) + 1;
           say(p, "Để tôi bắt!", "var(--color-sky-soft)", 1);
         }
       }
@@ -3864,10 +3976,20 @@
     function resolveKeeperClaims() {
       for (const p of [GK.R, GK.B]) {
         if (!p.keeperRush || game.stoppage || game.mode !== "play" || ball.kind === "shot" || ball.owner?.team === p.team || protectedBall(ball.owner)) continue;
-        if (!insideKeeperArea(p.team, ballUV()) || ball.h > GAME_DATA.goalkeeper.claimHeight || mdist(p.pos, ballUV()) > GAME_DATA.goalkeeper.claimRange) continue;
+        if (!insideKeeperArea(p.team, ballUV()) || ball.h > GAME_DATA.goalkeeper.claimHeight || mdist(p.pos, ballUV()) > GAME_DATA.goalkeeper.claimRange * bodyOf(p).reach / 2.45) continue;
         const carrier = ball.owner;
-        if (carrier) { carrier.script = null; carrier.busyUntil = T + .3; }
-        p.keeperRush = null; p.keys.push([T, T + .5, "gkLow"]); p.busyUntil = T + .5;
+        if (carrier) {
+          // At a man's feet it is a duel: the keeper's handling against his dribbling; lose it and he is rounded.
+          const win = keeperRng() < clamp(0.6 + (stat(p, "goalkeeping") - stat(carrier, "dribbling")) * 0.01, 0.3, 0.85);
+          if (!win) {
+            p.keeperRush = null; p.keys.push([T, T + .45, "dive"], [T + .45, T + 1.1, "diveLand"], [T + 1.1, T + 1.4, "sitUp"]); p.busyUntil = T + 1.4;
+            game.stats.keeperRounded = (game.stats.keeperRounded ?? 0) + 1;
+            say(carrier, "Qua thủ môn!", "var(--color-pear)", 1.0);
+            continue;
+          }
+          carrier.script = null; carrier.busyUntil = T + .3;
+        }
+        p.keeperRush = null; p.keys.push([T, T + .5, carrier ? "dive" : "gkLow"]); p.busyUntil = T + .5;
         holdBall(p); game.carrier = p; game.poss = p.team; game.dirty = true;
         game.stats.keeperRushClaims = (game.stats.keeperRushClaims ?? 0) + 1;
         say(p, "Ôm gọn!", "var(--color-sky-soft)", 1.2);
@@ -3922,7 +4044,26 @@
     /* ---------------------------------- drawing ---------------------------------- */
     const svg = root.querySelector('[data-id="scene"]');
     const L = id => svg.querySelector('[data-id="' + id.slice(1) + '"]');
-    const layer = { world: L("#world"), ground: L("#ground"), crowd: L("#crowd"), pitch: L("#pitch"), shadows: L("#shadows"), dyn: L("#dyn"), wfx: L("#wfx"), sfx: L("#sfx") };
+    const R = id => root.querySelector('[data-id="' + id + '"]');
+    const layer = { world: L("#world"), ground: R("ground"), crowd: R("crowd"), pitch: R("pitch"), shadows: L("#shadows"), dyn: L("#dyn"), wfx: L("#wfx"), sfx: L("#sfx") };
+    // The backdrop holds everything that never moves (stands, crowd, pitch markings, benches) in world units. It is
+    // rasterised once per zoom step and then only translated/scaled by the compositor as the camera moves.
+    const BACKDROP = { x: -240, y: -660, w: 1430, h: 1000, step: 0.08 };
+    const backdrop = { box: R("backdrop"), svg: R("backdrop-svg"), groundWorld: R("ground-world"), tv: R("tv"), unit: 0, zoom: 0, transform: "" };
+    backdrop.svg.setAttribute("viewBox", `${BACKDROP.x} ${BACKDROP.y} ${BACKDROP.w} ${BACKDROP.h}`);
+    function placeBackdrop(shake) {
+      const unit = backdrop.tv.clientWidth / VW;
+      if (!unit) return;
+      const zoom = Math.max(BACKDROP.step, Math.ceil(cam.z / BACKDROP.step) * BACKDROP.step);
+      if (unit !== backdrop.unit || zoom !== backdrop.zoom) {
+        backdrop.unit = unit; backdrop.zoom = zoom;
+        backdrop.svg.style.width = (BACKDROP.w * unit * zoom).toFixed(1) + "px";
+        backdrop.svg.style.height = (BACKDROP.h * unit * zoom).toFixed(1) + "px";
+      }
+      const x = ((BACKDROP.x - cam.x) * cam.z + VW / 2 + shake) * unit, y = ((BACKDROP.y - cam.y) * cam.z + VH / 2) * unit;
+      const transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${(cam.z / zoom).toFixed(4)})`;
+      if (transform !== backdrop.transform) { backdrop.box.style.transform = transform; backdrop.transform = transform; }
+    }
     function el(tag, attrs = {}, parent) {
       const n = document.createElementNS(NS, tag);
       for (const k in attrs) n.setAttribute(k, attrs[k]);
@@ -4006,7 +4147,7 @@
         dot(e + (e ? -1 : 1) * 6 / LEN, 0.5, 2.6);
       }
       // The two benches, either side of the halfway line on the far touchline.
-      const seatH = (SH + 3.5) * S, up = (pnt, h) => [pnt[0], pnt[1] - h];
+      const seatH = (SH0 + 3.5) * S, up = (pnt, h) => [pnt[0], pnt[1] - h];
       for (const [u0, u1] of [[0.36, 0.466], [0.538, 0.644]]) {
         const vb = -0.052, vf = -0.04;
         el("polygon", { points: poly([up(G(u0, vb), seatH + 14), up(G(u1, vb), seatH + 14), up(G(u1, vb), 0), up(G(u0, vb), 0)]), fill: "var(--art-stand-deep)", "stroke-width": 2 }, g);
@@ -4144,7 +4285,7 @@
     };
     /** A standalone figure in the same rig, ink and kit as the match, for other camera angles (the penalty scene). */
     function figureMarkup(p, name, { back = false, phase = 0 } = {}) {
-      const r = rig(poseOf(name, phase) ?? POSES.ready), skin = p.skin === 2 ? "var(--art-skin-2)" : "var(--art-skin)";
+      const r = rig(poseOf(name, phase) ?? POSES.ready, p.body), skin = p.skin === 2 ? "var(--art-skin-2)" : "var(--art-skin)";
       const kit = { shirt: p.role === "GK" ? KIT[p.team].gk : KIT[p.team].shirt, shorts: KIT[p.team].shorts, socks: KIT[p.team].socks };
       const path = (d, attrs) => `<path d="${d}" ${attrs} />`, parts = [];
       parts.push(path(seg(r.top, r.elbowB, r.handB), 'stroke-width="8"'), path(seg(r.top, r.elbowB, r.handB), `stroke="${skin}" stroke-width="4.6"`));
@@ -4180,11 +4321,12 @@
       if (hidden) { set(shadow, { opacity: 0 }); return; }
       const poseKey = name + ":" + Object.values(p.pose).map(v => v.toFixed(2)).join(",") + ":" + (p.face < 0);
       const poseChanged = p.drawPoseKey !== poseKey;
-      const r = poseChanged ? rig(p.pose) : p.drawRig;
+      const r = poseChanged ? rig(p.pose, p.body) : p.drawRig;
       p.drawPoseKey = poseKey; p.drawRig = r;
       // Never draw a body thinner than a third of its width mid-turn.
       const sx = (Math.sign(p.face) || 1) * Math.max(0.6, Math.abs(p.face));
-      set(root, { transform: `translate(${pt(p.g)}) scale(${(S * sx).toFixed(3)} ${S})` });
+      const b = p.body, tall = b ? b.height / 178 : 1, broad = b ? clamp(0.86 + (b.weight / (b.height / 100) ** 2 - 20) * 0.04, .9, 1.12) : 1;
+      set(root, { transform: `translate(${pt(p.g)}) scale(${(S * sx * broad * tall).toFixed(3)} ${(S * tall).toFixed(3)})` });
       const lying = Math.abs(r.rot) > 40;
       set(shadow, { cx: p.g[0].toFixed(1), cy: p.g[1].toFixed(1), rx: ((lying ? 30 : 15) * S - p.pose.j * 0.2).toFixed(1), ry: (4.5 * S + 1).toFixed(1), opacity: (0.24 - p.pose.j * 0.005).toFixed(3) });
       if (!poseChanged) return;
@@ -4334,6 +4476,30 @@
       }
     }
     
+    /* A skill in use floats over the player's head as its badge until it wears off. */
+    const skillIcons = new Map();
+    function skillIconKind(p) {
+      if (!on(p) || p.off || !["play", "reset"].includes(game.mode)) return null;
+      if ((p.specialUntil ?? 0) > game.clock && p.specialActiveId) return p.specialActiveId;
+      if (T < (p.skillIconUntil ?? -1)) return p.specialActiveId ?? specialKind(p);
+      return null;
+    }
+    function drawSkillIcons() {
+      for (const p of players) {
+        const kind = skillIconKind(p), skill = GAME_DATA.skills[kind];
+        let icon = skillIcons.get(p);
+        if (!skill) { if (icon) set(icon.node, { opacity: 0 }); continue; }
+        if (!icon) { icon = { node: el("g", { "data-id": `skill-icon-${p.id}` }, layer.wfx), kind: null }; skillIcons.set(p, icon); }
+        if (icon.kind !== kind) {
+          icon.kind = kind;
+          const color = GAME_DATA.skillRules.colors[skill.role] ?? "#edcf49";
+          icon.node.innerHTML = `<circle r="10" fill="#16456b" stroke="#fff" stroke-width="2.2" /><circle r="7.6" fill="none" stroke="${color}" stroke-width="2" /><g transform="translate(-6.2,-6.2) scale(.52)" fill="none" stroke="#fff6d0" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${skill.icon}</g>`;
+          icon.node.setAttribute("data-skill", kind);
+        }
+        const height = 150 * S * ((p.body?.height ?? 178) / 178);
+        set(icon.node, { transform: `translate(${p.g[0].toFixed(1)},${(p.g[1] - height).toFixed(1)})`, opacity: 1 });
+      }
+    }
     function drawControlMarkers() {
       controlMarkers.forEach(({ h, ring, label, arrow, pointer, powerBg, powerFill }) => {
         const p = h.selected, visible = !!p && on(p) && ["play", "reset"].includes(game.mode);
@@ -4355,9 +4521,12 @@
     }
     function render() {
       const shake = T - game.shake < 0.5 ? Math.sin(T * 70) * 3 * (1 - (T - game.shake) / 0.5) : 0;
-      set(layer.world, { transform: `translate(${(VW / 2 + shake).toFixed(1)} ${(VH / 2).toFixed(1)}) scale(${cam.z.toFixed(4)}) translate(${(-cam.x).toFixed(1)} ${(-cam.y).toFixed(1)})` });
+      const view = `translate(${(VW / 2 + shake).toFixed(1)} ${(VH / 2).toFixed(1)}) scale(${cam.z.toFixed(4)}) translate(${(-cam.x).toFixed(1)} ${(-cam.y).toFixed(1)})`;
+      set(layer.world, { transform: view }); set(backdrop.groundWorld, { transform: view });
+      placeBackdrop(shake);
       for (const p of people) drawPerson(p);
       drawControlMarkers();
+      drawSkillIcons();
       yellowMarkers.forEach(({ p, node }) => set(node, { x: p.g[0] + 16 * S, y: p.g[1] - 89 * S, opacity: p.yellows > 0 && !p.off && !p.sentOff ? 1 : 0, "data-player": p.name }));
       // Ball, shadow and the streak behind a hard shot.
       const bs = [ball.g[0], ball.g[1] - ball.h * K];
@@ -4389,11 +4558,14 @@
       if (frame === crowdFrame) return;
       crowdFrame = frame;
       const wild = T - game.crowdCheer < 2.5 || game.mode === "ceremony";
+      // At rest the crowd stands still, so the backdrop is not repainted; it bobs only while cheering.
+      if (!wild && crowd.still) return;
+      crowd.still = !wild;
       for (const f of crowd) {
         const [x, y] = toScreen(f.base), margin = 30 * cam.z;
-        if (x < -margin || x > VW + margin || y < -margin || y > VH + margin) continue;
+        if (wild && (x < -margin || x > VW + margin || y < -margin || y > VH + margin)) continue;
         const mine = f.team === null || f.team === game.cheerTeam;
-        const bob = wild && mine ? Math.abs(Math.sin(T * 7 + f.k * 5)) * (game.mode === "ceremony" ? 6 : 4) : wild ? 1 : Math.max(0, Math.sin(T * 2 + f.k * 3)) * 1.2;
+        const bob = !wild ? 0 : mine ? Math.abs(Math.sin(T * 7 + f.k * 5)) * (game.mode === "ceremony" ? 6 : 4) : 1;
         set(f.node, { transform: `translate(${f.base[0].toFixed(1)},${(f.base[1] - bob).toFixed(1)})` });
       }
     }
@@ -4450,7 +4622,8 @@
     const boardNodes = new Map();
     /** Both squads with ratings: the men on the pitch first, then the bench (not the injured who have gone off). */
     api.roster = () => Object.fromEntries(TEAMS.map(t => [t, [...team[t].filter(inSquad), ...bench[t].filter(b => !b.off)].map(p => ({
-      name: p.name, num: p.num, role: p.role === "SUB" ? p.natural : p.role, onPitch: !p.bench, ovr: overall(p), stats: { ...p.stats },
+      name: p.name, num: p.num, role: p.role === "SUB" ? p.natural : p.role, onPitch: !p.bench, ovr: overall(p), stats: { ...p.stats }, body: { ...bodyOf(p) }, skill: p.specialId, skillName: GAME_DATA.skills[p.specialId]?.name ?? "",
+      penaltySkill: p.specialSituations?.penaltyAttack ?? p.specialSituations?.penaltyDefense ?? null,
       attack: atkOf(p).name ?? "", defense: defOf(p).name ?? "", injured: !!p.injured, star: !!p.star
     }))]));
     api.palette = () => {
