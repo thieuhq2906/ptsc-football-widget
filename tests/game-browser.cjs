@@ -73,6 +73,16 @@ const server = http.createServer((req, res) => {
     await page.locator(".nav-back").click();
     await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/menu");
     console.log("PASS main menu, keyboard cursor, setting rows, Esc and back button");
+    // A match mounted on a hidden screen and shown in the same frame must still run in real time.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await route("#/menu"); await page.keyboard.press("Enter"); await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu");
+      await page.locator("#panel-cpu .start").click(); await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu/match");
+      await page.keyboard.press("Space"); await page.waitForTimeout(900);
+      assert(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.__state().T) > .4, "The match clock runs after kick-off");
+      await page.keyboard.press("Escape");
+    }
+    await route("#/menu");
+    console.log("PASS matches started from the menu run in real time");
 
     const narrativeSides = await page.evaluate(() => {
       const sides = [];

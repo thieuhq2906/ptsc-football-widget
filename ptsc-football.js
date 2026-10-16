@@ -4885,8 +4885,9 @@
         if (visible && running && !document.hidden) raf = requestAnimationFrame(tick);
       };
       // Only runs while on screen (and the tab is visible).
-      const io = new IntersectionObserver(([e]) => {
-        visible = e.isIntersecting;
+      // Entries can arrive batched (hidden then shown in one frame); the latest one is the current state.
+      const io = new IntersectionObserver(entries => {
+        visible = entries[entries.length - 1].isIntersecting;
         if (!visible) { cancelAnimationFrame(raf); raf = 0; }
         else resumeVisible();
       });
