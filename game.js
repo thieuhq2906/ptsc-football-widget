@@ -86,6 +86,14 @@
       if (!step(dir) && dir === "left") onLeave?.("left");
     });
   }
+  /** Puts the cursor back on a browser's current entry and replays the key there. */
+  function backToEntry(scope, event) {
+    const item = scope.querySelector(".br-item.is-current") ?? spatial(scope, null, "down");
+    if (!item) return false;
+    focusOn(item);
+    item.dispatchEvent(new KeyboardEvent("keydown", { code: event.code, key: event.key, shiftKey: event.shiftKey, bubbles: true, cancelable: true }));
+    return true;
+  }
   const leaveToNav = () => { if (route.name !== "info") return false; focusOn(infoScreen.querySelector(".info-nav .is-current")); return true; };
   /**
    * A browser over a container. spec: { cls, title, lead, grid, tabs() → [{ label, items: [{ key, html, group }] }], detail(key, tab) → html, onLeave }.
@@ -113,13 +121,18 @@
       let group = null;
       list.innerHTML = tabs[state.tab].items.map(item => (item.group && item.group !== group ? `<p class="br-sep">${group = item.group}</p>` : "") + item.html).join("");
       const target = list.querySelector(`[data-key="${CSS.escape(state.key ?? "")}"]`) ?? list.querySelector("[data-key]");
-      state.key = null; show(target?.dataset.key);
+      state.key = null; delete detail.dataset.key; show(target?.dataset.key);
       if (focus && target) focusOn(target);
     }
     const setTab = step => { state.tab = (state.tab + step + tabs.length) % tabs.length; state.key = null; render(true); };
     tabsEl.addEventListener("click", event => { const tab = event.target.closest(".br-tab"); if (tab) { state.tab = Number(tab.dataset.i); state.key = null; render(true); } });
     list.addEventListener("focusin", event => show(event.target.closest("[data-key]")?.dataset.key));
-    list.addEventListener("click", event => { const item = event.target.closest("[data-key]"); if (item) { focusOn(item); show(item.dataset.key); } });
+    list.addEventListener("click", event => {
+      const item = event.target.closest("[data-key]");
+      if (!item) return;
+      focusOn(item); show(item.dataset.key);
+      if (event.detail && getComputedStyle(root.querySelector(".br-body")).gridTemplateColumns.split(" ").length < 2) detail.scrollIntoView?.({ block: "start", behavior: "smooth" });
+    });
     browserKeys(root, { onTab: setTab, onLeave: spec.onLeave ?? leaveToNav });
     render(false);
     return { render, state };
@@ -146,20 +159,21 @@
   }
   function renderSkillLegend(container) {
     const skills = Object.entries(gameData.skills), rules = gameData.skillRules;
-    makeBrowser(container, {
+    const browser = makeBrowser(container, {
       cls: "skill-browser", grid: true, title: "Bảng skill",
       lead: "Mỗi cầu thủ một skill trong trận, dùng một lần. Bấm là kích hoạt; skill thủ môn tự bật; skill penalty dùng riêng cho mỗi lượt sút.",
       tabs: () => SKILL_GROUPS.map(([labelText, test]) => ({ label: labelText, items: skills.filter(([, skill]) => test(skill)).map(([kind, skill]) => ({ key: kind,
         html: `<button type="button" class="br-item skill-tile" data-br data-nav data-key="${kind}"><svg viewBox="0 0 24 24" aria-hidden="true">${skillBadge(kind, skill.icon, "tile-" + kind)}</svg><span><b>${escapeHtml(skill.short)}</b><small>${escapeHtml(skill.name)}</small></span></button>` })) })),
       detail: kind => {
         const skill = gameData.skills[kind], openPlay = skill.contexts.some(c => c === "attack" || c === "defense"), penalty = skill.contexts.some(c => c.startsWith("penalty"));
-        const keys = bindingsOf("cpu").A ?? {}, keysB = bindingsOf("local").B ?? {};
+        const cpuKey = bindingsOf("cpu").A?.special, keyA = bindingsOf("local").A?.special, keyB = bindingsOf("local").B?.special;
         return `<div class="bd-hero"><svg class="bd-badge" viewBox="0 0 24 24" aria-hidden="true">${skillBadge(kind, skill.icon, "hero-" + kind)}</svg><div><span class="bd-kicker">${skill.auto ? "Tự kích hoạt" : "Skill"}</span><h3>${escapeHtml(skill.short)}</h3><p class="bd-sub">${escapeHtml(skill.name)}</p></div></div>`
           + '<div class="bd-chips">' + skillRoles(skill).map(r => chip(ROLE_GROUPS[r], ROLE_COLORS[r])).join("") + skill.contexts.map(c => chip(gameData.skillContexts[c].label)).join("") + "</div>"
           + `<p class="bd-text">${escapeHtml(skill.desc)}</p>`
-          + facts([["Kích hoạt", skill.auto || kind === "penaltySaver" ? "Tự động" : `Phím Skill ${kbd(keys.special)} · người B ${kbd(keysB.special)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", openPlay && !skill.auto ? Math.round(rules.cost * 100) + "%" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : rules.usesPerMatch + " lần mỗi trận"]]);
+          + facts([["Kích hoạt", skill.auto || kind === "penaltySaver" ? "Tự động" : `Đấu máy ${kbd(cpuKey)} · Hai người ${kbd(keyA)} / ${kbd(keyB)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", !skill.auto && !penalty ? Math.round(rules.cost * 100) + "%" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : openPlay ? rules.usesPerMatch + " lần mỗi trận" : rules.usesPerMatch + " lần mỗi trận, chung với skill kia"]]);
       }
     });
+    keymapRenders.add(() => browser.render());
   }
 
   /* Ratings and build */
@@ -197,9 +211,9 @@
         if (kind === "stat") {
           const boosts = styles.filter(s => s.stats[id]).sort((a, b) => b.stats[id] - a.stats[id]);
           return `<div class="bd-hero"><b class="bd-code">${rules.short[id]}</b><div><span class="bd-kicker">Chỉ số</span><h3>${rules.labels[id]}</h3></div></div><p class="bd-text">${STAT_EFFECTS[id]}</p>`
-            + '<h4 class="bd-h">Mức nền theo vị trí</h4>' + bars(Object.keys(rules.base).map(r => [ROLE_GROUPS[r], rules.base[r][id] - 20, 75, rules.base[r][id], tone(rules.base[r][id])]))
+            + '<h4 class="bd-h">Mức nền theo vị trí</h4>' + bars(Object.keys(rules.base).map(r => { const v = Math.max(rules.range[0], rules.base[r][id]); return [ROLE_GROUPS[r], v - 20, 75, v, tone(v)]; }))
             + '<h4 class="bd-h">Trọng số trong OVR</h4>' + bars(Object.keys(rules.weights).map(r => [ROLE_GROUPS[r], rules.weights[r][id] ?? 0, .7, rules.weights[r][id] ? Math.round(rules.weights[r][id] * 100) + "%" : "—"]))
-            + (boosts.length ? '<h4 class="bd-h">Lối chơi tăng chỉ số này</h4><div class="bd-chips">' + boosts.map(s => chip(escapeHtml(s.name) + (s.stats[id] > 0 ? " +" : " ") + s.stats[id])).join("") + "</div>" : "");
+            + (boosts.length ? '<h4 class="bd-h">Lối chơi thay đổi chỉ số này</h4><div class="bd-chips">' + boosts.map(s => chip(escapeHtml(s.name) + (s.stats[id] > 0 ? " +" : " ") + s.stats[id])).join("") + "</div>" : "");
         }
         if (kind === "body") {
           const [name, unit, text] = BODY_ITEMS[id], body = gameData.body;
@@ -252,9 +266,11 @@
     if (!attack && s.screen) { d -= .08 * s.screen; w += (.5 - w) * s.screen; }
     w += s.swing * .3;
     const P = ([dd, ww]) => [(8 + ww * 104).toFixed(1), (150 - dd / .75 * 138).toFixed(1)], [x0, y0] = P(home), [x1, y1] = P([clamp(d, .02, .8), clamp(w, .06, .94)]);
-    const ball = s.swing ? `<circle class="sd-ball" cx="104" cy="${(Number(y1) - 14).toFixed(1)}" r="5"/><text class="sd-note" x="104" y="${(Number(y1) - 24).toFixed(1)}">bóng</text>` : "";
-    const roam = s.roam > 1.2 ? `<circle class="sd-roam" cx="${x1}" cy="${y1}" r="${(10 * s.roam).toFixed(1)}"/>` : "";
-    const rush = s.rush > 0 ? `<circle class="sd-roam" cx="${x1}" cy="${y1}" r="${(14 + s.rush * 5).toFixed(1)}"/>` : "";
+    const by = Number(y1) < 40 ? Number(y1) + 18 : Number(y1) - 14;
+    const ball = s.swing ? `<circle class="sd-ball" cx="104" cy="${by.toFixed(1)}" r="5"/><text class="sd-note" x="104" y="${(by - 9).toFixed(1)}">bóng</text>` : "";
+    const ring = r => Math.min(r, Number(x1) - 4, 116 - Number(x1), Number(y1) - 4, 156 - Number(y1)).toFixed(1);
+    const roam = s.roam > 1.2 ? `<circle class="sd-roam" cx="${x1}" cy="${y1}" r="${ring(10 * s.roam)}"/>` : "";
+    const rush = s.rush > 0 ? `<circle class="sd-roam" cx="${x1}" cy="${y1}" r="${ring(14 + s.rush * 5)}"/>` : "";
     return `<svg class="style-diagram" viewBox="0 0 120 160" role="img" aria-label="Vị trí điển hình"><rect x="4" y="4" width="112" height="152" rx="6"/><path d="M4 80h112M40 156v-16h40v16M40 4v16h40V4"/><circle cx="60" cy="80" r="14"/>${roam}${rush}${ball}`
       + `<circle class="sd-home" cx="${x0}" cy="${y0}" r="6"/><path class="sd-arrow" d="M${x0} ${y0}L${x1} ${y1}"/><circle class="sd-spot" cx="${x1}" cy="${y1}" r="7" style="fill:${ROLE_COLORS[role]}"/></svg>`;
   }
@@ -489,7 +505,7 @@
     return overlay;
   }
   function buildSheet(arena, name, title, body) {
-    const sheet = document.createElement("div"); sheet.className = "sheet"; sheet.dataset.sheet = name; sheet.hidden = true;
+    const sheet = document.createElement("div"); sheet.className = "sheet"; sheet.dataset.sheet = name; sheet.hidden = true; sheet.tabIndex = -1;
     sheet.setAttribute("role", "dialog"); sheet.setAttribute("aria-label", title);
     sheet.innerHTML = '<div class="sheet-head"><button type="button" class="sheet-back" data-nav data-act="close-sheet"><span aria-hidden="true">‹</span> Quay lại <kbd>Esc</kbd></button><h2>' + title + '</h2><span class="sheet-peek-note">Thả <kbd>Tab</kbd> để đá tiếp</span></div><div class="sheet-body">' + body + "</div>";
     arena.append(sheet);
@@ -1454,7 +1470,7 @@
     });
     editor.querySelector(".keymap-restore").addEventListener("click", () => {
       const result = keymap.restore(editingId);
-      if (result.ok) { loadDraft(editingId); say("Đã khôi phục phím gốc.", "ok"); render(); }
+      if (result.ok) { loadDraft(editingId); say("Đã khôi phục phím gốc.", "ok"); render(); if (!editor.contains(document.activeElement)) focusOn(pick); }
       else say("Chưa khôi phục: trùng phím " + (result.clash?.map(label).join(", ") ?? "") + " với người còn lại.", "error");
     });
     editor.querySelector(".keymap-delete").addEventListener("click", async () => {
@@ -1471,6 +1487,7 @@
   window.addEventListener("keydown", event => {
     if (!capture) return;
     event.preventDefault(); event.stopImmediatePropagation();
+    if (event.repeat) return;
     const pending = capture;
     if (event.code === "Escape") { capture = null; renderKeymaps(); return; }
     if (keymap.reserved(event.code)) {
@@ -1588,6 +1605,8 @@
       const sheet = [...view.arena.querySelectorAll(".sheet")].find(s => !s.hidden && !s.classList.contains("is-peek"));
       if (sheet) {
         if (sheet.dataset.sheet === "plan" && planKey(view === watchView ? watchView : view.panel.planView, sheet, event, dir)) { handled(); return; }
+        const browser = sheet.querySelector(".browser");
+        if (browser && !active?.closest?.("[data-br]") && sheet.contains(active) && (dir || ["KeyQ", "KeyE", "PageUp", "PageDown"].includes(event.code))) { handled(); backToEntry(browser, event); return; }
         if (event.code === "Escape") { handled(); closeSheet(sheet); }
         else if (event.code === "Tab") { handled(); moveFocus(sheet, event.shiftKey ? -1 : 1); }
         else if (vertical) { handled(); sheet.querySelector(".sheet-body").scrollBy({ top: delta * 90 }); }
@@ -1611,7 +1630,7 @@
       else if (event.code === "Space" && active?.matches?.(".menu-item")) { handled(); active.click(); }
       return;
     }
-    if (event.code === "Escape") { const back = backTarget(); if (back) { handled(); go(back); } return; }
+    if (event.code === "Escape" && !(route.name === "info" && infoScreen.querySelector(".info-panes").contains(active))) { const back = backTarget(); if (back) { handled(); go(back); } return; }
     if (route.name === "cpu" || route.name === "local") {
       const panel = document.getElementById(SCREENS[route.name]), setup = panel.querySelector(".setup"), row = active?.closest?.(".opt[data-opt]");
       if (vertical) { handled(); moveFocus(setup, delta); }
@@ -1626,7 +1645,11 @@
       if (nav.contains(active) || active === document.body || !active) {
         if (vertical) { handled(); const tab = moveFocus(nav, delta); if (tab) go("info/" + tab.dataset.pane); }
         else if (dir === "right") { handled(); const pane = infoScreen.querySelector(".info-pane:not([hidden])"); focusOn(spatial(pane, null, "down") ?? panes); }
-      } else if (active === panes && dir === "left") { handled(); focusOn(nav.querySelector(".is-current")); }
+      } else if (panes.contains(active) && !active.closest("[data-br], input, select, textarea")) {
+        const pane = infoScreen.querySelector(".info-pane:not([hidden])");
+        if (event.code === "Escape" || dir === "left") { handled(); focusOn(nav.querySelector(".is-current")); }
+        else if (dir || ["KeyQ", "KeyE", "PageUp", "PageDown"].includes(event.code)) { handled(); backToEntry(pane, event); }
+      }
     }
   });
   // A console-style cursor: pointing at a menu entry selects it.

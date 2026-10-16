@@ -587,7 +587,7 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 .br-tab-keys { display: inline-flex; gap: 3px; margin-left: 6px; }
 .br-tab-keys kbd { min-width: 20px; min-height: 20px; border-color: #ffffff40; border-bottom-width: 2px; background: #ffffff1a; color: #fff; font-size: 10px; }
 .br-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 16px; min-height: 0; }
-.br-list { display: grid; align-content: start; gap: 6px; min-height: 0; overflow: auto; padding: 2px 10px 12px 2px; }
+.br-list { display: grid; align-content: start; grid-auto-rows: max-content; gap: 6px; min-height: 0; overflow: auto; padding: 2px 10px 12px 2px; }
 .br-list.is-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
 .br-sep { grid-column: 1 / -1; margin: 8px 0 0; color: var(--pear); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .br-sep:first-child { margin-top: 0; }
@@ -595,18 +595,18 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 .br-item:focus { outline: none; transform: translateX(4px); border-color: var(--ink); background: var(--pear); color: var(--ink); box-shadow: 3px 4px 0 #000a; }
 .br-item.is-current:not(:focus) { border-color: #dafa8166; background: #dafa8114; }
 .br-item b { display: block; font-size: 15px; }
-.br-item small { display: block; overflow: hidden; color: var(--soft); font-size: 11px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; }
+.br-item small { display: -webkit-box; overflow: hidden; color: var(--soft); font-size: 11px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .br-item:focus small { color: #3b4a3a; }
 .skill-tile { min-height: 64px; }
 .skill-tile svg { width: 44px; height: 44px; }
-.code-cap { display: grid; place-items: center; min-width: 52px; height: 36px; padding: 0 6px; border-radius: 8px; background: var(--cap, #ffffff1f); color: #fff; font-size: 13px; font-weight: 900; letter-spacing: .04em; }
+.br-item .code-cap, .code-cap { display: grid; place-items: center; min-width: 52px; height: 36px; padding: 0 6px; border-radius: 8px; background: var(--cap, #ffffff1f); color: #fff; font-size: 13px; font-weight: 900; letter-spacing: .04em; }
 .br-item:focus .code-cap { background: var(--cap, var(--ink)); color: #fff; }
 .phase-dot { width: 12px; height: 12px; border-radius: 50%; background: #f0a14a; }
 .phase-dot[data-phase="defense"] { background: #4a9cf0; }
 .level-dot { width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 50%; }
 .level-row[data-level-id="easy"] .level-dot { background: #43c776; } .level-row[data-level-id="normal"] .level-dot { background: #f2c13b; } .level-row[data-level-id="hard"] .level-dot { background: #f0994a; } .level-row[data-level-id="legend"] .level-dot { background: #e05252; }
 .rule-row { grid-template-columns: minmax(0, 1fr); }
-.ctl-row .km-cap { display: inline-flex; gap: 3px; }
+.ctl-row .km-cap { display: inline-flex; flex-wrap: wrap; gap: 3px; max-width: 150px; }
 .ctl-row .km-cap kbd { min-width: 26px; }
 /* The card */
 .br-detail { min-height: 0; overflow: auto; padding: 18px 20px 20px; border: 2.5px solid var(--ink); border-radius: 18px; background: var(--card); color: var(--ink); box-shadow: 5px 6px 0 #000a; }
@@ -661,6 +661,7 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 .kb-bottom { align-items: flex-start; }
 .kb-gap { flex: 2 1 0; }
 .kb-key[data-wide] { flex: 5 1 0; }
+.kb-key[data-code="Tab"], .kb-key[data-code="Enter"], .kb-key[data-code="Escape"] { flex: 1.5 1 0; }
 .kb-arrows { display: grid; grid-template-columns: repeat(3, 34px); grid-template-rows: 30px 30px; gap: 3px; flex: none; margin-left: 10px; }
 .kb-arrows .kb-key { height: 30px; }
 .kb-arrows .kb-key:nth-child(1) { grid-column: 2; grid-row: 1; }
@@ -670,6 +671,7 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 .kb-more, .kb-caption { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 /* Key layout editor rows */
 .keymap-list .opt { min-height: 50px; }
+.keymap-pick { grid-template-columns: minmax(96px, 1fr) 38px minmax(120px, 1.4fr) 38px; }
 .keymap-name-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); cursor: text; }
 .keymap-name-row:focus-within { transform: translateX(6px); border-color: var(--ink); background: var(--card); color: var(--ink); box-shadow: 4px 5px 0 #000a; }
 .keymap-name { min-height: 36px; padding: 6px 10px; border: 2px solid #ffffff33; border-radius: 8px; background: #00000033; color: inherit; font: inherit; font-weight: 800; outline: none; }
@@ -677,7 +679,7 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 .keymap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
 .keymap-key { grid-template-columns: minmax(0, 1fr) auto; min-height: 46px; }
 .keymap-key .km-label { font-size: 13px; }
-.keymap-key.is-listening { border-color: var(--pear); background: #dafa8126; animation: keymap-listen 1s ease-in-out infinite alternate; }
+.keymap-key.is-listening { border-color: var(--pear); background: #dafa8126; color: #fff; animation: keymap-listen 1s ease-in-out infinite alternate; }
 .keymap-key.is-listening .km-cap { color: var(--pear); font-size: 12px; }
 .keymap-status { min-height: 1.5em; margin: 4px 0 0; color: var(--pear); font-weight: 700; font-size: 13px; }
 .keymap-status[data-tone="error"] { color: #ff9d8f; }
@@ -686,6 +688,14 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 .keymap-use.is-current .toggle-state { background: var(--pear); color: var(--ink); }
 .browser-sheet .sheet-body { overflow: hidden; }
 .sheet-controls { height: 100%; }
+@media (max-width: 1100px) {
+  .info-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
+  .info-nav { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .info-nav a { flex: none; padding: 9px 14px; font-size: 13px; clip-path: none; border-radius: 10px; }
+  .br-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .br-head .pane-lead { display: none; }
+  .keymap-targets { grid-template-columns: 1fr; }
+}
 @media (max-width: 760px) {
   .info-panes { overflow: auto; }
   .info-pane, .browser { height: auto; }
@@ -698,6 +708,8 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
   .kb-key small { font-size: 7px; }
   .kb-arrows { grid-template-columns: repeat(3, 28px); grid-template-rows: 26px 26px; }
   .bd-badge { width: 72px; height: 72px; }
+  .br-head .pane-lead { display: block; }
+  .keymap-pick { grid-template-columns: minmax(0, 1fr) 32px minmax(96px, 140px) 32px; }
 }
 /* Upright phones: the stamina boxes go under the pitch instead of over it; the key guide is of no use there. */
 @media (max-width: 640px) and (orientation: portrait) {
