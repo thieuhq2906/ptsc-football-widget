@@ -8,7 +8,7 @@ Không cần thư viện, không cần build, không cần server riêng.
 [Mở PTSC Cup](https://thieuhq2906.github.io/ptsc-football-widget/).
 
 - **Chỉ xem:** một trận ngẫu nhiên; kịch bản ưu tiên rượt đuổi, lội ngược dòng và bàn thắng muộn. Cả Đỏ và Xanh đều có thể thắng.
-- **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh; máy điều khiển đội còn lại.
+- **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh và **độ khó** (Dễ, Thường, Khó, Huyền thoại, nhớ trong trình duyệt); máy điều khiển đội còn lại.
 - **Hai người:** A chọn áo, B chọn sân trái/phải lúc bắt đầu và nhận màu áo còn lại. Hai đội đổi sân giữa hiệp.
 
 Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người tự động chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong. Cầu thủ ra/vào chạy nhanh gấp đôi; bàn giao và chờ đá tiếp đã được rút ngắn.
@@ -24,9 +24,9 @@ Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi
 | Di chuyển theo hướng màn hình | W A S D | Các phím mũi tên |
 | Giữ để nạp lực chuyền, thả để đá (khi có bóng) | F | J |
 | Có bóng: giữ để nạp lực sút, thả để đá; phòng ngự: bấm để xoạc (tự bám đối thủ trong 5,5m) | G | K |
-| Chọn cầu thủ gần bóng nhất, kể cả lúc chờ | R | U |
+| Chọn cầu thủ gần bóng nhất, kể cả lúc chờ; **khi đang cầm bóng: gọi đồng đội theo hướng mũi tên chạy chỗ thẳng về khung thành** | R | U |
 | Giữ để chạy nhanh | T | I |
-| Giữ để pressing / áp sát khi phòng ngự | V | N |
+| Giữ để bám người: người cầm bóng, người sắp nhận đường chuyền, hoặc bóng tự do; thả là dừng | V | N |
 | Bấm để tranh bóng khi đủ gần đối thủ | B | M |
 | Skill đặc biệt (icon cạnh tên/thể lực là chỉ dẫn) | E | O |
 
@@ -59,11 +59,11 @@ Phạt góc có người đá đứng trong 1,4m cạnh cờ, luôn điều khi�
 | Đập nhả | V | N |
 | Trả tuyến hai | B | M |
 Các cầu thủ khác vẫn có thể di chuyển lúc bóng chết, thay người và trọng tài nghỉ. Với người được điều khiển không phải người thực hiện bóng chết, input di chuyển ngắt đường chạy bố trí tự động; nhấn hướng phản hồi ngay, nhả phím dừng ngay. Space vẫn đóng băng trận. Đồng hồ và thể lực không giảm trong các khoảng chờ.
-Giữ V/N áp sát phản hồi ngay, bỏ đường chạy bố trí tự động không thuộc hành động đang thực hiện; tốc độ tiếp cận cơ bản 6,8m/s, hướng bám người cầm bóng cập nhật mỗi bước. Thả nút dừng áp sát, không tự tranh bóng/xoạc.
+Giữ V/N là bám theo ngay, chạy 6,8 m/s: bám người đối phương đang cầm bóng (cách 0,85 m); khi đối phương chuyền thì bám người nhận (hoặc chạy tới điểm bóng rơi); bóng tự do thì chạy tới bóng. Đội mình có bóng hoặc bóng chết thì phím không có tác dụng. Thả nút dừng ngay, không tự tranh bóng/xoạc.
 Đá phạt thường ưu tiên cầu thủ có **Vua đá phạt** còn lượt và đủ thể lực, tự điều khiển người đó. Người đá tự vào vị trí cạnh bóng rồi đứng yên chờ thực hiện; không đổi sang người khác trong lúc chờ. Giữ rồi thả **F/J** để chuyền, **G/K** để sút; có nạp lực, hướng ngắm và đường bóng cao/thấp như lúc chơi. Trên sân chỉ hiện chỉ dẫn phím nhỏ. Đội phòng ngự (kể cả người điều khiển) luôn lùi cách bóng 5 m từ lúc thổi còi cho tới khi bóng được đá, dù người chơi chờ bao lâu. Cú đá của đội người chơi chờ thao tác; máy chỉ đá sau khi người đá và hàng rào chuẩn bị xong, cân nhắc kích hoạt Vua đá phạt.
 Phạm lỗi trong vòng cấm bán nguyệt của đội phòng ngự dẫn tới **penalty trong trận**: màn camera từ sau người sút, hai bên chọn trái/giữa/phải. Vào thì cộng bàn thật và chuẩn bị giao bóng; bị cản thì thủ môn ôm bóng tiếp tục. Tình huống này tách khỏi luân lưu cuối trận, không cộng vào tỷ số luân lưu.
 Thủ môn được tăng nhẹ khả năng cản sút thường và bắt dính; sút thần sầu dễ ghi bàn hơn nhưng vẫn có thể bị cứu thua.
-Thủ môn băng ra thường xuyên: cắt bóng ở điểm sớm nhất trên đường bay mà kịp tới (bóng đủ thấp, trong vòng cấm), xét lại mỗi 0,35 giây, tầm lao ra 9 m. Gặp tiền đạo thoát xuống đối mặt, thủ môn lao ra sớm từ mép vòng cấm; người cầm bóng trong 5 m bị lao vào chân. Khi chạm bóng ở chân đối phương là một pha tranh chấp: chỉ số Bắt bóng đấu Rê bóng (30–85%), thua thì thủ môn bị qua người và nằm sân. Thủ môn đang lao ra và đã áp sát dưới 6 m làm giảm khả năng thủng lưới của cú sút (càng gần càng giảm, tới 55%). Thủ môn ôm bóng khi bóng trong tầm tay (1,5 m, theo sải tay) và trong vòng cấm.
+Thủ môn băng ra thường xuyên: cắt bóng ở điểm sớm nhất trên đường bay mà kịp tới (bóng đủ thấp, trong vòng cấm), xét lại mỗi 0,35 giây, tầm lao ra 9 m; gặp tiền đạo thoát xuống đối mặt thì lao ra sớm từ mép vòng cấm. **Khi bóng vào tầm với (sải tay + nhoài khoảng 1,6 m), thủ môn nhoài người tới vị trí bóng sẽ tới**, không chạy lên rồi đứng chờ. Nhoài vào chân đối phương là tranh chấp: Bắt bóng đấu Rê bóng (35–90%); thua thì bị qua người và nằm sân. Đối phương sút ngay lúc thủ môn đang lao ra/nhoài tới trong 6 m thì khả năng thủng lưới giảm theo khoảng cách (sát 1 m chỉ còn khoảng 40%).
 Thủ môn ôm bóng trên tay tối đa 6 giây trước khi tự phát bóng. Khi đi ra khỏi vòng cấm bán nguyệt, thủ môn tự hạ bóng xuống chân và tiếp tục điều khiển bình thường; không bị ép phá bóng khi bóng đã ở chân. Việc kiểm tra xét cả vị trí bóng trên tay và sân hiện tại sau đổi sân.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
@@ -135,6 +135,25 @@ Mỗi cầu thủ có 10 chỉ số (35–95): **Tốc độ, Rê bóng, Chuyề
 | Chuyền ngắn | Đường chuyền sệt ít bị cắt hơn. |
 | Chuyền dài | Ít chuyền dài quá tay ra biên hơn. |
 | Rê bóng + Sức mạnh đấu Phòng ngự + Sức mạnh | Tranh chấp tự động: ai thắng, người rê giỏi đôi khi lách qua pha vào bóng. |
+
+### Độ khó máy
+
+Chỉ áp dụng cho đội máy trong chế độ đấu với máy; đội của bạn không đổi.
+
+| Độ khó | Chỉ số cả đội | Tranh bóng | Đọc đường chuyền | Dứt điểm | Thủ môn | Ra quyết định |
+|---|---|---|---|---|---|---|
+| Dễ | −8 | ×0,7 | ×0,6 | ×0,85 | −6 điểm % cứu thua | chậm 50% |
+| Thường | 0 | ×1 | ×1 | ×1 | 0 | bình thường |
+| Khó | +5 | ×1,25 | ×1,3 | ×1,1 | +4 | nhanh 25% |
+| Huyền thoại | +10 | ×1,5 | ×1,6 | ×1,2 | +8 | nhanh 50% |
+
+### Thẻ thông tin
+
+Mỗi đội có một thẻ lớn: OVR, tên, vị trí, chiều cao/cân nặng, thể lực (số lớn và thanh), skill (icon, tên, trạng thái, mô tả), 10 chỉ số dạng ô số lớn tô màu theo mức (xanh ≥80, vàng 65–79, đỏ dưới 65) và hai chip lối chơi. Đội do người chơi điều khiển hiện người đang chọn; **đội máy** hiện người đang cầm bóng hoặc gần bóng nhất. Tab **Chỉ xem** cũng có thẻ, ô thể lực + skill trong sân và bảng đội hình cho cả hai đội. Ô trong sân của đội máy hiện thể lực và skill, không có phím.
+
+### Phạt góc
+
+Phạt góc chỉ xảy ra khi bóng thực sự chạm người: thủ môn đẩy ra ngoài, hoặc hậu vệ đứng trên đường bóng (cách đường bóng khoảng 1 m, giữa người sút và khung thành) chặn cú sút đi chệch. Khi đó bóng bay tới, chạm người hậu vệ rồi mới đổi hướng ra ngoài. Không có ai chắn thì là phát bóng lên.
 
 Tranh bóng bằng phím (B/M) vẫn giữ tỷ lệ cố định 30/50/15/5% như mô tả ở trên. Chế độ xem vẫn theo kịch bản bàn thắng. Thẻ cầu thủ hiện OVR và 10 chỉ số; HUD trên sân ghi OVR cạnh tên; bảng **Đội hình & chỉ số** liệt kê cả hai đội, kể cả dự bị.
 

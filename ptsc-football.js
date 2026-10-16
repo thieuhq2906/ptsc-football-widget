@@ -149,7 +149,17 @@
       bmi: [20.5, 25], limbs: [0.94, 1.06]
     },
     // Keepers come off their line often: loose balls and through balls within 9 m, and a man running at goal within 5 m.
-    goalkeeper: { claimHeight: 1.6, rushRange: 9, smotherRange: 5, claimRange: 1.5, speed: 7.2, decisionInterval: .35, confidence: .85 },
+    /**
+     * How hard the computer plays (vs-computer mode only): ratings shift for its whole squad, and its tackling, pass
+     * reading, finishing, goalkeeping and decision speed scale.
+     */
+    difficulty: {
+      easy: { name: "Dễ", stats: -8, tackle: .7, intercept: .6, finishing: .85, keeper: -.06, think: 1.5 },
+      normal: { name: "Thường", stats: 0, tackle: 1, intercept: 1, finishing: 1, keeper: 0, think: 1 },
+      hard: { name: "Khó", stats: 5, tackle: 1.25, intercept: 1.3, finishing: 1.1, keeper: .04, think: .75 },
+      legend: { name: "Huyền thoại", stats: 10, tackle: 1.5, intercept: 1.6, finishing: 1.2, keeper: .08, think: .5 }
+    },
+    goalkeeper: { claimHeight: 1.6, rushRange: 9, smotherRange: 5, claimRange: 1.5, diveLunge: 1.6, speed: 7.2, decisionInterval: .35, confidence: .85 },
     celebrations: { fist: "Vung nắm đấm", mate: "Đập tay, ôm đồng đội", arms: "Dang tay", airplane: "Máy bay", pointMate: "Chỉ tay cảm ơn đồng đội", badge: "Chỉ huy hiệu áo", dance: "Nhảy múa", kneeSlide: "Trượt gối", shush: "Suỵt", siu: "SIUU", sky: "Chỉ lên trời", hurry: "Ôm bóng về giữa sân khi vẫn bị dẫn", groupHug: "Ôm cả nhóm", kneelBrief: "Quỳ giơ tay" }
   };
   // Every style lists every parameter, so behaviour code can read them without checks.
@@ -617,7 +627,7 @@
       const rules = GAME_DATA.stats, base = rules.base[p.natural] ?? rules.base.MF, atk = atkOf(p).stats, def = defOf(p).stats;
       return Object.fromEntries(rules.keys.map(k => {
         const rolled = base[k] + (atk[k] ?? 0) + (def[k] ?? 0) + (p.star ? rules.star[k] ?? 0 : 0) + Math.round((statRng() * 2 - 1) * rules.spread) - (p.role === "SUB" ? 2 : 0);
-        const value = Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : rolled;
+        const value = Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : rolled + (k === "goalkeeping" && p.natural !== "GK" ? 0 : level(p.team).stats);
         return [k, clamp(Math.round(value), rules.range[0], rules.range[1])];
       }));
     }
@@ -737,6 +747,10 @@
     const humans = interactive ? [{ slot: "A", team: settings.teamA === "B" ? "B" : "R", selected: null, x: 0, y: 0, sprint: false, tackleAt: -99 }] : [];
     if (settings.mode === "local") humans.push({ slot: "B", team: otherTeam(humans[0].team), selected: null, x: 0, y: 0, sprint: false, tackleAt: -99 });
     let support = settings.support !== false && settings.support !== "false";
+    // Only the side nobody controls in a vs-computer match plays to the chosen level.
+    const LEVEL = settings.mode === "cpu" && Object.hasOwn(GAME_DATA.difficulty, settings.difficulty) ? GAME_DATA.difficulty[settings.difficulty] : GAME_DATA.difficulty.normal;
+    const cpuTeam = settings.mode === "cpu" ? otherTeam(humans[0].team) : null;
+    const level = t => t === cpuTeam ? LEVEL : GAME_DATA.difficulty.normal;
     const chargePower = h => h.charge ? h.charge.frozen ?? clamp((T - h.charge.start) / 0.9, 0.08, 1) : 0;
     const humanFor = p => p && humans.find(h => h.team === p.team);
     const specialActive = p => !!p && game.mode === "play" && !game.stoppage && (p.specialUntil ?? 0) > game.clock;
@@ -989,7 +1003,7 @@
       const c = game.carrier;
       if (game.mode !== "play" || game.stoppage || !c || !humanFor(c) || c.script || ball.mode !== "carried" || T < c.busyUntil) return;
       const d = nearest(outfield(opponents(c.team)).filter(p => !manual(p) && !p.script && T >= p.busyUntil), c.pos);
-      if (d.p && d.d < (2.1 + defOf(d.p).tackle * 1.5) * sweepOf(d.p) && T - (game.manualChallengeAt ?? -99) > 1.2) {
+      if (d.p && d.d < (2.1 + defOf(d.p).tackle * 1.5) * sweepOf(d.p) * Math.sqrt(level(d.p.team).tackle) && T - (game.manualChallengeAt ?? -99) > 1.2 / level(d.p.team).tackle) {
         game.manualChallengeAt = T;
         tackle(c, d.p, T + 0.3);
       }
@@ -1015,8 +1029,24 @@
     function movementCommitted(p) {
       return !!p.slideTarget || kickCommitted(p) || p.keys.some(k => T >= k[0] && T < k[1] && ["slide", "sitUp", "fall", "hurt", "tap", "trap", "volley", "bicycle", "header", "catch", "gkHigh", "gkLow", "gkChest", "dive"].includes(k[2]));
     }
+    /**
+     * What a held press key (V/N) follows: the opponent on the ball; the opponent a pass is going to (or where it will
+     * land); a loose ball. Nothing while his own side has it or the ball is dead.
+     */
+    function pressTarget(p) {
+      if (game.mode !== "play" || game.stoppage || !p) return null;
+      const owner = ball.owner;
+      if (owner && ["carried", "held"].includes(ball.mode)) return owner.team !== p.team && on(owner) ? { man: owner, gap: 0.85 } : null;
+      if (ball.mode === "fly" && ball.seg) {
+        const land = courtUV(ball.seg.b.g), receiver = nearest(outfield(opponents(p.team)), land);
+        if (game.poss === p.team && (!receiver.p || receiver.d > 3)) return null;
+        return receiver.p && receiver.d < 6 ? { man: receiver.p, gap: 0.7 } : { spot: land, gap: 0 };
+      }
+      if (ball.mode === "dead" && !owner && ball.show) return { spot: ballUV(), gap: 0 };
+      return null;
+    }
     function takeManualMovement(p, h) {
-      const pressing = h.pressing && !game.stoppage && game.carrier?.team !== p.team && ball.mode === "carried";
+      const pressing = h.pressing && !!pressTarget(p);
       if (restartLocked(p) || movementCommitted(p) || !(h.x || h.y || pressing)) return;
       p.script = null; p.faceLock = null; p.busyUntil = T;
       p.keys = p.keys.filter(k => !["jockey", "ready", "stance", "wall", "run", "dribble", "dribbleLow"].includes(k[2]));
@@ -1033,6 +1063,32 @@
       if (freeKick) { p.script = null; p.busyUntil = T; ball.owner = p; }
       selectBallOwner(p); h.charge = { action, owner: p, start: T }; return true;
     };
+    /** The team-mate most in line with the aim arrow sprints towards the goal for a couple of seconds, ready for the pass. */
+    function callRun(h, c) {
+      if (game.halted) return false;
+      if (T - (h.runCallAt ?? -9) < 0.8) return true;
+      const direction = aimFor(h, c).world;
+      let best = null, bestValue = -Infinity;
+      for (const m of outfield(team[c.team])) {
+        if (m === c || m.script || T < m.busyUntil || m.injured || toT(m.team, m.pos)[0] >= 0.86) continue;
+        const dx = (m.pos[0] - c.pos[0]) * LEN, dy = (m.pos[1] - c.pos[1]) * WID, dist = Math.hypot(dx, dy) || 1;
+        const along = (dx * direction[0] * LEN + dy * direction[1] * WID) / dist;
+        const value = along * 10 - dist * 0.05;
+        if (value > bestValue) { bestValue = value; best = m; }
+      }
+      if (!best) return false;
+      h.runCallAt = T;
+      // Straight at goal: towards the goal mouth, about 10 m, finishing in front of it rather than in the net.
+      const [md, mw] = toT(best.team, best.pos), runTo = toW(best.team, [Math.max(md, Math.min(0.88, md + 10 / LEN)), mw + (0.5 - mw) * 0.45]);
+      const time = Math.max(0.8, mdist(best.pos, runTo) / (6.6 * (0.75 + 0.25 * fit(best))));
+      mkScript(best, [T, best.pos], [T + time, runTo], [T + time + 0.6, runTo]);
+      best.busyUntil = T + 0.2; best.runCallUntil = T + time + 0.6;
+      game.stats.runsCalled = (game.stats.runsCalled ?? 0) + 1;
+      say(c, pick(["Chạy lên!", "Băng xuống!", "Xâm nhập đi!"]), "var(--color-card)", 1.0);
+      at(T + 0.25, () => { if (on(best)) say(best, pick(["Tôi chạy đây!", "Chuyền vào khoảng trống!", "Đang lên!"]), "var(--color-pear)", 1.0); });
+      drawControlMarkers();
+      return true;
+    }
     api.freezeCharge = slot => { const h = humans.find(h => h.slot === slot); if (h?.charge) h.charge.frozen = chargePower(h); };
     api.cancelCharge = slot => { const h = humans.find(h => h.slot === slot); if (h) h.charge = null; };
     api.releaseCharge = (slot, options = {}) => {
@@ -1048,6 +1104,9 @@
       const lockedRestart = lockRestartSelection(h);
       if (action === "switch") {
         if (lockedRestart) { drawControlMarkers(); return true; }
+        // On the ball, the same key calls a team-mate in the arrow's direction to make a run straight at goal.
+        const carrier = h.selected;
+        if (carrier && ball.owner === carrier && ["carried", "held"].includes(ball.mode) && game.mode === "play" && !game.stoppage) return callRun(h, carrier);
         const candidates = team[h.team].filter(controllable).sort((a, b) => mdist(a.pos, ballUV()) - mdist(b.pos, ballUV()) || a.i - b.i);
         if (!candidates.length) return false;
         const now = performance.now(), consecutive = now - (h.switchAt ?? -Infinity) <= GAME_DATA.controls.switchSequenceMs;
@@ -1128,7 +1187,31 @@
       }
       return false;
     };
-    api.status = () => ({ mode: settings.mode ?? "watch", support, phase: game.mode, stoppage: game.stoppage, note: game.note, minute: minute(), score: { ...game.score }, winner: game.winner,
+    /**
+     * One man per side for the HUD: whoever a player controls, otherwise the side's man on the ball, or the one
+     * nearest to it (the keeper only when the ball is in his area). Kept for a moment so the card does not flicker.
+     */
+    function focusOf(t) {
+      const h = humans.find(h => h.team === t);
+      if (h?.selected) return h.selected;
+      if (ball.owner?.team === t && on(ball.owner)) return (focusOf.last[t] = { p: ball.owner, at: T }).p;
+      const last = focusOf.last[t];
+      if (last && on(last.p) && T - last.at < 1.2) return last.p;
+      const pool = team[t].filter(p => on(p) && (p.role !== "GK" || insideKeeperArea(t, ballUV())));
+      const p = nearest(pool.length ? pool : team[t].filter(on), ballUV()).p;
+      focusOf.last[t] = { p, at: T };
+      return p;
+    }
+    focusOf.last = {};
+    function playerInfo(p) {
+      if (!p) return null;
+      const skill = specialData(p), remaining = Math.max(0, (p.specialUntil ?? 0) - game.clock);
+      return { name: p.name, number: p.num ?? null, role: p.role, team: p.team, energy: p.energy ?? 1, hasBall: ball.owner === p, ovr: overall(p), stats: { ...p.stats }, body: { ...bodyOf(p) },
+        style: { attack: { name: atkOf(p).name ?? "", en: atkOf(p).en ?? "", desc: atkOf(p).desc ?? "" }, defense: { name: defOf(p).name ?? "", en: defOf(p).en ?? "", desc: defOf(p).desc ?? "" } },
+        special: { kind: specialKind(p), icon: skill?.icon ?? "", name: specialName(p), short: skill?.short ?? "", desc: skill?.desc ?? "", contexts: skill?.contexts ?? [], used: !!p.specialUsed,
+          active: specialActive(p), remaining, auto: !!skill?.auto, minutesLeft: Math.ceil(remaining * PACE), ...specialAvailability(p) } };
+    }
+    api.status = () => ({ mode: settings.mode ?? "watch", support, difficulty: settings.mode === "cpu" ? { id: Object.hasOwn(GAME_DATA.difficulty, settings.difficulty) ? settings.difficulty : "normal", name: LEVEL.name } : null, phase: game.mode, stoppage: game.stoppage, note: game.note, minute: minute(), score: { ...game.score }, winner: game.winner,
       kickoff: game.restart === "kickoff" ? { slot: humanFor(game.restartTaker)?.slot ?? null, ready: kickoffReady(), name: game.restartTaker?.name } : null,
       corner: game.corner ? { slot: humanFor(game.corner.taker)?.slot ?? null, ready: cornerReady(), name: game.corner.taker.name, options: GAME_DATA.corners } : null,
       freeKick: game.stoppage && game.deadBallReason === "freeKick" && game.fk?.kind === "freeKick" ? { slot: humanFor(game.fk.taker)?.slot ?? null, ready: freeKickReady(humanFor(game.fk.taker)), name: game.fk.taker.name } : null,
@@ -1141,12 +1224,13 @@
         })),
         players: humans.map(h => ({ slot: h.slot, team: h.team, role: h.team === game.penalty.attack ? "attack" : "defend", locked: !!game.penalty.choices[h.team] })) } : null,
       ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
+      teams: Object.fromEntries(TEAMS.map(t => { const h = humans.find(h => h.team === t); return [t, { ...playerInfo(focusOf(t)), controller: h ? h.slot : interactive ? "cpu" : "auto" }]; })),
       players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
         special: { kind: specialKind(h.selected), icon: specialData(h.selected)?.icon ?? "", name: specialName(h.selected), contexts: specialData(h.selected)?.contexts ?? [], context: skillContext(h.selected), used: !!h.selected?.specialUsed, primed: !!h.selected?.specialPrimed, opening: openingSkills(), defenseOnly: defensiveSkill(h.selected), defending: defendingTeam(h.team), ...specialAvailability(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock), auto: !!specialData(h.selected)?.auto, minutesLeft: Math.ceil(Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) * PACE), short: specialData(h.selected)?.short ?? "" },
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
         slideReady: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil && ball.owner !== h.selected && T - h.tackleAt > 1.5,
-        pressing: !!h.pressing && defendingTeam(h.team), yellows: h.selected?.yellows ?? 0,
+        pressing: !!h.pressing && !!pressTarget(h.selected), yellows: h.selected?.yellows ?? 0,
         ovr: overall(h.selected), stats: h.selected?.stats ? { ...h.selected.stats } : null, body: h.selected?.body ? { ...h.selected.body } : null,
         style: h.selected?.attackStyleId ? Object.fromEntries([["attack", atkOf(h.selected)], ["defense", defOf(h.selected)]].map(([phase, s]) => [phase, { name: s.name, en: s.en, desc: s.desc }])) : null,
         charge: h.charge ? { action: h.charge.action, power: chargePower(h) } : null,
@@ -1197,7 +1281,7 @@
       holdStill(c, T, Tk + 0.08); kickPoses(c, Tk, throwing ? "throw" : action === "pass" ? "pass" : special || profile.power > 0.65 ? "power" : "kick");
       lockFace(c, Tk + 0.25, faceTowards(c, ground(...target))); c.busyUntil = Infinity;
       if (!assisted && !raw.boundary && action === "pass") {
-        const candidate = nearest(players.filter(p => p !== c && on(p) && !p.script), target).p;
+        const candidate = nearest(players.filter(p => p !== c && on(p) && (!p.script || T < (p.runCallUntil ?? 0))), target).p;
         if (candidate && mdist(candidate.pos, target) <= RUN * flight * (0.7 + 0.3 * fit(candidate))) receiver = candidate;
       }
       if (receiver) mkScript(receiver, [T, receiver.pos], [Tk + flight, target], [Tk + flight + 0.25, target]);
@@ -1586,7 +1670,7 @@
       const thiefP = mom ? (c.team === mom ? 0.04 : Math.min(0.55, 0.18 + overdue * 0.05)) : 0.14;
       const reader = nearest(outfield(opponents(c.team)), lerp(c.pos, tgt, f));
       const disrupt = reader.p && reader.d < 9 ? defOf(reader.p).intercept : 0;
-      if (!lofted && !throwing && rng() < (thiefP + disrupt + 0.12 * (1 - fit(c))) * clamp(1 - edge(c, "passing") * 1.5, .4, 1.6)) {
+      if (!lofted && !throwing && rng() < (thiefP * level(otherTeam(c.team)).intercept + disrupt + 0.12 * (1 - fit(c))) * clamp(1 - edge(c, "passing") * 1.5, .4, 1.6)) {
         const mid = lerp(c.pos, tgt, f), n = nearest(outfield(opponents(c.team)), mid);
         if (n.p && n.d / RUN < Tk + flight * f - T) thief = { p: n.p, mid };
       }
@@ -1650,7 +1734,7 @@
         fly({ g: ground(...out), h: 0 }, 0.6, 0.05, { roll: true, onEnd: () => ballOut(otherTeam(p.team), out) });
         return;
       }
-      carry(p); game.carrier = p; p.busyUntil = T + 0.2 + rng() * 0.25;
+      carry(p); game.carrier = p; p.busyUntil = T + (0.2 + rng() * 0.25) * level(p.team).think;
       controlledSay(humanFor(p), "receive");
       // A late challenge now and then, from a defender who can actually get there.
       if (rng() < (p.team === game.momentum ? 0.16 : 0.26)) {
@@ -1672,7 +1756,7 @@
       c.busyUntil = T + dur;
       // A challenge comes from a nearby defender who can reach him (about 6 m/s), and is usually clean.
       const tackleP = o.direct ? 0.25 : mom ? (c.team === mom ? 0.3 : 0.55) : 0.55;
-      if (opp.p && opp.d < 7 && rng() < tackleP * (1 + 0.6 * (1 - fit(c))) * (1 + defOf(opp.p).tackle) * clamp(1 + (duelRating(opp.p) - carryRating(c)) * 0.01, .5, 1.6)) {
+      if (opp.p && opp.d < 7 && rng() < tackleP * (1 + 0.6 * (1 - fit(c))) * (1 + defOf(opp.p).tackle) * level(opp.p.team).tackle * clamp(1 + (duelRating(opp.p) - carryRating(c)) * 0.01, .5, 1.6)) {
         const Tt = T + Math.max(dur * 0.6, (opp.d - 0.6) / 6);
         if (Tt < T + dur) tackle(c, opp.p, Tt);
       }
@@ -2559,7 +2643,7 @@
       if (interactive) {
         const open = nearest(outfield(opponents(c.team)), c.pos).d;
         const skill = edge(c, style === "header" ? "heading" : "finishing") * 0.5;
-        return clamp(0.74 - distance * 0.024 + (open > 4 ? 0.08 : -0.1) - (1 - fit(c)) * 0.18 + skill, 0.025, 0.86);
+        return clamp((0.74 - distance * 0.024 + (open > 4 ? 0.08 : -0.1) - (1 - fit(c)) * 0.18 + skill) * level(c.team).finishing, 0.025, Math.min(0.95, 0.86 * Math.max(1, level(c.team).finishing)));
       }
       if (game.golden) return minute() >= FULL + 3 ? 0.85 : 0.6;
       if (!next) return clamp(0.35 - distance * 0.012, 0.03, 0.35);
@@ -2615,9 +2699,10 @@
       const keeperSkill = specialActive(gk) ? activeSpecialData(gk) : null;
       if (keeperSkill?.auto && o.goalProbability == null) gc *= 1 - keeperSkill.save;
       // A keeper already rushing out narrows the angle: the closer he gets, the harder it is to beat him.
-      const closing = gk.keeperRush && on(gk) ? mdist(gk.pos, c.pos) : Infinity;
-      if (closing < 6 && o.goalProbability == null) { gc *= clamp(0.45 + closing * 0.08, 0.45, 0.93); game.stats.keeperRushBlocks = (game.stats.keeperRushBlocks ?? 0) + 1; }
-      if (o.goalProbability == null) gc = Math.max(0, gc - defOf(gk).save - (interactive ? edge(gk, "goalkeeping") * 0.4 + (bodyOf(gk).reach - 2.45) * 0.25 : 0));
+      // A keeper rushing out or diving at the shooter's feet narrows the angle: the closer, the harder to beat him.
+      const closing = (gk.keeperRush || T < (gk.smotherUntil ?? 0)) && on(gk) ? mdist(gk.pos, c.pos) : Infinity;
+      if (closing < 6 && o.goalProbability == null) { gc *= clamp(0.3 + closing * 0.1, 0.3, 0.93); game.stats.keeperRushBlocks = (game.stats.keeperRushBlocks ?? 0) + 1; }
+      if (o.goalProbability == null) gc = Math.max(0, gc - defOf(gk).save - (interactive ? edge(gk, "goalkeeping") * 0.4 + (bodyOf(gk).reach - 2.45) * 0.25 + level(gk.team).keeper : 0));
       // Misses: mostly saved or off target; the woodwork is rare (and at most twice a match per side).
       let outcome = roll < gc ? "goal" : roll < gc + (1 - gc) * 0.55 ? "save" : roll < gc + (1 - gc) * 0.6 ? "post" : "wide";
       if (o.onTarget) outcome = roll < gc ? "goal" : "save";
@@ -2643,6 +2728,8 @@
       game.stats.shots++;
       at(Tk, () => {
         if (game.mode !== "play" || (o.manual && ball.owner !== c)) return;
+        // Someone else has the ball now (a keeper smothered it during the wind-up): no shot.
+        if (ball.owner && ball.owner !== c) { c.busyUntil = T; return; }
         game.carrier = null;
         say(c, o.label ?? spec.label, "var(--color-coral)", 1.0);
         if (outcome === "wallHit") {
@@ -2679,6 +2766,17 @@
           return;
         }
         const arc = Math.max(spec.arc + (!o.powerProfile && style === "kick" ? dist * 0.012 : 0), wallArc(h)), flight = Math.max(0.3, dist / spec.speed, gravFlight(arc));
+        // A low shot going wide can only come off a defender who is really standing in its path: then the ball goes
+        // to him, he blocks it and it spins out for a corner. With nobody in the way it is a goal kick.
+        const blocker = outcome === "wide" && !over && h < 1.6 ? shotBlocker(c, mouth) : null;
+        if (blocker && rng() < 0.6) {
+          const tb = flight * blocker.t, hit = blocker.contact;
+          mkScript(blocker.p, [T, blocker.p.pos], [T + tb, hit], [T + tb + 0.5, hit]);
+          blocker.p.keys.push([T + tb - 0.2, T + tb + 0.35, h > 1 ? "header" : "tap"]); blocker.p.busyUntil = T + tb + 0.6;
+          game.stats.deflections = (game.stats.deflections ?? 0) + 1;
+          fly({ g: ground(...hit), h: Math.min(h, 1.2) * blocker.t + 0.2 }, tb, arc * blocker.t, { kind: "shot", onEnd: () => deflectedOut(c, blocker.p, w) });
+          return;
+        }
         fly({ g: ground(...mouth), h }, flight, arc, { kind: "shot", curve: curveFor(1), wobble: style === "knuckle" ? 2.5 : 0, onEnd: () => shotEnd(outcome, c, w, h, over) });
         if (outcome === "wide" && !over) {
           // Going wide: a step across and he watches it go past.
@@ -2707,6 +2805,7 @@
         game.stats.parries++;
         if (rng() < 0.5) {
           say(gk, "Cứu thua! Ra ngoài!", "var(--color-sky-soft)", 1.2);
+          game.stats.parriedOut = (game.stats.parriedOut ?? 0) + 1;
           const side = toW(c.team, [1.04, rng() < 0.5 ? 0.3 : 0.7]);
           fly({ g: ground(...side), h: 0.3 }, 0.45, 0.6, { onEnd: () => corner(c.team, side[1] < 0.5 ? 0 : 1) });
           reactToMiss(c, "save");
@@ -2759,6 +2858,29 @@
       game.stats.praises = (game.stats.praises ?? 0) + 1;
       at(T + 0.5, () => { if (on(mate)) { mate.keys.push([T, T + 0.5, "clapA"], [T + 0.5, T + 0.9, "clapB"]); say(mate, line("praise"), "var(--color-card)", 1.1); } });
     }
+    /** An outfield defender standing across the shot's path (within about a metre of it, between shooter and goal). */
+    function shotBlocker(c, mouth) {
+      const a = [c.pos[0] * LEN, c.pos[1] * WID], b = [mouth[0] * LEN, mouth[1] * WID], v = [b[0] - a[0], b[1] - a[1]], L2 = v[0] * v[0] + v[1] * v[1] || 1;
+      let best = null;
+      for (const d of outfield(opponents(c.team))) {
+        if (manual(d) || d.script || T < d.busyUntil) continue;
+        const pnt = [d.pos[0] * LEN, d.pos[1] * WID], t = ((pnt[0] - a[0]) * v[0] + (pnt[1] - a[1]) * v[1]) / L2;
+        if (t < 0.12 || t > 0.92) continue;
+        const near = [a[0] + v[0] * t, a[1] + v[1] * t], off = Math.hypot(pnt[0] - near[0], pnt[1] - near[1]);
+        if (off > 1.1 * sweepOf(d)) continue;
+        if (!best || t < best.t) best = { p: d, t, contact: [near[0] / LEN, near[1] / WID] };
+      }
+      return best;
+    }
+    /** The shot has hit a defender: it spins away over his own goal line for a corner. */
+    function deflectedOut(c, d, w) {
+      say(d, pick(["Chặn được!", "Cản phá!", "Chắn bóng!"]), "var(--color-sky-soft)", 1.0);
+      say("ball", "Chạm hậu vệ · phạt góc!", "var(--color-sky-soft)", 1.2);
+      reactToMiss(c);
+      const out = toW(c.team, [1.05, w < 0.5 ? 0.25 : 0.75]);
+      game.stoppage = true; game.carrier = null;
+      fly({ g: ground(...out), h: 0 }, 0.5, 0.4, { roll: true, onEnd: () => corner(c.team, out[1] < 0.5 ? 0 : 1) });
+    }
     function shotEnd(outcome, c, w, h, over) {
       const def = otherTeam(c.team), gk = GK[def];
       if (outcome === "goal") {
@@ -2772,13 +2894,6 @@
         c.keys.push([T + 0.1, T + 1.1, "headHands"]);
         looseBall(inPitch(toW(c.team, [0.78 + rng() * 0.08, w < 0.5 ? 0.22 + rng() * 0.14 : 0.64 + rng() * 0.14])), { maxArc: 1.0 });
       } else {
-        if (!over && rng() < 0.4) {
-          say("ball", "Chạm hậu vệ · phạt góc!", "var(--color-sky-soft)", 1.2);
-          const out = toW(c.team, [1.05, w < 0.5 ? 0.25 : 0.75]);
-          fly({ g: ground(...out), h: 0 }, 0.4, 0.2, { roll: true, onEnd: () => corner(c.team, out[1] < 0.5 ? 0 : 1) });
-          game.stoppage = true;
-          return;
-        }
         say("ball", over ? "Vọt xà!" : "Ra ngoài!", "var(--color-sky-soft)", 1.2);
         reactToMiss(c);
         c.keys.push([T + 0.1, T + 1.2, "headHands"]);
@@ -3207,11 +3322,13 @@
         // Anchor the taker after arrival, including while aiming or charging. Body separation cannot displace him.
         p.pos = [...stand]; p.vel = [0, 0];
       } else {
-        const pressing = !waiting && h?.pressing && game.carrier && game.carrier.team !== p.team && ball.mode === "carried";
-        const chase = pressing ? add(game.carrier.g, mul(p.g, -1)) : null;
+        // Holding the press key follows the man (or the ball) at a sprint until it is released.
+        const follow = !waiting && h?.pressing ? pressTarget(p) : null, pressing = !!follow;
+        const followUV = follow ? follow.man?.pos ?? follow.spot : null;
+        const chase = followUV ? add(ground(...followUV), mul(p.g, -1)) : null;
         const direction = h ? courtUV(chase ?? [h.x, h.y]) : null;
         const directionLength = direction ? Math.hypot(direction[0] * LEN, direction[1] * WID) : 0;
-        const advance = pressing ? Math.max(0, Math.min(4, mdist(p.pos, game.carrier.pos) - 0.85)) : 4;
+        const advance = pressing ? Math.max(0, Math.min(4, mdist(p.pos, followUV) - follow.gap)) : 4;
         // Waiting for a kick-off nobody may step into the other half.
         const ownHalf = uv => { const [d, w] = toT(p.team, uv); return d > .48 ? toW(p.team, [.48, w]) : uv; };
         const constrain = game.stoppage && game.restartTaker === p ? uv => [clamp(uv[0], .005, .995), clamp(uv[1], .005, .995)] : game.mode === "reset" ? uv => ownHalf(inPitch(uv)) : inPitch;
@@ -3973,27 +4090,53 @@
         }
       }
     }
+    /**
+     * A keeper coming out does not stop in front of the ball: once it is within a dive (his reach plus a lunge), he
+     * throws himself at it. At a man's feet the dive is a duel (handling against dribbling, the dive helps him);
+     * a loose or passed ball within reach is simply gathered. Beaten, he is left on the floor.
+     */
     function resolveKeeperClaims() {
+      const rules = GAME_DATA.goalkeeper;
       for (const p of [GK.R, GK.B]) {
-        if (!p.keeperRush || game.stoppage || game.mode !== "play" || ball.kind === "shot" || ball.owner?.team === p.team || protectedBall(ball.owner)) continue;
-        if (!insideKeeperArea(p.team, ballUV()) || ball.h > GAME_DATA.goalkeeper.claimHeight || mdist(p.pos, ballUV()) > GAME_DATA.goalkeeper.claimRange * bodyOf(p).reach / 2.45) continue;
-        const carrier = ball.owner;
-        if (carrier) {
-          // At a man's feet it is a duel: the keeper's handling against his dribbling; lose it and he is rounded.
-          const win = keeperRng() < clamp(0.6 + (stat(p, "goalkeeping") - stat(carrier, "dribbling")) * 0.01, 0.3, 0.85);
-          if (!win) {
-            p.keeperRush = null; p.keys.push([T, T + .45, "dive"], [T + .45, T + 1.1, "diveLand"], [T + 1.1, T + 1.4, "sitUp"]); p.busyUntil = T + 1.4;
-            game.stats.keeperRounded = (game.stats.keeperRounded ?? 0) + 1;
-            say(carrier, "Qua thủ môn!", "var(--color-pear)", 1.0);
-            continue;
-          }
-          carrier.script = null; carrier.busyUntil = T + .3;
+        if (!p.keeperRush || game.stoppage || game.mode !== "play" || ball.kind === "shot" || ball.owner?.team === p.team || protectedBall(ball.owner) || T < p.busyUntil) continue;
+        const reach = rules.claimRange * bodyOf(p).reach / 2.45, dive = reach + rules.diveLunge * bodyOf(p).height / 185, at = ballUV(), d = mdist(p.pos, at);
+        if (!insideKeeperArea(p.team, at) || ball.h > rules.claimHeight || d > dive) continue;
+        // He dives to where the ball will be when he gets there, not where it is now.
+        const carrier = ball.owner, tDive = d > reach ? 0.24 : 0.12;
+        let aim = at;
+        if (carrier) aim = inPitch([at[0] + carrier.vel[0] / LEN * tDive, at[1] + carrier.vel[1] / WID * tDive]);
+        else if (ball.mode === "fly" && ball.seg) { const s = ball.seg, f = clamp((T + tDive - s.t0) / (s.t1 - s.t0 || 1), 0, 1); aim = courtUV(lerp(s.a.g, s.b.g, s.roll ? 1 - (1 - f) * (1 - f) : f)); }
+        const da = mdist(p.pos, aim), spot = lerp(p.pos, aim, Math.max(0, da - 0.35) / Math.max(da, 0.01));
+        p.keeperRush = null; p.script = null;
+        mkScript(p, [T, p.pos], [T + tDive, spot], [T + tDive + 0.6, spot]);
+        lockFace(p, T + 1.2, Math.sign(ground(...at)[0] - p.g[0]) || 1);
+        p.busyUntil = T + tDive + 0.05; p.smotherUntil = T + tDive + 0.45;
+        at_(p, carrier, tDive);
+      }
+    }
+    function at_(p, carrier, tDive) {
+      // The dive happens over a few frames; the outcome is decided when he reaches the ball.
+      p.keys.push([T, T + tDive + .3, carrier ? "dive" : "gkLow"]);
+      at(T + tDive, () => {
+        // If he was beaten to it by a shot, the shot (and its save or goal) takes over.
+        p.smotherUntil = 0;
+        if (game.mode !== "play" || game.stoppage || ball.owner?.team === p.team || ball.kind === "shot") return;
+        const reach = GAME_DATA.goalkeeper.claimRange * bodyOf(p).reach / 2.45 + 0.8;
+        const still = mdist(p.pos, ballUV()) <= reach && ball.h <= GAME_DATA.goalkeeper.claimHeight && ball.kind !== "shot" && insideKeeperArea(p.team, ballUV());
+        const owner = ball.owner;
+        const win = still && (!owner || keeperRng() < clamp(0.68 + (stat(p, "goalkeeping") - stat(owner, "dribbling")) * 0.01 + (sweepOf(p) - 1) * .3, 0.35, 0.9));
+        if (!win) { (game.stats.diveLog ??= []).push({ still, d: +mdist(p.pos, ballUV()).toFixed(2), h: +ball.h.toFixed(2), kind: ball.kind, mode: ball.mode, owner: !!owner, reach: +reach.toFixed(2) });
+          p.keys = p.keys.filter(k => k[1] <= T); p.keys.push([T, T + .7, "diveLand"], [T + .7, T + 1.0, "sitUp"]); p.busyUntil = T + 1.0;
+          game.stats.keeperRounded = (game.stats.keeperRounded ?? 0) + 1;
+          if (owner && owner.team !== p.team) say(owner, "Qua thủ môn!", "var(--color-pear)", 1.0);
+          return;
         }
-        p.keeperRush = null; p.keys.push([T, T + .5, carrier ? "dive" : "gkLow"]); p.busyUntil = T + .5;
+        if (owner) { owner.script = null; owner.busyUntil = T + .3; owner.keys.push([T, T + .6, "stumble"]); }
+        p.keys = p.keys.filter(k => k[1] <= T); p.keys.push([T, T + .5, "gkLow"], [T + .5, T + 1.1, "catch"]); p.busyUntil = T + 1.1;
         holdBall(p); game.carrier = p; game.poss = p.team; game.dirty = true;
         game.stats.keeperRushClaims = (game.stats.keeperRushClaims ?? 0) + 1;
-        say(p, "Ôm gọn!", "var(--color-sky-soft)", 1.2);
-      }
+        say(p, owner ? "Nhoài người ôm gọn!" : "Ôm gọn!", "var(--color-sky-soft)", 1.2);
+      });
     }
     function resolveDefensiveSpecials() {
       const c = ball.owner;
@@ -4751,8 +4894,8 @@
       io.observe(svg);
       document.addEventListener("visibilitychange", visibilityChanged);
       resumeVisible();
-      api.pause = () => { running = false; cancelAnimationFrame(raf); raf = 0; humans.forEach(h => { h.charge = null; h.pressing = false; }); };
-      api.play = () => { running = true; resumeVisible(); };
+      api.pause = () => { running = false; game.halted = true; cancelAnimationFrame(raf); raf = 0; humans.forEach(h => { h.charge = null; h.pressing = false; }); };
+      api.play = () => { running = true; game.halted = false; resumeVisible(); };
       api.destroy = () => { api.pause(); io.disconnect(); document.removeEventListener("visibilitychange", visibilityChanged); shadow.innerHTML = ""; delete host.__ptscFootball; };
     }
 

@@ -11,8 +11,8 @@
   const keymap = window.PTSCKeymap, label = keymap.label;
   const MOVE_ACTIONS = new Set(["up", "down", "left", "right", "sprint", "press"]);
   const GUIDE_ACTIONS = ["switch", "sprint", "pass", "shoot", "press", "challenge"];
-  const GUIDE_LABELS = ["Đổi người", "Chạy nhanh", "Chuyền", "Sút / xoạc", "Áp sát", "Tranh bóng"];
-  const GUIDE_GESTURES = ["Bấm", "Giữ", "Giữ → thả", "Giữ → thả / bấm", "Giữ", "Bấm"];
+  const GUIDE_LABELS = ["Đổi người", "Chạy nhanh", "Chuyền", "Sút / xoạc", "Bám người", "Tranh bóng"];
+  const GUIDE_GESTURES = ["Bấm · có bóng: gọi chạy chỗ", "Giữ", "Giữ → thả", "Giữ → thả / bấm", "Giữ để bám theo", "Bấm"];
   const CORNER_ACTIONS = ["pass", "shoot", "press", "challenge"];
   const PENALTY_ACTIONS = { left: "left", down: "center", right: "right" };
   const gameData = window.PTSCFootball.data;
@@ -147,7 +147,8 @@
     switchRepeats.set(code, repeat);
     const advance = () => {
       if (switchRepeats.get(code) !== repeat) return;
-      if (!keys.has(code) || !acceptsKeys(session) || session.api.status().ended) {
+      // On the ball the key calls one run per press; holding it does not keep calling.
+      if (!keys.has(code) || !acceptsKeys(session) || session.api.status().ended || session.api.status().players.find(p => p.slot === slot)?.hasBall) {
         switchRepeats.delete(code); return;
       }
       session.api.action(slot, "switch"); updateHud(session);
@@ -204,41 +205,128 @@
   document.querySelector("#panel-watch .arena-surface").append(watchRestart);
   watchRestart.addEventListener("click", () => document.getElementById("new-watch").click());
 
+  const watchPanel = document.getElementById("panel-watch");
+  const watchView = { panel: watchPanel, api: null, rosterKey: null };
+  function initWatchHud() {
+    const energy = document.createElement("div"); energy.className = "arena-energy";
+    watchPanel.querySelector(".arena-surface").append(energy);
+    const cards = document.createElement("div"); cards.className = "player-status";
+    const roster = document.createElement("details"); roster.className = "advanced roster"; roster.open = true; roster.hidden = true;
+    roster.innerHTML = '<summary>Đội hình &amp; chỉ số · OVR tính theo vị trí đang đá</summary><div class="roster-body"></div>';
+    watchPanel.querySelector(".watch-actions").after(cards, roster);
+    buildTeamCards(cards, cardOrder("watch"));
+    buildEnergyBoxes(energy, cardOrder("watch"));
+  }
+  function updateWatchHud() {
+    if (activeMode !== "watch" || !watcher?.status) return;
+    if (watchView.api !== watcher) { watchView.api = watcher; watchView.rosterKey = null; }
+    const state = watcher.status(), ctx = { id: "watch", leftTeam: state.leftTeam, paused: false, ended: state.ended };
+    for (const card of watchPanel.querySelector(".player-status").cards ?? []) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
+    for (const box of watchPanel.querySelector(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
+    renderRoster(watchView);
+  }
   function optionsFor(panel) {
     const teamA = panel.querySelector('input[name$="-team"]:checked').value;
     const teamB = opposite(teamA);
     const sideB = panel.querySelector('input[name="local-side"]:checked')?.value ?? "right";
     return { mode: panel.dataset.mode, duration: Number(panel.querySelector(".duration").value), extraTime: panel.querySelector(".extra-time").checked, penalties: panel.querySelector(".penalties").checked,
-      support: panel.querySelector(".support").checked, teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
+      support: panel.querySelector(".support").checked, difficulty: panel.querySelector(".difficulty")?.value ?? "normal", teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
   }
   function setupSummary(panel) {
     const options = optionsFor(panel), sideA = options.leftTeam === options.teamA ? "trái" : "phải";
-    const description = options.mode === "cpu" ? `Bạn: đội ${names[options.teamA]} · Máy: đội ${names[opposite(options.teamA)]}`
+    const description = options.mode === "cpu" ? `Bạn: đội ${names[options.teamA]} · Máy: đội ${names[opposite(options.teamA)]} (${gameData.difficulty[options.difficulty]?.name ?? "Thường"})`
       : `A: đội ${names[options.teamA]}, sân ${sideA} · B: đội ${names[opposite(options.teamA)]}, sân ${sideA === "trái" ? "phải" : "trái"}`;
     panel.querySelector(".setup-summary").textContent = description + (sessions.has(options.mode) ? " · Áp dụng khi bắt đầu trận mới." : "");
   }
-  function playerCards(session) {
-    const cards = session.panel.querySelector(".player-status");
-    cards.replaceChildren();
-    const players = [{ slot: "A", team: session.options.teamA }];
-    if (session.options.mode === "local") players.push({ slot: "B", team: opposite(session.options.teamA) });
-    for (const player of players) {
+  const ROLE_NAMES = { GK: "Thủ môn", DF: "Hậu vệ", MF: "Tiền vệ", FW: "Tiền đạo" };
+  const levelOf = v => v >= 80 ? "high" : v >= 65 ? "mid" : "low";
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const isHuman = controller => controller === "A" || controller === "B";
+  /** Who is on each card: the controlled sides first, then the computer's (or Đỏ then Xanh when watching). */
+  function cardOrder(mode, teamA) {
+    if (mode === "local") return [{ team: teamA, controller: "A" }, { team: opposite(teamA), controller: "B" }];
+    if (mode === "cpu") return [{ team: teamA, controller: "A" }, { team: opposite(teamA), controller: "cpu" }];
+    return [{ team: "R", controller: "auto" }, { team: "B", controller: "auto" }];
+  }
+  const controllerLabel = (controller, team) => controller === "cpu" ? "Máy · " + names[team] : controller === "auto" ? "Đội " + names[team] : "Người " + controller + " · " + names[team];
+  /** Big, readable cards: overall rating, name, build, stamina, skill, ten ratings and both playing styles. */
+  function buildTeamCards(container, order) {
+    container.replaceChildren();
+    container.cards = order.map(({ team, controller }) => {
       const card = document.createElement("article");
-      card.className = "player-card"; card.dataset.slot = player.slot; card.dataset.team = player.team;
-      const title = document.createElement("strong");
-      const energyLabel = document.createElement("div"); energyLabel.className = "energy-label";
-      const energyText = document.createElement("span"); energyText.textContent = "Thể lực";
-      const percent = document.createElement("span"); percent.className = "percent";
-      const meter = document.createElement("meter"); meter.min = 0; meter.max = 1; meter.low = .35; meter.high = .6; meter.optimum = 1;
-      meter.setAttribute("aria-label", `Thể lực người ${player.slot}`);
-      const power = document.createElement("div"); power.className = "charge-hud";
-      power.innerHTML = '<span class="charge-text">Giữ phím chuyền/sút để nạp lực</span><progress max="1" value="0" aria-label="Lực chuyền hoặc sút"></progress>';
-      const skillInfo = document.createElement("p"); skillInfo.className = "skill-description";
-      const styleInfo = document.createElement("p"); styleInfo.className = "style-description";
-      const statGrid = document.createElement("div"); statGrid.className = "stat-grid";
-      statGrid.innerHTML = gameData.stats.keys.map(k => `<span data-stat="${k}" title="${gameData.stats.labels[k]}"><b>${gameData.stats.short[k]}</b><i></i></span>`).join("");
-      energyLabel.append(energyText, percent); card.append(title, energyLabel, meter, power, skillInfo, styleInfo, statGrid); cards.append(card);
+      card.className = "player-card"; card.dataset.team = team; card.dataset.controller = controller;
+      if (isHuman(controller)) card.dataset.slot = controller;
+      const stats = gameData.stats.keys.map(k => '<div class="pc-stat" data-stat="' + k + '" title="' + gameData.stats.labels[k] + '"><b>–</b><span>' + gameData.stats.short[k] + '</span><i><i></i></i></div>').join("");
+      card.innerHTML = '<div class="pc-head"><div class="pc-ovr"><b data-f="ovr">–</b><small>OVR</small></div>'
+        + '<div class="pc-id"><span class="pc-tag" data-f="tag">' + escapeHtml(controllerLabel(controller, team)) + '</span><strong data-f="name">Chuẩn bị</strong><span class="pc-meta" data-f="meta"></span></div>'
+        + '<div class="pc-skill" data-f="skillBox"><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span><b data-f="skillShort"></b><small data-f="skillState"></small></span></div></div>'
+        + '<div class="pc-energy"><span>Thể lực</span><b data-f="energy">100%</b><div class="pc-bar"><i data-f="energyBar"></i></div></div>'
+        + '<div class="pc-stats">' + stats + '</div>'
+        + '<div class="pc-styles"><span class="chip atk"><small>Có bóng</small><b data-f="atk"></b></span><span class="chip def"><small>Mất bóng</small><b data-f="def"></b></span></div>'
+        + '<p class="pc-skill-desc" data-f="skillDesc"></p>'
+        + (isHuman(controller) ? '<div class="charge-hud"><span class="charge-text">Giữ phím chuyền/sút để nạp lực</span><progress max="1" value="0" aria-label="Lực chuyền hoặc sút"></progress></div>' : "");
+      card.fields = Object.fromEntries([...card.querySelectorAll("[data-f]")].map(n => [n.dataset.f, n]));
+      card.stats = [...card.querySelectorAll("[data-stat]")].map(n => ({ key: n.dataset.stat, node: n, value: n.querySelector("b"), bar: n.querySelector("i i") }));
+      container.append(card);
+      return card;
+    });
+  }
+  function skillStateText(skill, paused) {
+    return paused ? "Tạm dừng" : skill.active ? (skill.auto ? skill.minutesLeft + "' còn lại" : Math.ceil(skill.remaining) + "s") : skill.label;
+  }
+  function updateTeamCard(card, info, ctx) {
+    if (!info?.name) return;
+    const f = card.fields, b = info.body, skill = info.special;
+    writeText(f.ovr, info.ovr ?? "–"); f.ovr.dataset.level = levelOf(info.ovr ?? 0);
+    writeText(f.name, info.name + (info.number != null ? " #" + info.number : ""));
+    const side = ctx.leftTeam === info.team ? "sân trái" : "sân phải";
+    writeText(f.meta, (ROLE_NAMES[info.role] ?? "") + (b ? " · " + (b.height / 100).toFixed(2).replace(".", "m") + " · " + b.weight + "kg" : "") + " · " + side + (info.hasBall ? " · có bóng" : ""));
+    const percent = Math.round(info.energy * 100);
+    writeText(f.energy, percent + "%"); f.energyBar.style.width = percent + "%"; card.classList.toggle("is-low", info.energy < .35);
+    for (const s of card.stats) {
+      const v = info.stats?.[s.key] ?? 0;
+      writeText(s.value, v || "–"); s.node.dataset.level = levelOf(v); s.bar.style.width = Math.round(clamp01((v - 35) / 60) * 100) + "%";
     }
+    writeText(f.atk, info.style?.attack.name || "–"); f.atk.title = info.style?.attack.desc ?? "";
+    writeText(f.def, info.style?.defense.name || "–"); f.def.title = info.style?.defense.desc ?? "";
+    if (f.skillBox.dataset.kind !== String(skill.kind)) {
+      f.skillBox.dataset.kind = String(skill.kind);
+      f.skillBox.querySelector("svg").innerHTML = skill.kind ? skillBadge(skill.kind, skill.icon, "card-" + ctx.id + "-" + card.dataset.team) : "";
+    }
+    writeText(f.skillShort, skill.kind ? skill.short || skill.name : "Không có");
+    writeText(f.skillState, skillStateText(skill, ctx.paused));
+    f.skillBox.classList.toggle("is-active", skill.active); f.skillBox.classList.toggle("is-unavailable", !skill.ready && !skill.active);
+    const key = ctx.keyFor?.(card.dataset.controller);
+    writeText(f.skillDesc, skill.kind ? (key ? key + " · " : "") + skill.name + ": " + skill.desc : "");
+  }
+  /** The in-pitch stamina and skill boxes, one per side. */
+  function buildEnergyBoxes(container, order) {
+    container.innerHTML = order.map(({ team, controller }) => '<div class="energy-player" data-team="' + team + '" data-slot="' + (isHuman(controller) ? controller : "cpu") + '" data-controller="' + controller + '"><span class="energy-name">' + controller + '</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực"></progress><div class="special-button is-unavailable" role="img"><svg viewBox="0 0 24 24" aria-hidden="true"></svg>' + (isHuman(controller) ? "<kbd></kbd>" : "") + '<span class="skill-short"></span><span class="skill-state">Sẵn sàng</span></div></div>').join("");
+  }
+  function updateEnergyBox(box, info, ctx) {
+    if (!box || !info?.name) return;
+    const controller = box.dataset.controller, prefix = controller === "cpu" ? "Máy" : controller === "auto" ? names[info.team] : controller;
+    writeText(box.querySelector(".energy-name"), prefix + " · " + info.name + (info.ovr ? " · " + info.ovr : ""));
+    writeText(box.querySelector("strong"), Math.round(info.energy * 100) + "%");
+    box.querySelector("progress").value = info.energy; box.classList.toggle("is-low", info.energy < .35);
+    const button = box.querySelector(".special-button"), skill = info.special;
+    if (button.dataset.kind !== String(skill.kind)) {
+      button.dataset.kind = String(skill.kind);
+      button.querySelector("svg").innerHTML = skill.kind ? skillBadge(skill.kind, skill.icon, "box-" + ctx.id + "-" + box.dataset.team) : "";
+    }
+    const state = skillStateText(skill, ctx.paused);
+    writeText(button.querySelector(".skill-state"), state);
+    writeText(button.querySelector(".skill-short"), skill.kind ? skill.short || skill.name : "Không có");
+    button.classList.toggle("is-active", skill.active); button.classList.toggle("is-used", skill.used && !skill.active);
+    button.classList.toggle("is-unavailable", ctx.paused || ctx.ended || !skill.ready);
+    button.title = skill.kind ? skill.name + " · " + skill.desc + " · " + state : "Không có skill";
+    button.setAttribute("aria-label", prefix + ": " + button.title);
+  }
+  function playerCards(session) {
+    const order = cardOrder(session.options.mode, session.options.teamA);
+    buildTeamCards(session.panel.querySelector(".player-status"), order);
+    buildEnergyBoxes(session.panel.querySelector(".arena-energy"), order);
+    renderPanelKeys(session.panel);
   }
   function updateHud(session) {
     session.hudNodes ??= new Map();
@@ -294,52 +382,24 @@
       const phase = { reset: "Chuẩn bị giao bóng", celebrate: "Bàn thắng!", halftime: "Nghỉ giữa hiệp · đổi sân" }[state.phase];
       status.textContent = session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
     }
+    const ctx = { id: session.options.mode, leftTeam: state.leftTeam, paused: session.paused && !session.awaitingStart, ended: state.ended, keyFor: c => bindings[c] ? label(bindings[c].special) : "" };
+    const cards = q(".player-status").cards ?? [];
+    for (const card of cards) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
+    for (const box of q(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
     for (const player of state.players) {
-      const set = bindings[player.slot];
-      const switchButton = q(`.switch-action[data-slot="${player.slot}"]`);
+      const switchButton = q('.switch-action[data-slot="' + player.slot + '"]');
       if (switchButton) switchButton.disabled = false;
-      const onField = q(`.arena-energy [data-slot="${player.slot}"]`);
-      const percent = Math.round(player.energy * 100);
-      onField.dataset.team = player.team; onField.classList.toggle("is-low", player.energy < .35);
-      writeText(onField.querySelector(".energy-name"), `${player.slot} · ${player.name || "Chuẩn bị"}${player.ovr ? ` · ${player.ovr}` : ""}`);
-      writeText(onField.querySelector("strong"), percent + "%");
-      onField.querySelector("progress").value = player.energy;
-      const skillButton = onField.querySelector(".special-button"), skill = player.special;
-      if (skillButton.dataset.kind !== skill.kind) {
-        skillButton.dataset.kind = skill.kind ?? "";
-        skillButton.querySelector("svg").innerHTML = skillBadge(skill.kind, skill.icon, `skill-${session.options.mode}-${player.slot}`);
-      }
-      const skillState = (session.paused && !session.awaitingStart) ? "Tạm dừng" : skill.active ? skill.auto ? `${skill.minutesLeft}' còn lại` : `${Math.ceil(skill.remaining)}s` : skill.label;
-      writeText(skillButton.querySelector(".skill-state"), skillState);
-      writeText(skillButton.querySelector(".skill-short"), skill.short || skill.name);
-      skillButton.classList.toggle("is-active", skill.active);
-      skillButton.classList.toggle("is-used", skill.used && !skill.active);
-      skillButton.classList.toggle("is-unavailable", (session.paused && !session.awaitingStart) || state.ended || !skill.ready);
-      const category = skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
-      skillButton.title = `${skill.name} · ${category} · ${skillState} · ${Math.round(gameData.skillRules.cost * 100)}% thể lực · ${gameData.skillRules.usesPerMatch} lần/cầu thủ/trận`;
-      skillButton.setAttribute("aria-label", `${player.slot}: ${skillButton.title}`);
-      const slideButton = q(`.slide-action[data-slot="${player.slot}"]`);
+      const kbdNode = q(".arena-energy").querySelector('[data-slot="' + player.slot + '"] kbd');
+      if (kbdNode && bindings[player.slot]) writeText(kbdNode, label(bindings[player.slot].special));
+      const slideButton = q('.slide-action[data-slot="' + player.slot + '"]');
       if (slideButton) {
         slideButton.disabled = session.paused || state.ended || !player.ready || (!player.hasBall && !player.slideReady);
         writeText(slideButton.querySelector(".action-label"), player.hasBall ? "Sút" : "Xoạc");
       }
-      const card = q(`.player-card[data-slot="${player.slot}"]`);
+      const card = cards.find(c => c.dataset.slot === player.slot);
       if (!card) continue;
-      for (const cell of card.querySelectorAll("[data-stat]")) {
-        const value = player.stats?.[cell.dataset.stat] ?? "–";
-        writeText(cell.querySelector("i"), value);
-        cell.dataset.level = value >= 80 ? "high" : value >= 65 ? "mid" : "low";
-      }
-      const build = player.body ? ` · ${(player.body.height / 100).toFixed(2).replace(".", "m")} · ${player.body.weight}kg` : "";
-      writeText(card.querySelector(".style-description"), player.style ? `Tấn công: ${player.style.attack.name} (${player.style.attack.en}) · Phòng ngự: ${player.style.defense.name} (${player.style.defense.en})${build}` : "");
-      card.querySelector(".style-description").title = player.style ? `${player.style.attack.desc} ${player.style.defense.desc}` : "";
-      writeText(card.querySelector(".skill-description"), `${set ? label(set.special) : ""} · ${skill.name} · ${category} · ${skillState}`);
-      const side = state.leftTeam === player.team ? "trái" : "phải";
-      writeText(card.querySelector("strong"), `${player.slot} · ${names[player.team]} · ${player.name || "Chuẩn bị"}${player.number ? " #" + player.number : ""}${player.ovr ? ` · OVR ${player.ovr}` : ""} · sân ${side}${player.hasBall ? " · có bóng" : ""}`);
-      card.querySelector("meter").value = player.energy;
-      writeText(card.querySelector(".percent"), percent + "%");
       card.querySelector("progress").value = player.charge?.power ?? 0;
-      writeText(card.querySelector(".charge-text"), player.charge ? `${player.charge.action === "pass" ? "Lực chuyền" : "Lực sút"}: ${Math.round(player.charge.power * 100)}%` : player.pressing ? "Đang pressing · áp sát" : "Giữ phím chuyền/sút để nạp lực");
+      writeText(card.querySelector(".charge-text"), player.charge ? (player.charge.action === "pass" ? "Lực chuyền" : "Lực sút") + ": " + Math.round(player.charge.power * 100) + "%" : player.pressing ? "Đang bám người · giữ phím áp sát" : "Giữ phím chuyền/sút để nạp lực");
     }
   }
   for (const arena of document.querySelectorAll(".arena")) {
@@ -504,8 +564,14 @@
     const form = panel.querySelector("form");
     const arena = panel.querySelector(".arena");
     const matchOptions = document.createElement("fieldset"); matchOptions.className = "match-options";
-    matchOptions.innerHTML = '<legend>Thời gian &amp; phân thắng thua</legend><label>Thời lượng <select class="duration" aria-label="Thời lượng trận đấu"><option value="2">2 phút</option><option value="4">4 phút</option><option value="6">6 phút</option><option value="10">10 phút</option></select></label><label><input type="checkbox" class="extra-time">Hiệp phụ nếu hòa</label><label><input type="checkbox" class="penalties">Luân lưu nếu vẫn hòa</label>';
+    const difficulty = panel.dataset.mode === "cpu" ? '<label>Độ khó máy <select class="difficulty" aria-label="Độ khó của máy">' + Object.entries(gameData.difficulty).map(([id, d]) => '<option value="' + id + '"' + (id === "normal" ? " selected" : "") + ">" + d.name + "</option>").join("") + "</select></label>" : "";
+    matchOptions.innerHTML = '<legend>Thời gian &amp; phân thắng thua</legend>' + difficulty + '<label>Thời lượng <select class="duration" aria-label="Thời lượng trận đấu"><option value="2">2 phút</option><option value="4">4 phút</option><option value="6">6 phút</option><option value="10">10 phút</option></select></label><label><input type="checkbox" class="extra-time">Hiệp phụ nếu hòa</label><label><input type="checkbox" class="penalties">Luân lưu nếu vẫn hòa</label>';
     form.insertBefore(matchOptions, form.querySelector(".setup-summary"));
+    const levelSelect = matchOptions.querySelector(".difficulty");
+    if (levelSelect) {
+      try { const saved = localStorage.getItem("ptsc-football.difficulty"); if (saved && saved in gameData.difficulty) levelSelect.value = saved; } catch {}
+      levelSelect.addEventListener("change", () => { try { localStorage.setItem("ptsc-football.difficulty", levelSelect.value); } catch {} });
+    }
     const overlay = document.createElement("div"); overlay.className = "start-overlay"; overlay.hidden = true;
     overlay.innerHTML = '<span>Nhấn <kbd>Space</kbd> để bắt đầu trận đấu</span>';
     arena.querySelector(".arena-surface").append(overlay);
@@ -515,7 +581,7 @@
     restartChoice.innerHTML = '<span class="restart-label"></span><div class="restart-keys"></div>';
     arena.querySelector(".arena-surface").append(restartChoice);
     const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
-    energy.innerHTML = (panel.dataset.mode === "local" ? ["A", "B"] : ["A"]).map(slot => `<div class="energy-player" data-slot="${slot}"><span class="energy-name">${slot}</span><strong>100%</strong><progress max="1" value="1" aria-label="Thể lực người ${slot}"></progress><div class="special-button is-unavailable" data-slot="${slot}" role="img"><svg viewBox="0 0 24 24" aria-hidden="true">${defaultSkillIcon}</svg><kbd></kbd><span class="skill-short"></span><span class="skill-state">Sẵn sàng</span></div></div>`).join("");
+    energy.innerHTML = "";
     arena.querySelector(".arena-surface").append(energy);
     const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
     result.innerHTML = '<strong></strong><span></span>';
@@ -696,5 +762,6 @@
     if (document.hidden) suspend();
     else if (activeMode === "watch") watcher?.play();
   });
-  setInterval(() => { const session = sessions.get(activeMode); if (session) updateHud(session); highlightPads(); }, 250);
+  initWatchHud();
+  setInterval(() => { const session = sessions.get(activeMode); if (session) updateHud(session); else updateWatchHud(); highlightPads(); }, 250);
 })();

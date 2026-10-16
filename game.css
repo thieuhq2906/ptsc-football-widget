@@ -303,3 +303,57 @@ kbd { display: inline-grid; place-items: center; min-width: 25px; min-height: 26
   .watch-actions { align-items: flex-start; }
   .match-toolbar { flex-wrap: wrap; }
 }
+/* Player cards: one per side, big numbers first. */
+.player-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin: 18px 0; }
+.player-card { display: grid; gap: 12px; padding: 14px 16px; border: 2px solid #1d2340; border-top: 8px solid #e45248; border-radius: 16px; background: #fffdf6; box-shadow: 3px 4px 0 #1d2340; }
+.player-card[data-team="B"] { border-top-color: #397eca; border-left-color: #1d2340; }
+.pc-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.pc-ovr { display: grid; place-items: center; align-content: center; width: 74px; height: 74px; border-radius: 14px; background: #1d2340; color: #fff; }
+.pc-ovr b { font-size: 40px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.pc-ovr b[data-level="high"] { color: #b8f58c; } .pc-ovr b[data-level="mid"] { color: #ffe27a; } .pc-ovr b[data-level="low"] { color: #ffa48f; }
+.pc-ovr small { margin-top: 3px; font-size: 10px; font-weight: 800; letter-spacing: .14em; opacity: .7; }
+.pc-id { display: grid; gap: 2px; min-width: 0; }
+.pc-tag { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #c63d33; }
+.player-card[data-team="B"] .pc-tag { color: #2b67ad; }
+.player-card .pc-id strong { display: block; margin: 0; font-size: 24px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-meta { font-size: 12px; color: #586072; }
+.pc-skill { display: grid; justify-items: center; gap: 2px; min-width: 84px; text-align: center; }
+.pc-skill svg { width: 50px; height: 50px; }
+.pc-skill span { display: grid; }
+.pc-skill b { font-size: 14px; }
+.pc-skill small { font-size: 11px; color: #586072; }
+.pc-skill.is-unavailable svg { filter: grayscale(.8); opacity: .6; }
+.pc-skill.is-active svg { filter: drop-shadow(0 0 6px #8fe35c); }
+.pc-energy { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 4px 10px; }
+.pc-energy span { font-size: 12px; font-weight: 800; letter-spacing: .04em; color: #586072; text-transform: uppercase; }
+.pc-energy b { justify-self: end; font-size: 32px; font-weight: 900; line-height: 1; color: #2f7a3c; font-variant-numeric: tabular-nums; }
+.player-card.is-low .pc-energy b { color: #c2410c; }
+.pc-bar { grid-column: 1 / -1; height: 12px; border-radius: 99px; background: #e3e4da; overflow: hidden; }
+.pc-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #5d9a45, #a6dc6a); transition: width .25s; }
+.player-card.is-low .pc-bar i { background: linear-gradient(90deg, #d9572b, #ffb36b); }
+.pc-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.pc-stat { display: grid; justify-items: center; gap: 2px; padding: 7px 2px 8px; border-radius: 10px; background: #f1f2ea; color: #48505f; }
+.pc-stat b { font-size: 26px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.pc-stat span { font-size: 10px; font-weight: 800; letter-spacing: .07em; color: #6c7468; }
+.pc-stat > i { display: block; width: 80%; height: 4px; border-radius: 9px; background: #00000014; overflow: hidden; }
+.pc-stat > i > i { display: block; height: 100%; width: 0; background: currentColor; }
+.pc-stat[data-level="high"] { background: #e2f4e1; color: #1d7438; }
+.pc-stat[data-level="mid"] { background: #fbf2d4; color: #876a0a; }
+.pc-stat[data-level="low"] { background: #fbe8e3; color: #b13e2c; }
+.pc-styles { display: flex; flex-wrap: wrap; gap: 8px; }
+.pc-styles .chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 11px; border: 1.5px solid #1d2340; border-radius: 99px; font-size: 14px; }
+.pc-styles .chip small { font-size: 10px; font-weight: 800; letter-spacing: .05em; color: #6c7468; text-transform: uppercase; }
+.pc-styles .chip.atk { background: #ffefd2; }
+.pc-styles .chip.def { background: #e0ebfa; }
+.pc-skill-desc { margin: 0; font-size: 12px; line-height: 1.5; color: #586072; }
+.player-card .charge-hud { margin-top: 0; }
+#panel-watch .player-status { margin-top: 18px; }
+@media (max-width: 640px) {
+  .player-card { padding: 12px; gap: 10px; }
+  .pc-ovr { width: 60px; height: 60px; }
+  .pc-ovr b { font-size: 32px; }
+  .player-card .pc-id strong { font-size: 20px; }
+  .pc-skill { min-width: 64px; }
+  .pc-skill svg { width: 40px; height: 40px; }
+  .pc-stat b { font-size: 20px; }
+}

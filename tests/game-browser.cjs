@@ -700,6 +700,118 @@ const server = http.createServer((req, res) => {
     assert(saverShare > .3 && saverShare < .7 && shooterShare > .15 && shooterShare < .45, "Penalty specialists are a minority: " + JSON.stringify({ saverShare, shooterShare }));
     console.log("PASS skills always work, defensive skills last longer, mixed skills by position, rare penalty specialists");
 
+    // Corners only come from a real touch: a defender blocking the shot or the keeper pushing it out.
+    const cornerCauses = await page.evaluate(() => {
+      const rows = [];
+      for (let seed = 1; seed <= 12; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { seed, still: 0, fonts: "none" });
+        for (let i = 0; i < 1500 && !api.status().ended; i++) api.__step(.25);
+        const st = api.__stats(); rows.push({ corners: st.corners, touched: (st.deflections ?? 0) + (st.parriedOut ?? 0) });
+        api.destroy(); host.remove();
+      }
+      return rows;
+    });
+    assert(cornerCauses.every(r => r.corners <= r.touched), "Every corner follows a defender's block or a keeper's parry: " + JSON.stringify(cornerCauses));
+    console.log("PASS corners only after a real touch by a defender or the keeper");
+
+    // Holding the press key follows: the man on the ball, the man a pass goes to, or a loose ball; it stops on release.
+    const pressFollow = await page.evaluate(() => {
+      let steps = 0, moving = 0, closing = 0, released = null;
+      for (let seed = 1; seed <= 4; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "cpu", seed, still: 0, fonts: "none", duration: 4 });
+        let prev = null;
+        for (let i = 0; i < 1200 && !api.status().ended; i++) {
+          __takeRestart(api);
+          const s = api.status(), me = s.players[0], defending = s.possession && s.possession !== me.team && s.phase === "play" && !s.stoppage;
+          api.setInput("A", { pressing: defending });
+          api.__step(.1);
+          const now = api.__selected("A");
+          if (defending && me.pressing && prev && prev.name === now.name) {
+            steps++;
+            if (Math.hypot((now.pos[0] - prev.pos[0]) * 45, (now.pos[1] - prev.pos[1]) * 30) > .05) moving++;
+          }
+          if (defending && api.status().players[0].pressing && api.status().players[0].ready && !released && i > 200) {
+            api.setInput("A", {}); const a = api.__selected("A"); api.__step(.2); const b = api.__selected("A");
+            if (a.name === b.name && api.status().players[0].ready) released = Math.hypot((b.pos[0] - a.pos[0]) * 45, (b.pos[1] - a.pos[1]) * 30);
+          }
+          prev = now;
+        }
+        api.destroy(); host.remove();
+      }
+      return { steps, moving, released };
+    });
+    assert(pressFollow.steps > 50 && pressFollow.moving / pressFollow.steps > .85, "Holding the press key keeps following: " + JSON.stringify(pressFollow));
+    assert(pressFollow.released != null && pressFollow.released < .2, "Releasing the press key stops him: " + JSON.stringify(pressFollow));
+    console.log("PASS press key held follows the man or the ball, release stops");
+
+    // Difficulty: only the computer's side changes, its whole squad shifted in rating.
+    const levels = await page.evaluate(() => {
+      const meanOvr = (difficulty, seed) => {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "cpu", teamA: "R", difficulty, seed, still: 0, fonts: "none" });
+        const roster = api.roster(), status = api.status(); api.destroy(); host.remove();
+        const avg = list => list.reduce((s, p) => s + p.ovr, 0) / list.length;
+        return { human: avg(roster.R), cpu: avg(roster.B), name: status.difficulty?.name };
+      };
+      return ["easy", "normal", "hard", "legend"].map(level => ({ level, ...meanOvr(level, 21) }));
+    });
+    assert.deepEqual(levels.map(l => l.name), ["Dễ", "Thường", "Khó", "Huyền thoại"]);
+    assert(levels.every(l => Math.abs(l.human - levels[1].human) < .01), "The player's side is never changed by the level");
+    assert(levels[0].cpu < levels[1].cpu && levels[1].cpu < levels[2].cpu && levels[2].cpu < levels[3].cpu, "Harder levels field a stronger computer side: " + JSON.stringify(levels));
+    const oddLevel = await page.evaluate(() => {
+      const host = document.createElement("div"); document.body.append(host);
+      const api = PTSCFootball.mount(host, { mode: "cpu", difficulty: "constructor", seed: 3, still: 0, fonts: "none" });
+      const result = { name: api.status().difficulty.name, finite: Object.values(api.roster()).flat().every(p => Object.values(p.stats).every(Number.isFinite)) };
+      api.destroy(); host.remove(); return result;
+    });
+    assert.deepEqual(oddLevel, { name: "Thường", finite: true }, "An unknown level falls back to normal");
+    console.log("PASS AI difficulty: four levels shift only the computer's squad");
+
+    // On the ball, the switch key sends the team-mate in the arrow's direction on a run at goal.
+    const runCall = await page.evaluate(() => {
+      for (let seed = 1; seed <= 20; seed++) {
+        const host = document.createElement("div"); document.body.append(host);
+        const api = PTSCFootball.mount(host, { mode: "local", seed, still: 0, fonts: "none" });
+        for (let i = 0; i < 300; i++) {
+          __stepPlay(api, .05);
+          const p = api.status().players.find(x => x.hasBall && x.ready && x.role !== "GK");
+          if (!p) continue;
+          const before = api.__players().filter(x => x.team === p.team && x.name !== p.name).map(x => ({ name: x.name, d: x.d }));
+          api.setInput(p.slot, { x: p.team === api.status().leftTeam ? 1 : -1, y: 0 }); api.setInput(p.slot, {});
+          const ok = api.action(p.slot, "switch"), stillOwner = api.status().players.find(x => x.slot === p.slot).name === p.name;
+          api.__step(1.2);
+          const after = api.__players().filter(x => x.team === p.team);
+          const advanced = before.map(b => (after.find(a => a.name === b.name)?.d ?? b.d) - b.d);
+          const result = { ok, stillOwner, runs: api.__stats().runsCalled ?? 0, best: Math.max(...advanced) };
+          api.destroy(); host.remove();
+          return result;
+        }
+        api.destroy(); host.remove();
+      }
+      return null;
+    });
+    assert(runCall && runCall.ok && runCall.stillOwner && runCall.runs === 1, "The switch key on the ball calls a run and keeps control: " + JSON.stringify(runCall));
+    assert(runCall.best > 0.08, "The called team-mate runs towards goal: " + JSON.stringify(runCall));
+    console.log("PASS switch key on the ball calls a team-mate's run at goal");
+
+    // Cards for every side: the computer's side and both sides when watching.
+    await page.locator("#tab-cpu").click();
+    await page.locator("#panel-cpu .start").click(); await page.keyboard.press("Space"); await page.waitForTimeout(600);
+    const cpuCards = await page.evaluate(() => [...document.querySelectorAll("#panel-cpu .player-card")].map(c => ({ controller: c.dataset.controller, ovr: c.querySelector(".pc-ovr b").textContent, stats: c.querySelectorAll(".pc-stat").length })));
+    assert.deepEqual(cpuCards.map(c => c.controller), ["A", "cpu"]);
+    assert(cpuCards.every(c => /^\d+$/.test(c.ovr) && c.stats === 10), "Both cards show a rating and ten stats: " + JSON.stringify(cpuCards));
+    assert.equal(await page.locator("#panel-cpu .arena-energy .energy-player").count(), 2, "The computer's stamina and skill are on the pitch too");
+    await page.keyboard.press("Space");
+    await page.locator("#tab-watch").click(); await page.waitForTimeout(800);
+    const watchCards = await page.evaluate(() => [...document.querySelectorAll("#panel-watch .player-card")].map(c => ({ team: c.dataset.team, name: c.querySelector(".pc-id strong").textContent, ovr: c.querySelector(".pc-ovr b").textContent })));
+    assert.deepEqual(watchCards.map(c => c.team), ["R", "B"]);
+    assert(watchCards.every(c => c.name !== "Chuẩn bị" && /^\d+$/.test(c.ovr)), "Watching shows both sides' players: " + JSON.stringify(watchCards));
+    assert.equal(await page.locator("#panel-watch .roster table").count(), 2);
+    await page.locator("#tab-cpu").click();
+    console.log("PASS info cards for the computer's side and for both sides when watching");
+
     // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
     const skillShots = await page.evaluate(() => {
       const results = [];
