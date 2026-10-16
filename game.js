@@ -64,7 +64,7 @@
   }
   /** Playing styles by zone of the pitch, attacking and defensive side by side. */
   function renderStyleLegend(container) {
-    const styleItem = style => '<div class="style-legend-item"><b>' + escapeHtml(style.name) + " <span>" + escapeHtml(style.en) + "</span></b><small>" + escapeHtml(style.desc) + "</small></div>";
+    const styleItem = style => '<div class="style-legend-item"><b>' + escapeHtml(style.name) + " <span>" + escapeHtml(style.tag) + "</span></b><small>" + escapeHtml(style.desc) + "</small></div>";
     const column = (phase, role) => Object.values(gameData.playstyles[phase]).filter(style => style.roles.includes(role)).map(styleItem).join("");
     container.innerHTML = '<div class="style-legend"><h2 class="pane-title">Phong cách chơi</h2><p class="pane-lead">Mỗi cầu thủ có 1 kiểu khi đội có bóng và 1 kiểu khi mất bóng. Chúng quyết định cách cầu thủ đứng, chạy và xử lý bóng.</p>'
       + Object.entries(ROLE_GROUPS).map(([role, title]) => '<section class="legend-group"><h3>' + title + '</h3><div class="style-zone"><div><h4>Khi có bóng · tấn công</h4>' + column("attack", role) + "</div><div><h4>Khi mất bóng · phòng ngự</h4>" + column("defense", role) + "</div></div></section>").join("") + "</div>";
@@ -91,7 +91,7 @@
       + '<h3>OVR theo vị trí đang đá</h3><ul class="info-list">' + weights + "</ul>"
       + '<h3>Hình thể</h3><ul class="info-list"><li><b>Chiều cao:</b> thủ môn ' + body.GK.join("–") + " cm, hậu vệ " + body.DF.join("–") + ", tiền vệ " + body.MF.join("–") + ", tiền đạo " + body.FW.join("–") + "; lối chơi cộng/trừ thêm.</li>"
       + "<li><b>Cao, tay dài:</b> thắng không chiến, đánh đầu nhiều hơn; thủ môn ôm bóng và cứu thua rộng hơn.</li><li><b>Thấp (trọng tâm thấp):</b> khó bị cướp bóng hơn.</li><li><b>Nặng:</b> tranh chấp khỏe hơn, chậm hơn một chút.</li><li><b>Chân dài:</b> tầm tranh bóng và xoạc xa hơn.</li></ul>"
-      + '<p class="pane-lead">Trong trận: giữ <kbd>Tab</kbd> để xem nhanh thẻ chỉ số, hoặc mở menu (<kbd>Esc</kbd>) → Đội hình &amp; chỉ số để xem cả đội hình.</p>';
+      + '<p class="pane-lead">Trong trận: giữ <kbd>Tab</kbd> để xem nhanh thẻ chỉ số, hoặc mở menu (<kbd>Esc</kbd>) → Kế hoạch trận để xem từng cầu thủ, thay người và đổi chiến thuật.</p>';
   }
   function renderRulesGuide(container) {
     const rows = Object.values(gameData.difficulty).map(d => "<tr><td><b>" + d.name + "</b></td><td>" + (d.stats > 0 ? "+" : "") + d.stats + "</td><td>×" + d.tackle + "</td><td>×" + d.intercept + "</td><td>×" + d.finishing + "</td><td>" + (d.keeper > 0 ? "+" : "") + Math.round(d.keeper * 100) + "</td><td>×" + d.think + "</td></tr>").join("");
@@ -99,19 +99,6 @@
       + '<div class="info-table-wrap"><table class="info-table"><thead><tr><th>Mức</th><th>Chỉ số</th><th>Tranh bóng</th><th>Đọc chuyền</th><th>Dứt điểm</th><th>Thủ môn (điểm %)</th><th>Thời gian ra quyết định</th></tr></thead><tbody>' + rows + "</tbody></table></div>"
       + '<h3>Penalty</h3><ul class="info-list"><li>Sút khác hướng thủ môn đoán luôn vào.</li><li>Đoán đúng: thủ môn có <b>Bắt pen</b> bắt 100% (80% nếu người sút bật <b>Sút pen</b>); không có Bắt pen thì bắt 80% (20% nếu người sút bật Sút pen).</li><li>Chỉ khoảng 30% cầu thủ sân có Sút pen, 50% thủ môn có Bắt pen.</li></ul>'
       + '<h3>Trận đấu</h3><ul class="info-list"><li>Thời lượng 2–10 phút bóng lăn, hai hiệp đổi sân; hiệp phụ và luân lưu tuỳ chọn.</li><li>Phạt góc chỉ khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra.</li><li>Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc.</li><li>Sau bàn thắng, trọng tài chỉ thổi khi hai đội đã về hết nửa sân nhà.</li><li>Chấn thương: xe cấp cứu đưa đi, không vào lại trận đó.</li></ul>';
-  }
-  /** Both squads with every rating; redrawn only when someone comes on or off. */
-  function renderRoster(view) {
-    const roster = view.api?.roster?.();
-    if (!roster) return;
-    const key = JSON.stringify(Object.values(roster).map(list => list.map(p => [p.name, p.onPitch, p.role, p.injured])));
-    if (view.rosterKey === key) return;
-    view.rosterKey = key;
-    const roles = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" }, keys = gameData.stats.keys;
-    const cell = v => `<td data-level="${v >= 80 ? "high" : v >= 65 ? "mid" : "low"}">${v}</td>`;
-    const table = (t, list) => `<div class="roster-team" data-team="${t}"><h3>Đội ${names[t]}</h3><div class="roster-scroll"><table><thead><tr><th>#</th><th>Cầu thủ</th><th>VT</th><th>OVR</th><th title="Chiều cao">CAO</th><th title="Cân nặng">NẶNG</th>${keys.map(k => `<th title="${gameData.stats.labels[k]}">${gameData.stats.short[k]}</th>`).join("")}<th>Skill</th><th>Lối chơi (tấn công · phòng ngự)</th></tr></thead><tbody>${list.map(p => `<tr class="${p.onPitch ? "" : "is-bench"}"><td>${p.num}</td><td>${escapeHtml(p.name)}${p.onPitch ? "" : " <small>dự bị</small>"}</td><td>${roles[p.role] ?? p.role}</td><td class="ovr">${p.ovr ?? "–"}</td><td>${p.body.height}</td><td>${p.body.weight}</td>${keys.map(k => cell(p.stats[k])).join("")}<td class="styles">${escapeHtml(p.skillName)}${p.penaltySkill ? " · " + escapeHtml(gameData.skills[p.penaltySkill].short) : ""}</td><td class="styles">${escapeHtml(p.attack)} · ${escapeHtml(p.defense)}</td></tr>`).join("")}</tbody></table></div></div>`;
-    view.arena.querySelector(".roster-body").innerHTML = Object.entries(roster).map(([t, list]) => table(t, list)).join("");
-    view.arena.querySelector(".roster").hidden = false;
   }
   /** The controls section of Game info: every mode's players, redrawn when layouts change. */
   function renderControlsGuide() {
@@ -222,7 +209,7 @@
     sheet.querySelector(".sheet-back").addEventListener("click", () => closeSheet(sheet));
     return sheet;
   }
-  const SQUAD_SHEET = '<div class="player-status"></div><div class="roster" hidden><h3 class="roster-title">Đội hình · OVR tính theo vị trí đang đá</h3><div class="roster-body"></div></div>';
+  const SQUAD_SHEET = '<div class="player-status"></div>';
   function setBackdropInert(arena, sheet, on) {
     for (const child of arena.children) if (child !== sheet) child.inert = on;
   }
@@ -488,7 +475,7 @@
   /* ------------------------------ main menu and watching ------------------------------ */
   const watchPanel = document.getElementById("panel-watch"), watchArena = watchPanel.querySelector(".arena");
   const mainMenu = watchPanel.querySelector(".main-menu");
-  const watchView = { panel: watchPanel, arena: watchArena, overlay: null, paused: false, rosterKey: null, rosterApi: null, get api() { return watcher; } };
+  const watchView = { panel: watchPanel, arena: watchArena, overlay: null, paused: false, get api() { return watcher; } };
   function showPreview(item) {
     mainMenu.lastItem = item;
     writeText(mainMenu.querySelector(".menu-preview-kicker"), item.dataset.kicker);
@@ -512,13 +499,14 @@
     if (!paused && route.name === "watch") focusOn(watchArena);
   }
   function initWatch() {
-    watchView.overlay = buildOverlay(watchArena, [["resume", "Tiếp tục"], ["new-watch", "Trận mới"], ["squad", "Đội hình &amp; chỉ số"], ["menu", "Menu chính"]]);
-    buildSheet(watchArena, "squad", "Đội hình &amp; chỉ số", SQUAD_SHEET);
+    watchView.overlay = buildOverlay(watchArena, [["resume", "Tiếp tục"], ["new-watch", "Trận mới"], ["plan", "Đội hình &amp; chỉ số"], ["menu", "Menu chính"]]);
+    buildSheet(watchArena, "squad", "Chỉ số nhanh", SQUAD_SHEET);
+    buildPlanSheet(watchView);
     watchView.overlay.addEventListener("click", event => {
       const button = event.target.closest("[data-act]"), act = button?.dataset.act;
       if (act === "resume") setWatchPaused(false);
       else if (act === "new-watch") { newWatch(); setWatchPaused(false); }
-      else if (act === "squad") openSheet(watchView, "squad", button);
+      else if (act === "plan") openPlan(watchView, button);
       else if (act === "menu") go("menu");
     });
     watchPanel.querySelector(".pause").addEventListener("click", () => setWatchPaused(!watchView.paused, !watchView.paused));
@@ -530,11 +518,249 @@
   }
   function updateWatchHud() {
     if (activeMode !== "watch" || !watcher?.status) return;
-    if (watchView.rosterApi !== watcher) { watchView.rosterApi = watcher; watchView.rosterKey = null; }
     const state = watcher.status(), ctx = { id: "watch", leftTeam: state.leftTeam, paused: false, ended: state.ended };
     for (const card of watchArena.querySelector(".player-status").cards ?? []) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
     for (const box of watchArena.querySelector(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
-    renderRoster(watchView);
+  }
+
+  /* ------------------------------ game plan: line-up, player info, tactics, substitutions ------------------------------ */
+  // Like a console's game plan: both sides with a pitch and a list; any player opens his info and ratings; the side
+  // you control can make substitutions, pick a shape and switch the automatic coach on or off.
+  const PLAN_TABS = [["lineup", "Đội hình"], ["tactics", "Chiến thuật"], ["support", "Hỗ trợ"]];
+  const LINE_LABEL = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" };
+  const RADAR = [["SÚT", s => s.finishing], ["CHUYỀN", s => (s.passing + s.longPass) / 2], ["RÊ", s => s.dribbling], ["TỐC", s => s.speed], ["SỨC", s => (s.strength + s.heading) / 2], ["THỦ", s => s.defending]];
+  const statTone = v => v >= 85 ? "top" : v >= 75 ? "good" : v >= 65 ? "fair" : "low";
+  const posBadge = line => `<span class="pos-badge" data-line="${line}">${LINE_LABEL[line] ?? line}</span>`;
+  const PLAN_SHEET = '<div class="plan-tabs" role="tablist" aria-label="Kế hoạch trận">' + PLAN_TABS.map(([id, text]) => `<button type="button" class="plan-tab" role="tab" tabindex="-1" data-tab="${id}">${text}</button>`).join("") + '</div>'
+    + '<div class="plan-teams"><section class="plan-team" data-col="0"></section><section class="plan-team" data-col="1"></section></div>'
+    + '<div class="plan-foot"><p class="plan-status" role="status" aria-live="polite"></p><p class="plan-prompts"></p></div>';
+  function figureSvg(api, id, viewBox, cls) {
+    return `<svg class="${cls}" viewBox="${viewBox}" aria-hidden="true"><g fill="none" stroke="var(--color-ink)" stroke-linecap="round" stroke-linejoin="round">${api?.figure?.(id) ?? ""}</g></svg>`;
+  }
+  function radarSvg(stats) {
+    const point = (i, r) => { const a = -Math.PI / 2 + i * Math.PI / 3; return [50 + Math.cos(a) * r * 33, 50 + Math.sin(a) * r * 33]; };
+    const ring = r => RADAR.map((_, i) => point(i, r).map(v => v.toFixed(1)).join(",")).join(" ");
+    const shape = RADAR.map(([, f], i) => point(i, Math.max(.08, clamp01((f(stats) - 30) / 65))).map(v => v.toFixed(1)).join(",")).join(" ");
+    return `<svg class="radar" viewBox="0 0 100 100" role="img" aria-label="${RADAR.map(([k, f]) => k + " " + Math.round(f(stats))).join(", ")}"><polygon class="radar-ring" points="${ring(1)}"/><polygon class="radar-ring" points="${ring(.5)}"/><polygon class="radar-shape" points="${shape}"/>`
+      + RADAR.map(([k], i) => { const [x, y] = point(i, 1.3); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}">${k}</text>`; }).join("") + "</svg>";
+  }
+  /** A shape drawn small: a vertical pitch with a dot per player. */
+  function shapeSvg(shape) {
+    const home = shape.keeper ? shape.home : [[0.03, 0.5], ...shape.home], lines = shape.keeper ? shape.lines : ["GK", ...shape.lines];
+    return '<svg class="shape-mini" viewBox="0 0 40 56" aria-hidden="true"><rect x="1" y="1" width="38" height="54" rx="3"/><path d="M1 28h38M14 55v-6h12v6M14 1v6h12V1"/>'
+      + home.map(([d, w], i) => `<circle cx="${(4 + w * 32).toFixed(1)}" cy="${(52 - d / .72 * 46).toFixed(1)}" r="3" data-line="${lines[i]}"/>`).join("") + "</svg>";
+  }
+  function planOrder(view) {
+    const a = view.options?.teamA;
+    return a ? [a, opposite(a)] : ["R", "B"];
+  }
+  const planWho = (view, controller) => controller === "cpu" || controller === "auto" ? "Máy" : view.options?.mode === "cpu" ? "Bạn" : "Người " + controller;
+  const findPlanPlayer = (data, t, id) => data?.[t] && [...data[t].players, ...data[t].bench].find(p => p.id === id);
+  function planRow(t, p, col, data, ui) {
+    const queued = data[t].queue.find(q => q.off === p.id || q.on === p.id), picking = ui.pick?.team === t && ui.pick.id === p.id;
+    const choosable = ui.pick?.team === t && !picking && (ui.pick.onPitch ? p.canOn : p.canOff);
+    const flags = (queued ? queued.off === p.id ? '<i class="flag off" title="Sẽ ra sân">▼</i>' : '<i class="flag on" title="Sẽ vào sân">▲</i>' : "")
+      + (p.yellows ? '<i class="flag card" title="Thẻ vàng"></i>' : "") + (p.injured ? '<i class="flag hurt" title="Chấn thương">+</i>' : "");
+    const state = picking ? "pick" : choosable ? "choose" : queued ? (queued.off === p.id ? "off" : "on") : "";
+    const sub = `#${p.num} · ${p.attack.name} / ${p.defense.name}`;
+    return `<button type="button" class="plan-row" data-nav data-col="${col}" data-key="${t}:${p.id}" data-team="${t}" data-id="${p.id}"${state ? ` data-state="${state}"` : ""}${p.injured ? " data-hurt" : ""}>`
+      + posBadge(p.onPitch ? p.line ?? p.role : p.role) + `<span class="plan-name"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(sub)}</small></span>`
+      + `<span class="plan-energy" title="Thể lực ${Math.round(p.energy * 100)}%"><i style="width:${Math.round(p.energy * 100)}%"></i></span><span class="plan-flags">${flags}</span><b class="plan-ovr" data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b></button>`;
+  }
+  function planColumn(view, t, col) {
+    const ui = view.planUI, data = ui.data, d = data[t], api = view.api;
+    const head = `<header class="plan-head" data-team="${t}"><span class="kit-shirt ${t === "R" ? "red" : "blue"}" aria-hidden="true"></span><div class="plan-title"><b>Đội ${names[t]}</b><small>${escapeHtml(planWho(view, d.controller))}${d.coached ? "" : " · chỉ xem"}</small></div><div class="plan-formation"><b>${d.shape}</b><small>${escapeHtml(d.shapeName)}</small></div></header>`;
+    const tokens = d.players.map(p => {
+      const [dd, w] = p.spot ?? [0.3, 0.5], queued = d.queue.some(q => q.off === p.id), top = dd <= .05 ? 91 : 79 - (dd - .1) / .6 * 70;
+      return `<button type="button" class="pp-token" tabindex="-1" data-team="${t}" data-id="${p.id}" style="left:${(10 + w * 80).toFixed(1)}%;top:${top.toFixed(1)}%;z-index:${Math.round(100 - top)}"${queued ? ' data-state="off"' : ""}>`
+        + figureSvg(api, p.id, "-17 -97 38 40", "pp-face") + `<span class="pp-tag">${posBadge(p.line ?? p.role)}<b>${p.ovr ?? ""}</b></span><span class="pp-name">${escapeHtml(p.name)}</span></button>`;
+    }).join("");
+    const pitch = `<div class="plan-pitch" aria-hidden="true"><i class="pp-lines"></i>${tokens}</div>`;
+    let pane = "";
+    if (ui.tab === "lineup") {
+      pane = '<div class="plan-list" role="list">' + d.players.map(p => planRow(t, p, col, data, ui)).join("")
+        + `<p class="plan-sep">Dự bị</p>` + (d.bench.length ? d.bench.map(p => planRow(t, p, col, data, ui)).join("") : '<p class="plan-empty">Không có cầu thủ dự bị.</p>') + "</div>";
+    } else if (ui.tab === "tactics") {
+      pane = '<div class="plan-list">' + d.shapes.map(s => {
+        const current = s.id === d.shape, tag = d.coached ? "button" : "div";
+        return `<${tag} ${d.coached ? `type="button" data-nav data-col="${col}" data-key="${t}:shape:${s.id}" ` : ""}class="plan-shape" data-team="${t}" data-shape="${s.id}" aria-pressed="${current}">${shapeSvg(s)}<span><b>${s.id}</b><small>${escapeHtml(s.name)}</small>${s.desc && s.desc !== s.name ? `<em>${escapeHtml(s.desc)}</em>` : ""}</span>${current ? '<i class="plan-check">Đang dùng</i>' : ""}</${tag}>`;
+      }).join("") + `<p class="plan-note">${d.coached ? d.auto.tactics ? "Tự động đổi chiến thuật đang bật: máy có thể đổi sơ đồ theo tỉ số." : "Sơ đồ bạn chọn được giữ nguyên; chỉ khi bị đuổi người, đội tự bớt một vị trí cùng kiểu." : "Máy tự chọn và đổi sơ đồ theo diễn biến trận."}</p></div>`;
+    } else {
+      const toggle = (key, title, desc, on, attr) => `<button type="button" class="plan-toggle" data-nav data-col="${col}" data-key="${t}:${key}" data-team="${t}" ${attr} aria-pressed="${on}"><span><b>${title}</b><small>${desc}</small></span><b class="toggle-state">${on ? "Bật" : "Tắt"}</b></button>`;
+      pane = d.coached ? '<div class="plan-list">'
+        + toggle("auto:tactics", "Tự động đổi chiến thuật", "Máy đổi sơ đồ theo tỉ số: giữ chắc khi dẫn, dồn lên khi bị dẫn.", d.auto.tactics, 'data-auto="tactics"')
+        + toggle("auto:subs", "Tự động thay người", "Máy đưa người dự bị khỏe vào thay cầu thủ mệt ở lúc bóng chết.", d.auto.subs, 'data-auto="subs"')
+        + (col === 0 && view.panel?.setup ? toggle("support", "Hỗ trợ ngắm", "Chuyền tới đồng đội gần hướng ngắm, sút trúng khung thành.", !!view.panel.setup.values.support, "data-support") : "")
+        + "</div>" : '<p class="plan-note">Máy tự đổi chiến thuật và thay người cho đội này.</p>';
+    }
+    return head + `<div class="plan-main"${ui.detail?.team === t ? " inert" : ""}>${pitch}<div class="plan-pane">${pane}</div></div>` + (ui.detail?.team === t ? planDetail(view) : "");
+  }
+  function planDetail(view) {
+    const ui = view.planUI, { team: t, id, page } = ui.detail, p = findPlanPlayer(ui.data, t, id), d = ui.data[t];
+    if (!p) return "";
+    const b = p.body, queued = d.queue.find(q => q.off === id || q.on === id);
+    const top = `<div class="pd-top">${figureSvg(view.api, id, "-26 -98 56 66", "pd-face")}<div class="pd-id"><span class="pd-num">#${p.num}</span><strong>${escapeHtml(p.name)}</strong><span class="pd-pos">${posBadge(p.onPitch ? p.line ?? p.role : p.role)}<small>Sở trường: ${LINE_LABEL[p.natural] ?? p.natural}${p.onPitch ? "" : " · dự bị"}</small></span></div><div class="pd-ovr"><b data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b><small>OVR</small></div>${radarSvg(p.stats)}</div>`;
+    const info = page === 0
+      ? `<dl class="pd-info"><div><dt>Chiều cao</dt><dd>${b.height} cm</dd></div><div><dt>Cân nặng</dt><dd>${b.weight} kg</dd></div><div><dt>Tầm với</dt><dd>${b.reach.toFixed(2).replace(".", ",")} m</dd></div><div><dt>Thể lực</dt><dd>${Math.round(p.energy * 100)}%</dd></div><div><dt>Thẻ</dt><dd>${p.yellows ? p.yellows + " vàng" : "Chưa có"}</dd></div><div><dt>Tình trạng</dt><dd>${p.injured ? "Chấn thương" : p.subbing ? "Đang thay người" : queued ? (queued.off === id ? "Sẽ ra sân" : "Sẽ vào sân") : p.onPitch ? "Trên sân" : "Dự bị"}</dd></div></dl>`
+        + `<div class="pd-styles"><div class="pd-style atk"><small>Có bóng</small><b>${escapeHtml(p.attack.name)}</b><em>${escapeHtml(p.attack.tag)}</em><p>${escapeHtml(p.attack.desc)}</p></div><div class="pd-style def"><small>Mất bóng</small><b>${escapeHtml(p.defense.name)}</b><em>${escapeHtml(p.defense.tag)}</em><p>${escapeHtml(p.defense.desc)}</p></div></div>`
+        + (p.skill ? `<div class="pd-skill"><svg viewBox="0 0 24 24" aria-hidden="true">${skillBadge(p.skill.id, p.skill.icon, "pd-" + p.id)}</svg><span><b>${escapeHtml(p.skill.name)}${p.skill.used ? " · đã dùng" : ""}</b><small>${escapeHtml(p.skill.desc)}</small>${p.penaltySkill ? `<small class="pd-pen">Penalty: ${escapeHtml(p.penaltySkill.name)}</small>` : ""}</span></div>` : "")
+      : '<ol class="pd-stats">' + gameData.stats.keys.map(k => `<li><b data-tone="${statTone(p.stats[k])}">${p.stats[k]}</b><span>${gameData.stats.labels[k]}</span><i><i style="width:${Math.round(clamp01((p.stats[k] - 35) / 60) * 100)}%"></i></i></li>`).join("") + "</ol>";
+    const canSwap = d.coached && (queued || (p.onPitch ? p.canOff : p.canOn));
+    return `<div class="plan-detail" tabindex="-1" role="region" aria-label="Thông tin ${escapeHtml(p.name)}"><div class="pd-head"><b>${page === 0 ? "Thông tin cầu thủ" : "Chỉ số"}</b><span class="pd-pages"><kbd>←</kbd><kbd>→</kbd> ${page + 1}/2 · <kbd>↑</kbd><kbd>↓</kbd> đổi người</span></div>${top}<div class="pd-body">${info}</div>`
+      + `<div class="pd-actions"><button type="button" class="secondary" data-nav data-pd="page">${page === 0 ? "Xem chỉ số ›" : "‹ Thông tin"}</button>${canSwap ? `<button type="button" class="secondary" data-nav data-pd="sub">${queued ? "Hủy lượt thay" : "Thay người"} <kbd>X</kbd></button>` : ""}<button type="button" class="secondary" data-nav data-pd="close">Quay lại <kbd>Esc</kbd></button></div></div>`;
+  }
+  const PLAN_PROMPTS = {
+    lineup: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Đổi đội</span><span><kbd>Enter</kbd> Xem cầu thủ</span><span><kbd>X</kbd> Thay người</span><span><kbd>Esc</kbd> Quay lại</span>",
+    tactics: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Đổi đội</span><span><kbd>Enter</kbd> Dùng sơ đồ</span><span><kbd>Esc</kbd> Quay lại</span>",
+    support: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>Enter</kbd> Bật / Tắt</span><span><kbd>Esc</kbd> Quay lại</span>",
+    detail: "<span><kbd>←</kbd><kbd>→</kbd> Trang</span><span><kbd>↑</kbd><kbd>↓</kbd> Đổi cầu thủ</span><span><kbd>X</kbd> Thay người</span><span><kbd>Esc</kbd> Quay lại</span>",
+    pick: "<span><kbd>↑</kbd><kbd>↓</kbd> Chọn người</span><span><kbd>Enter</kbd> Xác nhận</span><span><kbd>Esc</kbd> Hủy thay người</span>"
+  };
+  function renderPlan(view, focusKey) {
+    const sheet = view.arena.querySelector('.sheet[data-sheet="plan"]'), ui = view.planUI;
+    const data = view.api?.plan?.();
+    if (!sheet || !data) return;
+    ui.data = data;
+    // The portraits use the match's own colours, once its stylesheet has them.
+    if (!sheet.style.getPropertyValue("--color-ink")) for (const [k, v] of Object.entries(view.api.palette?.() ?? {})) if (v) sheet.style.setProperty(k, v);
+    const keep = focusKey ?? document.activeElement?.closest?.("[data-key]")?.dataset.key ?? (ui.detail && sheet.contains(document.activeElement) ? "detail" : null);
+    for (const tab of sheet.querySelectorAll(".plan-tab")) { const on = tab.dataset.tab === ui.tab; tab.classList.toggle("is-current", on); tab.setAttribute("aria-selected", String(on)); }
+    planOrder(view).forEach((t, col) => {
+      const column = sheet.querySelector(`.plan-team[data-col="${col}"]`);
+      column.dataset.team = t;
+      column.innerHTML = planColumn(view, t, col);
+    });
+    sheet.dataset.mode = ui.detail ? "detail" : ui.pick ? "pick" : "list";
+    sheet.querySelector(".plan-prompts").innerHTML = PLAN_PROMPTS[sheet.dataset.mode === "list" ? ui.tab : sheet.dataset.mode];
+    const pick = ui.pick && findPlanPlayer(data, ui.pick.team, ui.pick.id);
+    writeText(sheet.querySelector(".plan-status"), pick ? `Chọn người ${pick.onPitch ? "vào thay cho" : "ra sân để"} ${pick.name}${pick.onPitch ? "" : " vào"} · Esc để hủy` : ui.note ?? "");
+    if (ui.detail) focusOn(sheet.querySelector(".plan-detail"));
+    else if (keep && keep !== "detail") focusOn(sheet.querySelector(`[data-key="${CSS.escape(keep)}"]`) ?? firstPlanItem(sheet, 0));
+  }
+  const planItems = (sheet, col) => [...sheet.querySelectorAll(`.plan-team[data-col="${col}"] [data-nav]`)];
+  const firstPlanItem = (sheet, col) => planItems(sheet, col)[0] ?? planItems(sheet, 1 - col)[0] ?? sheet.querySelector(".sheet-back");
+  function openPlan(view, opener) {
+    view.planUI ??= { tab: "lineup" };
+    Object.assign(view.planUI, { detail: null, pick: null, note: "" });
+    const sheet = view.arena.querySelector('.sheet[data-sheet="plan"]');
+    openSheet(view, "plan", opener);
+    renderPlan(view, null);
+    focusOn(firstPlanItem(sheet, 0));
+  }
+  function setPlanTab(view, step) {
+    const ui = view.planUI, at = PLAN_TABS.findIndex(([id]) => id === ui.tab);
+    ui.tab = typeof step === "string" ? step : PLAN_TABS[(at + step + PLAN_TABS.length) % PLAN_TABS.length][0];
+    ui.pick = null; ui.detail = null; ui.note = "";
+    const sheet = view.arena.querySelector('.sheet[data-sheet="plan"]'), col = document.activeElement?.closest?.("[data-col]")?.dataset.col ?? "0";
+    renderPlan(view, "none");
+    focusOn(firstPlanItem(sheet, Number(col)));
+  }
+  function openDetail(view, t, id) {
+    view.planUI.detail = { team: t, id, page: view.planUI.detail?.page ?? 0 };
+    view.planUI.pick = null;
+    renderPlan(view);
+  }
+  function closeDetail(view) {
+    const d = view.planUI.detail;
+    view.planUI.detail = null;
+    renderPlan(view, d ? `${d.team}:${d.id}` : null);
+  }
+  /** Starts a substitution from one man, cancels a queued one, or explains why he cannot go off (or on). */
+  function startPick(view, t, id) {
+    const ui = view.planUI, d = ui.data[t], p = findPlanPlayer(ui.data, t, id);
+    if (!p) return;
+    if (!d.coached) { ui.note = "Chỉ thay người được cho đội bạn điều khiển."; renderPlan(view); return; }
+    if (view.api.status().ended) { ui.note = "Trận đấu đã kết thúc."; renderPlan(view); return; }
+    if (d.queue.some(q => q.off === id || q.on === id)) { view.api.cancelSub(t, id); ui.note = `Đã hủy lượt thay của ${p.name}.`; ui.detail = null; renderPlan(view, `${t}:${id}`); return; }
+    if (p.onPitch ? !p.canOff : !p.canOn) {
+      ui.note = p.role === "GK" && p.onPitch ? "Không có thủ môn dự bị để thay." : p.injured ? `${p.name} đang bị thương.` : p.subbing ? `${p.name} đang được thay ra.` : `${p.name} chưa thay được lúc này.`;
+      renderPlan(view); return;
+    }
+    const other = (p.onPitch ? d.bench : d.players).filter(x => p.onPitch ? x.canOn : x.canOff);
+    if (!other.length) { ui.note = p.onPitch ? "Không còn cầu thủ dự bị nào vào sân được." : "Không có ai trên sân để thay ra."; renderPlan(view); return; }
+    ui.detail = null; ui.note = ""; ui.pick = { team: t, id, onPitch: p.onPitch };
+    renderPlan(view, `${t}:${other[0].id}`);
+  }
+  function completePick(view, t, id) {
+    const data = team => view.planUI.data[team];
+    const ui = view.planUI, pick = ui.pick, p = findPlanPlayer(ui.data, t, id), first = pick && findPlanPlayer(ui.data, pick.team, pick.id);
+    if (!pick || !p || !first) return;
+    if (t !== pick.team || id === pick.id) { ui.pick = null; renderPlan(view, `${pick.team}:${pick.id}`); return; }
+    if (p.onPitch === pick.onPitch) {
+      const able = p.onPitch ? p.canOff : p.canOn;
+      ui.pick = able ? { team: t, id, onPitch: p.onPitch } : pick;
+      ui.note = able ? "" : `${p.name} chưa thay được lúc này.`;
+      renderPlan(view, `${t}:${able ? (p.onPitch ? data(t).bench : data(t).players).find(x => p.onPitch ? x.canOn : x.canOff)?.id ?? id : id}`);
+      return;
+    }
+    const [off, on] = pick.onPitch ? [first, p] : [p, first];
+    const result = view.api.queueSub(t, off.id, on.id);
+    ui.pick = null;
+    ui.note = !result.ok ? result.reason : result.now ? `Đã đổi đội hình: ${on.name} đá chính thay ${off.name}.` : `Sẽ thay ở lần bóng chết tới: ${on.name} vào, ${off.name} ra.`;
+    renderPlan(view, `${t}:${off.id}`);
+  }
+  function planActivate(view, el) {
+    const ui = view.planUI, t = el.dataset.team;
+    if (el.matches(".plan-row, .pp-token")) { if (ui.pick) completePick(view, t, el.dataset.id); else openDetail(view, t, el.dataset.id); }
+    else if (el.matches(".plan-shape[data-shape]") && ui.data[t]?.coached) {
+      const result = view.api.setShape(t, el.dataset.shape);
+      ui.note = result.ok ? `Đội ${names[t]} đá ${el.dataset.shape}.` : "Sơ đồ này không dùng được lúc này.";
+      renderPlan(view, el.dataset.key);
+    } else if (el.matches("[data-auto]")) {
+      const key = el.dataset.auto, on = !ui.data[t].auto[key];
+      view.api.setAuto(t, { [key]: on });
+      ui.note = (key === "tactics" ? "Tự động đổi chiến thuật " : "Tự động thay người ") + (on ? "bật." : "tắt.");
+      renderPlan(view, el.dataset.key);
+    } else if (el.matches("[data-support]")) {
+      view.panel.overlay.querySelector('[data-act="support"]').click();
+      renderPlan(view, el.dataset.key);
+    }
+  }
+  function buildPlanSheet(view) {
+    const sheet = buildSheet(view.arena, "plan", "Kế hoạch trận", PLAN_SHEET);
+    sheet.classList.add("plan-sheet");
+    sheet.addEventListener("click", event => {
+      const tab = event.target.closest(".plan-tab");
+      if (tab) { setPlanTab(view, tab.dataset.tab); return; }
+      const action = event.target.closest("[data-pd]")?.dataset.pd, ui = view.planUI;
+      if (action === "page") { ui.detail.page = 1 - ui.detail.page; renderPlan(view); return; }
+      if (action === "sub") { startPick(view, ui.detail.team, ui.detail.id); return; }
+      if (action === "close") { closeDetail(view); return; }
+      const item = event.target.closest(".plan-row, .pp-token, .plan-shape[data-shape], [data-auto], [data-support]");
+      if (item && !item.closest(".plan-detail")) planActivate(view, item);
+    });
+  }
+  /** Keys inside the game plan; true when handled. */
+  function planKey(view, sheet, event, dir) {
+    const ui = view.planUI, code = event.code;
+    if (!ui) return false;
+    if (ui.detail) {
+      if (code === "Escape") { closeDetail(view); return true; }
+      if (dir === "left" || dir === "right") { ui.detail.page = 1 - ui.detail.page; renderPlan(view); return true; }
+      if (dir === "up" || dir === "down") {
+        const d = ui.data[ui.detail.team], all = [...d.players, ...d.bench], at = all.findIndex(p => p.id === ui.detail.id);
+        ui.detail.id = all[(at + (dir === "down" ? 1 : -1) + all.length) % all.length].id; renderPlan(view); return true;
+      }
+      if (code === "KeyX" && !event.repeat) { startPick(view, ui.detail.team, ui.detail.id); return true; }
+      return (code === "Enter" || code === "Space") && document.activeElement?.matches?.(".plan-detail");
+    }
+    if (code === "Escape" && ui.pick) { const pick = ui.pick; ui.pick = null; renderPlan(view, `${pick.team}:${pick.id}`); return true; }
+    if ((code === "KeyQ" || code === "PageUp") && !event.repeat) { setPlanTab(view, -1); return true; }
+    if ((code === "KeyE" || code === "PageDown") && !event.repeat) { setPlanTab(view, 1); return true; }
+    const current = document.activeElement?.closest?.("[data-col]"), col = Number(current?.dataset.col ?? 0);
+    if (dir === "up" || dir === "down") {
+      const items = planItems(sheet, col), at = items.indexOf(current);
+      if (!items.length) return false;
+      { const next = items[at < 0 ? 0 : (at + (dir === "down" ? 1 : -1) + items.length) % items.length]; focusOn(next); next.scrollIntoView?.({ block: "nearest" }); }
+      return true;
+    }
+    if (dir === "left" || dir === "right") {
+      const at = Math.max(0, planItems(sheet, col).indexOf(current)), items = planItems(sheet, 1 - col);
+      if (items.length) focusOn(items[Math.min(at, items.length - 1)]);
+      return true;
+    }
+    if (code === "KeyX" && !event.repeat && current?.matches(".plan-row")) { startPick(view, current.dataset.team, current.dataset.id); return true; }
+    return false;
   }
 
   /* ------------------------------ match setup ------------------------------ */
@@ -568,6 +794,10 @@
       { key: "support", label: cpu ? "Hỗ trợ ngắm" : "Hỗ trợ ngắm (A và B)", initial: true, values: () => onOff,
         desc: () => "Chuyền tới đồng đội gần hướng ngắm và sút trúng khung thành. Đổi được ngay trong trận (Esc → menu).",
         changed: v => { sessions.get(mode)?.api.setSupport(v); syncSupport(panel); } },
+      { key: "autoTactics", label: "Tự động đổi chiến thuật", initial: false, values: () => onOff,
+        desc: v => v ? "Máy đổi sơ đồ theo tỉ số cho đội của bạn: giữ chắc khi dẫn, dồn lên khi bị dẫn." : "Sơ đồ bạn chọn trong Kế hoạch trận được giữ nguyên suốt trận." },
+      { key: "autoSubs", label: "Tự động thay người", initial: true, values: () => onOff,
+        desc: v => v ? "Máy đưa người dự bị khỏe vào thay cầu thủ mệt ở lúc bóng chết; bạn vẫn tự thay được." : "Chỉ thay người khi bạn chọn trong Kế hoạch trận (chấn thương vẫn được thay)." },
       keyRow("A"), !cpu && keyRow("B")
     ].filter(Boolean);
   }
@@ -625,7 +855,7 @@
   }
   function optionsFor(panel) {
     const v = panel.setup.values, mode = panel.dataset.mode, teamA = v.team, teamB = opposite(teamA);
-    return { mode, duration: v.duration, extraTime: v.extraTime, penalties: v.penalties, support: v.support, difficulty: v.level ?? "normal",
+    return { mode, duration: v.duration, extraTime: v.extraTime, penalties: v.penalties, support: v.support, difficulty: v.level ?? "normal", autoTactics: v.autoTactics, autoSubs: v.autoSubs,
       teamA, leftTeam: mode === "local" ? (v.side === "left" ? teamB : teamA) : "R" };
   }
   function renderMatchup(panel) {
@@ -633,7 +863,7 @@
     const side = team => o.leftTeam === team ? "sân trái" : "sân phải";
     const who = cpu ? ["Bạn", "Máy"] : ["Người A", "Người B"];
     const team = (t, name) => `<div class="vs-team" data-team="${t}"><span class="kit-shirt ${t === "R" ? "red" : "blue"}" aria-hidden="true"></span><b>${name}</b><small>Đội ${names[t]} · ${side(t)}</small></div>`;
-    const facts = [["Thời gian", o.duration + " phút"], cpu && ["Độ khó", gameData.difficulty[o.difficulty]?.name ?? "Thường"], ["Hiệp phụ", o.extraTime ? "Có" : "Không"], ["Luân lưu", o.penalties ? "Có" : "Không"], ["Hỗ trợ ngắm", o.support ? "Bật" : "Tắt"]].filter(Boolean);
+    const facts = [["Thời gian", o.duration + " phút"], cpu && ["Độ khó", gameData.difficulty[o.difficulty]?.name ?? "Thường"], ["Hiệp phụ", o.extraTime ? "Có" : "Không"], ["Luân lưu", o.penalties ? "Có" : "Không"], ["Hỗ trợ ngắm", o.support ? "Bật" : "Tắt"], ["Tự động", [o.autoTactics && "chiến thuật", o.autoSubs && "thay người"].filter(Boolean).join(", ") || "Tắt"]].filter(Boolean);
     const html = `<div class="vs">${team(o.teamA, who[0])}<span class="vs-mark">VS</span>${team(teamB, who[1])}</div><dl class="vs-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`
       + (sessions.has(o.mode) ? '<p class="vs-note">Trận đang dở sẽ được thay bằng trận mới.</p>' : "");
     const matchup = panel.querySelector(".matchup");
@@ -659,7 +889,7 @@
       const set = bindingsOf(mode)[slot] ?? {};
       return { left: label(set.left), center: label(set.down), right: label(set.right), special: label(set.special) };
     };
-    const session = { panel, arena, api, options, paused: true, awaitingStart: true, overlay: panel.overlay, rosterKey: null,
+    const session = { panel, arena, api, options, paused: true, awaitingStart: true, overlay: panel.overlay,
       penaltyView: new window.PTSCPenaltyView(panel.querySelector(".penalty-host"), api, { keys: penaltyKeys }) };
     sessions.set(mode, session);
     closeSheets(arena);
@@ -766,7 +996,6 @@
       return session.hudNodes.get(selector);
     };
     const state = session.api.status(), bindings = bindingsOf(session.options.mode);
-    renderRoster(session);
     if (!!state.refBreak !== !!session.refStopped) {
       session.refStopped = !!state.refBreak;
       // A referee stoppage cancels kicks but preserves held movement keys.
@@ -962,8 +1191,10 @@
     const arena = panel.querySelector(".arena"), surface = arena.querySelector(".arena-surface");
     const mode = panel.dataset.mode, slots = mode === "local" ? ["A", "B"] : ["A"];
     buildSetup(panel);
-    panel.overlay = buildOverlay(arena, [["resume", "Tiếp tục"], ["support", "Hỗ trợ ngắm", " support-button"], ["squad", "Đội hình &amp; chỉ số"], ["controls", "Điều khiển"], ["restart", "Trận mới"], ["setup", "Cài đặt trận"], ["info", "Thông tin game"], ["menu", "Menu chính"]]);
-    buildSheet(arena, "squad", "Đội hình &amp; chỉ số", SQUAD_SHEET);
+    panel.overlay = buildOverlay(arena, [["resume", "Tiếp tục"], ["support", "Hỗ trợ ngắm", " support-button"], ["plan", "Kế hoạch trận"], ["controls", "Điều khiển"], ["restart", "Trận mới"], ["setup", "Cài đặt trận"], ["info", "Thông tin game"], ["menu", "Menu chính"]]);
+    buildSheet(arena, "squad", "Chỉ số nhanh", SQUAD_SHEET);
+    panel.planView = { panel, arena, planUI: null, get api() { return sessions.get(mode)?.api; }, get options() { return sessions.get(mode)?.options; } };
+    buildPlanSheet(panel.planView);
     buildSheet(arena, "controls", "Điều khiển trận này", '<div class="controls">' + slots.map(slot => '<article><div class="pad-help" data-slot="' + slot + '"></div></article>').join("") + '</div><div class="advanced-grid">' + slots.map(slot => '<div class="advanced" data-slot="' + slot + '"' + (mode === "cpu" ? ' data-title="Bạn"' : "") + "></div>").join("") + '</div><p class="sheet-tip">Giữ <kbd>Tab</kbd> trong trận để xem nhanh chỉ số · <kbd>Space</kbd> tạm dừng / tiếp tục · đổi phím ở Thông tin game → Layout phím.</p>');
     syncSupport(panel);
     panel.overlay.addEventListener("click", event => {
@@ -974,7 +1205,8 @@
         panel.setup.values.support = !panel.setup.values.support;
         session.api.setSupport(panel.setup.values.support);
         syncSupport(panel); renderSetup(panel);
-      } else if (act === "squad" || act === "controls") openSheet(session, act, button);
+      } else if (act === "plan") openPlan(panel.planView, button);
+      else if (act === "controls") openSheet(session, act, button);
       else if (act === "restart") startMatch(panel);
       else if (act === "setup") go(mode);
       else if (act === "info") go("info/skills");
@@ -1015,7 +1247,7 @@
   /* ------------------------------ keyboard: menus ------------------------------ */
   // Menus answer to the arrows (and W A S D when nothing is being typed), Enter, Space and Esc, like a console pad.
   const NAV_KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", KeyW: "up", KeyS: "down", KeyA: "left", KeyD: "right" };
-  const navItems = scope => [...scope.querySelectorAll("[data-nav]")].filter(el => !el.disabled && !el.closest("[hidden]") && el.getClientRects().length);
+  const navItems = scope => [...scope.querySelectorAll("[data-nav]")].filter(el => !el.disabled && !el.closest("[hidden], [inert]") && el.getClientRects().length);
   function moveFocus(scope, delta) {
     const items = navItems(scope);
     if (!items.length) return null;
@@ -1047,6 +1279,7 @@
     if (view) {
       const sheet = [...view.arena.querySelectorAll(".sheet")].find(s => !s.hidden && !s.classList.contains("is-peek"));
       if (sheet) {
+        if (sheet.dataset.sheet === "plan" && planKey(view === watchView ? watchView : view.panel.planView, sheet, event, dir)) { handled(); return; }
         if (event.code === "Escape") { handled(); closeSheet(sheet); }
         else if (event.code === "Tab") { handled(); moveFocus(sheet, event.shiftKey ? -1 : 1); }
         else if (vertical) { handled(); sheet.querySelector(".sheet-body").scrollBy({ top: delta * 90 }); }
@@ -1096,7 +1329,7 @@
     if (event.pointerType !== "mouse" || at === lastPointer) return;
     lastPointer = at;
     if (document.activeElement?.matches?.("input, select, textarea")) return;
-    const item = event.target.closest(".menu-item, .opt, .info-nav a, .setup .start, .sheet-back");
+    const item = event.target.closest(".menu-item, .opt, .info-nav a, .setup .start, .sheet-back, .plan-row, .plan-shape[data-nav], .plan-toggle");
     if (item && item !== document.activeElement && !item.closest("[hidden]") && !capture) focusOn(item);
   });
 

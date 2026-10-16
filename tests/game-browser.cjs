@@ -77,8 +77,8 @@ const server = http.createServer((req, res) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       await route("#/menu"); await page.keyboard.press("Enter"); await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu");
       await page.locator("#panel-cpu .start").click(); await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu/match");
-      await page.keyboard.press("Space"); await page.waitForTimeout(900);
-      assert(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.__state().T) > .4, "The match clock runs after kick-off");
+      await page.keyboard.press("Space");
+      await page.waitForFunction(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.__state().T > .4, null, { timeout: 4000 }).catch(() => assert.fail("The match clock runs after kick-off"));
       await page.keyboard.press("Escape");
     }
     await route("#/menu");
@@ -479,19 +479,19 @@ const server = http.createServer((req, res) => {
     await page.waitForTimeout(200);
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__state().T), paused);
     console.log("PASS pause freezes match");
-    await page.locator('#panel-local [data-act="squad"]').click();
-    assert(await page.locator('#panel-local .sheet[data-sheet="squad"]').isVisible(), "The squad sheet opens from the match menu");
-    assert.equal(await page.locator('#panel-local .sheet[data-sheet="squad"] .player-card').count(), 2);
+    await page.locator('#panel-local [data-act="plan"]').click();
+    assert(await page.locator('#panel-local .sheet[data-sheet="plan"]').isVisible(), "The game plan opens from the match menu");
+    assert.equal(await page.locator('#panel-local .plan-team').count(), 2);
     await page.keyboard.press("Escape");
-    assert(await page.locator('#panel-local .sheet[data-sheet="squad"]').isHidden());
-    assert.equal(await page.evaluate(() => document.activeElement.dataset.act), "squad", "Closing a sheet returns to its menu entry");
+    assert(await page.locator('#panel-local .sheet[data-sheet="plan"]').isHidden());
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.act), "plan", "Closing a sheet returns to its menu entry");
     await page.locator('#panel-local [data-act="resume"]').click();
     assert(await page.locator("#panel-local .start-overlay").isHidden());
     await page.keyboard.down("Tab");
     assert(await page.locator('#panel-local .sheet[data-sheet="squad"].is-peek').isVisible(), "Holding Tab shows the rating cards during play");
     await page.keyboard.up("Tab");
     assert(await page.locator('#panel-local .sheet[data-sheet="squad"]').isHidden(), "Releasing Tab hides them");
-    console.log("PASS match menu: squad sheet, Esc back to its entry, Tab peek");
+    console.log("PASS match menu: game plan sheet, Esc back to its entry, Tab peek");
     await page.locator("#panel-local").screenshot({ path: path.join(artifacts, "two-player.png") });
 
     await route("#/cpu");
@@ -711,8 +711,9 @@ const server = http.createServer((req, res) => {
       const table = styles[phase];
       if (table[low] != null && table[high] != null) assert(table[low] < table[high], `${low} must play deeper than ${high}: ` + JSON.stringify(table));
     };
-    ordered("attack", "deepLyingForward", "goalPoacher"); ordered("attack", "orchestrator", "holePlayer"); ordered("attack", "buildUp", "extraFrontman");
-    ordered("defense", "pressBack", "frontLinePoacher"); ordered("defense", "anchorMan", "destroyer"); ordered("defense", "deepDefender", "highLineMaster"); ordered("defense", "defensiveGK", "sweeperGK");
+    ordered("attack", "pivot", "drill"); ordered("attack", "metronome", "lateArrival"); ordered("attack", "launcher", "stepUp");
+    ordered("defense", "shadow", "coiled"); ordered("defense", "shield", "breaker"); ordered("defense", "bulwark", "trap"); ordered("defense", "lineGuard", "libero");
+    assert(Object.values(styleTable.attack).concat(Object.values(styleTable.defense)).every(st => st.name && st.tag && st.desc && !("en" in st)), "Every style has its own name, a short tag and a description");
     assert(await page.locator("#screen-info .style-legend .legend-group").count() === 4, "Styles are grouped by zone");
     assert(await page.locator("#screen-info .skill-legend .legend-group").count() === 5, "Skills are grouped by situation");
     console.log("PASS attacking and defensive playing styles fit positions, change where players stand, grouped legends");
@@ -728,7 +729,7 @@ const server = http.createServer((req, res) => {
       }
       const custom = { R: { players: [
         { name: "Thủ Thành", head: "buzz", skin: 1, num: 1, stats: { goalkeeping: 92 } }, { name: "Hậu A", head: "spiky", skin: 1, num: 2 }, { name: "Hậu B", head: "curly", skin: 2, num: 3 },
-        { name: "Tiền Vệ", head: "beard", skin: 1, num: 8 }, { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, stats: { finishing: 95, speed: 90 }, attack: "goalPoacher", defense: "frontLinePoacher" },
+        { name: "Tiền Vệ", head: "beard", skin: 1, num: 8 }, { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, stats: { finishing: 95, speed: 90 }, attack: "drill", defense: "coiled" },
         { name: "Cánh Phải", head: "glasses", skin: 1, num: 11 }], bench: [{ name: "Dự Bị", head: "buzz", skin: 2, num: 12, natural: "DF" }] } };
       const host = document.createElement("div"); document.body.append(host);
       const api = PTSCFootball.mount(host, { mode: "cpu", seed: 4, still: 0, fonts: "none", squads: JSON.stringify(custom) });
@@ -738,13 +739,14 @@ const server = http.createServer((req, res) => {
     assert(ratings.all.every(p => ratings.rules.keys.every(k => p.stats[k] >= ratings.rules.range[0] && p.stats[k] <= ratings.rules.range[1]) && p.ovr >= 35 && p.ovr <= 95), "Ratings stay within 35–95");
     const mean = (list, key) => list.reduce((s, p) => s + p.stats[key], 0) / list.length;
     const forwards = ratings.all.filter(p => p.role === "FW");
-    assert(mean(forwards.filter(p => p.attack === "Săn bàn"), "finishing") > mean(forwards.filter(p => p.attack === "Hộ công lùi sâu"), "finishing"), "Goal poachers finish better than deep-lying forwards");
+    assert(mean(forwards.filter(p => p.attack === "Kẻ đón lõng"), "finishing") > mean(forwards.filter(p => p.attack === "Bức tường"), "finishing"), "Edge-of-the-box strikers finish better than target men");
     assert(mean(ratings.all.filter(p => p.role === "GK"), "goalkeeping") > 70 && mean(ratings.all.filter(p => p.role !== "GK"), "goalkeeping") < 40, "Only keepers can keep goal");
     const striker = ratings.roster.R.find(p => p.name === "Sát Thủ");
-    assert(striker && striker.stats.finishing === 95 && striker.stats.speed === 90 && striker.attack === "Săn bàn" && striker.defense === "Chờ phản công", "Squads given as data keep fixed ratings and styles: " + JSON.stringify(striker));
+    assert(striker && striker.stats.finishing === 95 && striker.stats.speed === 90 && striker.attack === "Mũi khoan" && striker.defense === "Lò xo", "Squads given as data keep fixed ratings and styles: " + JSON.stringify(striker));
     assert.equal(ratings.roster.R.find(p => p.name === "Thủ Thành").stats.goalkeeping, 92);
     assert(ratings.roster.B.some(p => p.name === "Vũ"), "A team without custom data keeps the default squad");
-    assert(await page.locator("#panel-local .roster table").count() === 2, "Both squads are listed with ratings");
+    const localPlan = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.plan());
+    assert(["R", "B"].every(t => localPlan[t].players.length === 6 && [...localPlan[t].players, ...localPlan[t].bench].every(p => Object.keys(p.stats).length === 10)), "Both squads are listed with ratings");
     console.log("PASS player ratings: ten per player in range, shaped by playing styles, squads as data with fixed ratings, roster tables");
 
     // Skills: always work, defensive ones last half as long again, and positions sometimes get the other kind.
@@ -878,7 +880,7 @@ const server = http.createServer((req, res) => {
     const watchCards = await page.evaluate(() => [...document.querySelectorAll("#panel-watch .player-card")].map(c => ({ team: c.dataset.team, name: c.querySelector(".pc-id strong").textContent, ovr: c.querySelector(".pc-ovr b").textContent })));
     assert.deepEqual(watchCards.map(c => c.team), ["R", "B"]);
     assert(watchCards.every(c => c.name !== "Chuẩn bị" && /^\d+$/.test(c.ovr)), "Watching shows both sides' players: " + JSON.stringify(watchCards));
-    assert.equal(await page.locator("#panel-watch .roster table").count(), 2);
+    assert(await page.evaluate(() => { const plan = document.getElementById("watch-match").__ptscFootball.plan(); return !plan.R.coached && !plan.B.coached && plan.R.players.length === 6; }), "Watching lists both squads, view only");
     await route("#/cpu");
     console.log("PASS info cards for the computer's side and for both sides when watching");
 
@@ -891,18 +893,18 @@ const server = http.createServer((req, res) => {
     await page.keyboard.press("Escape"); await routeIs("#/cpu/match");
     assert.equal(await activeAct(), "resume", "Back in a paused match, the cursor is on its menu");
     await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
-    assert(await page.locator('#panel-cpu .sheet[data-sheet="squad"]').isVisible());
+    assert(await page.locator('#panel-cpu .sheet[data-sheet="plan"]').isVisible());
     await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Shift+Tab");
     assert(await page.evaluate(() => !!document.activeElement.closest(".sheet")), "Tab stays inside an open sheet");
     await page.keyboard.press("Escape");
-    assert.equal(await activeAct(), "squad");
+    assert.equal(await activeAct(), "plan");
     await page.locator("#panel-cpu .arena-tools .pause").click();
     assert(await page.locator("#panel-cpu .start-overlay").isHidden(), "The pitch's pause button resumes over the menu");
     assert.equal(await page.evaluate(() => document.activeElement.className), "arena");
     await page.evaluate(() => {
       const api = document.querySelector("#panel-cpu .match-host").__ptscFootball;
-      api.__step(3); api.__fastForward(31); api.__step(30); api.__fastForward(61);
-      for (let i = 0; i < 200 && !api.status().ended; i++) __stepPlay(api, .5);
+      // Jump to the end of each half (half time puts the clock back to 30 if it comes late).
+      for (let i = 0; i < 800 && !api.status().ended; i++) { if (i % 20 === 0) api.__fastForward(api.status().minute > 30 ? 61 : 31); __stepPlay(api, .5); }
     });
     await page.waitForFunction(() => document.querySelector('#panel-cpu .start-overlay[data-kind="end"]:not([hidden])'), null, { timeout: 8000 });
     assert.equal(await activeAct(), "restart", "The full-time menu opens on a new match, not on a toggle");
@@ -932,6 +934,142 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.locator(".keymap-key.is-listening").count(), 0, "Leaving the editor stops listening for a key");
     await route("#/cpu");
     console.log("PASS in-game navigation: back to a paused match, sheets keep Tab, pause button resumes, full-time cursor, prompts, full screen, typing, dialog, key capture");
+
+    const engine = await page.evaluate(() => {
+      const host = document.createElement("div"); document.body.append(host);
+      const api = PTSCFootball.mount(host, { mode: "cpu", teamA: "R", seed: 6, still: 0, fonts: "none", duration: 6 });
+      const out = { start: api.plan() };
+      out.cpuRefused = api.queueSub("B", "B1", out.start.B.bench[0]?.id).ok === false && api.setShape("B", "3-1-1").ok === false;
+      out.keeperRefused = api.queueSub("R", "R0", out.start.R.bench[0]?.id);
+      const off = out.start.R.players.find(p => p.canOff), on = out.start.R.bench.find(b => b.canOn);
+      out.pre = api.queueSub("R", off.id, on.id); out.preOn = api.plan().R.players.find(p => p.id === off.id).name === on.name;
+      api.setShape("R", "1-1-3");
+      api.__step(3); for (let i = 0; i < 60 && api.status().phase !== "play"; i++) __stepPlay(api, .5);
+      const initial = api.plan().R.players.map(p => p.name).join();
+      api.setAuto("R", { subs: false });
+      for (let i = 0; i < 440; i++) __stepPlay(api, .5);
+      const mid = api.plan(); out.midMinute = api.status().minute;
+      out.held = mid.R.shape; out.injuries = api.__stats().injuries;
+      out.lineupKept = mid.R.players.map(p => p.name).join() === initial;
+      out.cpuRotated = mid.B.players.map(p => p.name).join() !== out.start.B.players.map(p => p.name).join();
+      // A change asked for during play happens at the next dead ball.
+      const off2 = mid.R.players.find(p => p.canOff), on2 = mid.R.bench.find(b => b.canOn);
+      out.queued = on2 ? api.queueSub("R", off2.id, on2.id) : { ok: false, reason: "no bench" };
+      out.queueLen = api.plan().R.queue.length;
+      for (let i = 0; i < 400 && api.plan().R.queue.length; i++) __stepPlay(api, .25);
+      out.subDone = api.plan().R.players.some(p => p.name === on2?.name) || !!api.plan().R.players.find(p => p.id === off2.id && p.subbing);
+      // With the automatic coach back on, a tied side does not stay in all-out attack.
+      api.setAuto("R", { tactics: true });
+      for (let i = 0; i < 120; i++) __stepPlay(api, .5);
+      out.autoShape = api.plan().R.shape; out.minute = api.status().minute; out.score = api.status().score;
+      out.figure = api.figure("R3").includes("<path");
+      api.destroy(); host.remove();
+      return out;
+    });
+    assert(engine.start.R.coached && !engine.start.B.coached && engine.start.R.auto.tactics === false && engine.start.R.auto.subs === true, "A person's side starts with its own plan and automatic substitutions");
+    assert(engine.cpuRefused, "The computer's side cannot be changed");
+    assert(!engine.keeperRefused.ok && /thủ môn/.test(engine.keeperRefused.reason), "There is no keeper on the bench");
+    assert(engine.pre.ok && engine.pre.now && engine.preOn, "Before kick-off a change alters the line-up at once");
+    assert.equal(engine.held, "1-1-3", "With the automatic coach off, the chosen shape holds: " + JSON.stringify(engine));
+    assert(engine.injuries > 0 || engine.lineupKept, "With automatic substitutions off, nobody is rotated");
+    assert(engine.cpuRotated, "The computer still rotates its side: " + JSON.stringify({ minute: engine.midMinute, injuries: engine.injuries }));
+    assert(engine.queued.ok && !engine.queued.now && engine.queueLen === 1 && engine.subDone, "A change during play waits for the next dead ball: " + JSON.stringify(engine.queued));
+    assert(engine.figure, "Players can be drawn for their portraits");
+    console.log("PASS game plan engine: own shape held, automatic coach optional, substitutions now before kick-off and at the next dead ball otherwise");
+
+    const planEdges = await page.evaluate(() => {
+      const mountCpu = seed => { const host = document.createElement("div"); document.body.append(host); return [host, PTSCFootball.mount(host, { mode: "cpu", teamA: "R", seed, still: 0, fonts: "none", duration: 6, autoSubs: false })]; };
+      const toPlay = api => { api.__step(3); for (let i = 0; i < 60 && api.status().phase !== "play"; i++) __stepPlay(api, .5); for (let i = 0; i < 10; i++) __stepPlay(api, .2); };
+      const out = {};
+      // A change queued for a man who then gets injured is dropped: his replacement is not taken off again.
+      let [host, api] = mountCpu(3); toPlay(api);
+      let plan = api.plan();
+      const victim = plan.R.players.find(p => p.role !== "GK" && p.canOff);
+      if (plan.R.bench.length >= 2) {
+        api.queueSub("R", victim.id, plan.R.bench[1].id);
+        const subsBefore = api.__stats().subs, injured = api.__injure();
+        for (let i = 0; i < 300 && api.plan().R.queue.length; i++) __stepPlay(api, .25);
+        for (let i = 0; i < 40; i++) __stepPlay(api, .25);
+        const after = api.plan();
+        out.injury = { injured, queue: after.R.queue.length, extraSubs: api.__stats().subs - subsBefore, slotName: after.R.players.find(p => p.id === victim.id)?.name, firstSub: plan.R.bench[0].name };
+      }
+      api.destroy(); host.remove();
+      // A change asked for at half time is made before the second-half kick-off.
+      [host, api] = mountCpu(5); toPlay(api);
+      api.__fastForward(31);
+      for (let i = 0; i < 400 && api.status().phase !== "halftime"; i++) __stepPlay(api, .25);
+      for (let i = 0; i < 40 && api.status().phase === "halftime"; i++) api.__step(.25);
+      plan = api.plan();
+      const off = plan.R.players.find(p => p.canOff), on = plan.R.bench.find(b => b.canOn);
+      out.halfQueued = api.queueSub("R", off.id, on.id);
+      for (let i = 0; i < 400 && !(api.status().phase === "play" && !api.status().stoppage); i++) __stepPlay(api, .1);
+      out.halfDone = api.plan().R.players.some(p => p.name === on.name) && api.status().minute <= 32;
+      // Switching the automatic coach off keeps the shape the side is in at that moment.
+      api.setAuto("R", { tactics: true }); api.setShape("R", "1-1-3");
+      for (let i = 0; i < 200; i++) __stepPlay(api, .5);
+      const coachShape = api.plan().R.shape;
+      api.setAuto("R", { tactics: false });
+      for (let i = 0; i < 200; i++) __stepPlay(api, .5);
+      out.kept = [coachShape, api.plan().R.shape];
+      // Nothing more to change once the match is over.
+      for (let i = 0; i < 800 && !api.status().ended; i++) { if (i % 20 === 0) api.__fastForward(api.status().minute > 30 ? 61 : 31); __stepPlay(api, .5); }
+      plan = api.plan();
+      out.ended = api.status().ended;
+      out.afterEnd = api.queueSub("R", plan.R.players.find(p => p.role !== "GK").id, plan.R.bench[0]?.id ?? "Rs0");
+      out.shapeAfterEnd = api.setShape("R", "2-1-2").ok;
+      out.keeperLine = api.plan().R.players.find(p => p.role === "GK").line;
+      api.destroy(); host.remove();
+      return out;
+    });
+    if (planEdges.injury) assert(planEdges.injury.queue === 0 && planEdges.injury.extraSubs <= 1 && planEdges.injury.slotName === planEdges.injury.firstSub, "A queued change for an injured man is dropped, not turned on his replacement: " + JSON.stringify(planEdges.injury));
+    assert(planEdges.halfQueued.ok && planEdges.halfDone, "A change asked for at half time is made before the kick-off: " + JSON.stringify(planEdges));
+    assert.equal(planEdges.kept[1], planEdges.kept[0], "Turning the automatic coach off keeps the current shape");
+    assert(planEdges.ended && !planEdges.afterEnd.ok && /kết thúc/.test(planEdges.afterEnd.reason) && !planEdges.shapeAfterEnd, "No changes after full time");
+    assert.equal(planEdges.keeperLine, "GK");
+    console.log("PASS game plan edge cases: injured man's change dropped, half-time change before kick-off, coach switch keeps shape, nothing after full time");
+
+    await choose("cpu", "autoTactics", "true");
+    await startMatch("cpu");
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.plan().R.auto.tactics), true, "The setting starts the match with the automatic coach");
+    await route("#/cpu"); await choose("cpu", "autoTactics", "false"); await choose("cpu", "team", "R");
+    await startMatch("cpu");
+    await page.keyboard.press("Escape"); await page.locator('#panel-cpu [data-act="plan"]').click();
+    const planSheet = page.locator('#panel-cpu .sheet[data-sheet="plan"]');
+    assert(await planSheet.isVisible());
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.key), "R:R0", "The plan opens on your keeper");
+    assert.equal(await planSheet.locator('.plan-team[data-col="0"] .plan-row').count(), await page.evaluate(() => { const p = document.querySelector("#panel-cpu .match-host").__ptscFootball.plan().R; return p.players.length + p.bench.length; }));
+    await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+    assert(await planSheet.locator(".plan-detail").isVisible(), "Enter opens the player's info");
+    const firstName = await planSheet.locator(".pd-id strong").textContent();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await planSheet.locator(".pd-stats li").count(), 10, "The second page lists all ten ratings");
+    await page.keyboard.press("ArrowDown");
+    assert.notEqual(await planSheet.locator(".pd-id strong").textContent(), firstName, "Up/down switches to the next player");
+    await page.keyboard.press("Escape");
+    assert(await planSheet.locator(".plan-detail").isHidden());
+    await page.keyboard.press("KeyX");
+    assert.equal(await planSheet.getAttribute("data-mode"), "pick", "X starts a substitution");
+    const incoming = await page.evaluate(() => document.activeElement.querySelector(".plan-name b").textContent);
+    await page.keyboard.press("Enter");
+    assert.match(await planSheet.locator(".plan-status").textContent(), /Đã đổi đội hình/);
+    assert(await page.evaluate(name => document.querySelector("#panel-cpu .match-host").__ptscFootball.plan().R.players.some(p => p.name === name), incoming), "The substitute is now on the pitch");
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await page.evaluate(() => document.activeElement.closest(".plan-team").dataset.col), "1", "Left/right switch between the two sides");
+    await page.keyboard.press("Enter"); await page.keyboard.press("KeyX");
+    assert.match(await planSheet.locator(".plan-status").textContent(), /đội bạn điều khiển/, "The computer's players can be looked at, not changed");
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("KeyE");
+    assert.equal(await planSheet.locator(".plan-tab.is-current").getAttribute("data-tab"), "tactics");
+    await page.keyboard.press("ArrowLeft"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.plan().R.shape), "3-1-1", "A shape is picked from the list");
+    await page.keyboard.press("KeyE");
+    await page.keyboard.press("Enter");
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.plan().R.auto.tactics), true, "The automatic coach is switched on in the plan");
+    await page.keyboard.press("Escape");
+    assert.equal(await activeAct(), "plan");
+    await page.locator('#panel-cpu [data-act="menu"]').click(); await routeIs("#/menu");
+    await route("#/cpu");
+    console.log("PASS game plan screen: player info pages, switch player, substitution, view-only opponents, tactics and automatic coach");
 
     // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
     const skillShots = await page.evaluate(() => {

@@ -11,7 +11,7 @@ Trang là một game duy nhất trên một màn hình (stage) phủ kín cửa 
 
 - **Menu chính** (`#/menu`): các thanh menu bên trái, ô mô tả mục đang chọn bên phải, một trận máy đấu máy chạy phía sau. **Đấu với máy · Hai người · Chỉ xem · Thông tin game**.
 - **Chuẩn bị trận** (`#/cpu`, `#/local`): các hàng cài đặt (màu áo, độ khó hoặc sân bắt đầu của B, thời gian 2/4/6/10 phút, hiệp phụ, luân lưu, hỗ trợ ngắm, bố trí phím, tùy chỉnh phím). Ô dưới danh sách giải thích hàng đang chọn; bên phải là thẻ đối đầu (hai áo, VS, tóm tắt) và nút **Vào sân**.
-- **Trận đấu** (`#/cpu/match`, `#/local/match`): chỉ có sân và HUD trong sân, góc phải dưới là nút tạm dừng và toàn màn hình. Menu trận (trước giao bóng, khi tạm dừng, khi hết trận): **Bắt đầu/Tiếp tục · Hỗ trợ ngắm Bật/Tắt · Đội hình & chỉ số · Điều khiển · Trận mới · Cài đặt trận · Thông tin game · Menu chính**. Hết trận, menu tự hiện sau tiếng còi với **Trận mới** làm nổi bật. Giữ **Tab** khi đang đá để xem nhanh hai thẻ chỉ số mà không dừng trận.
+- **Trận đấu** (`#/cpu/match`, `#/local/match`): chỉ có sân và HUD trong sân, góc phải dưới là nút tạm dừng và toàn màn hình. Menu trận (trước giao bóng, khi tạm dừng, khi hết trận): **Bắt đầu/Tiếp tục · Hỗ trợ ngắm Bật/Tắt · Kế hoạch trận · Điều khiển · Trận mới · Cài đặt trận · Thông tin game · Menu chính**. Hết trận, menu tự hiện sau tiếng còi với **Trận mới** làm nổi bật. Giữ **Tab** khi đang đá để xem nhanh hai thẻ chỉ số mà không dừng trận.
 - **Chỉ xem** (`#/watch`): Space hoặc Esc mở menu **Tiếp tục · Trận mới · Đội hình & chỉ số · Menu chính**.
 - **Thông tin game** (`#/info/…`): Bảng skill, Chỉ số & hình thể, Phong cách chơi, Layout phím (bộ sửa phím duy nhất), Điều khiển, Độ khó & luật.
 
@@ -21,7 +21,7 @@ Bàn phím trong menu: **↑ ↓** (hoặc W S) chọn, **← →** (A D) đổi
 - **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh và **độ khó** (Dễ, Thường, Khó, Huyền thoại, nhớ trong trình duyệt); máy điều khiển đội còn lại.
 - **Hai người:** A chọn áo, B chọn sân trái/phải lúc bắt đầu và nhận màu áo còn lại. Hai đội đổi sân giữa hiệp.
 
-Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người tự động chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong. Cầu thủ ra/vào chạy nhanh gấp đôi; bàn giao và chờ đá tiếp đã được rút ngắn.
+Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người (tự động hoặc do bạn chọn trong Kế hoạch trận) chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong. Cầu thủ ra/vào chạy nhanh gấp đôi; bàn giao và chờ đá tiếp đã được rút ngắn.
 Chế độ chơi không dùng lịch bàn thắng của chế độ xem; tỷ số phụ thuộc vào thao tác, vị trí sút, đối thủ và thể lực. Hết giờ có thể hòa.
 
 Tam giác xanh trên đầu và vòng dưới chân đánh dấu người đang điều khiển, giống mẫu tham chiếu; người B dùng xanh lam.
@@ -121,20 +121,28 @@ Tham khảo thiết kế tình huống từ [hướng dẫn gameplay chính th�
 
 ### Lối chơi (playstyle)
 
-Mỗi cầu thủ có **một lối chơi tấn công** (dùng khi đội mình có bóng) và **một lối chơi phòng ngự** (khi mất bóng), theo hệ thống của eFootball. Chỉ chọn những kiểu hợp sân nhỏ 5 cầu thủ ngoài sân + thủ môn; các kiểu cần nhiều người hoặc hành lang cánh dài (Dummy Runner, Roaming Flank, Cross Specialist, Creative Playmaker, Defensive Full-back, Full-back Finisher, Attack Outlet, All-action Defender, Attacking GK) không đưa vào vì trùng hoặc không thể hiện rõ trên sân 6 người. Lối chơi gắn với cầu thủ (đi theo khi thay người; vào ở vị trí khác thì nhận kiểu hợp vị trí đó). Cầu thủ đang được người điều khiển đi theo phím bấm; lối chơi quyết định phần còn lại. Thẻ cầu thủ ghi cả hai kiểu; **Bảng lối chơi** ngoài sân chia theo vùng, hai cột tấn công/phòng ngự.
+Mỗi cầu thủ có **một lối chơi tấn công** (khi đội mình có bóng) và **một lối chơi phòng ngự** (khi mất bóng). Bộ lối chơi là của riêng PTSC Cup, đặt tên mới và thiết kế cho sân 6 người; mỗi kiểu có tên, một dòng tóm tắt và mô tả. Ngoài các thông số cũ (dâng cao, độ rộng, đi lại, sút, rê, tạt, phối hợp, chuyền dài, áp sát, kèm người, cắt bóng, tuyến hàng thủ, lao ra), có ba hành vi mới: **lệch theo bóng** (dạt về phía có bóng, hoặc ngược lại rình ở phía xa bóng), **chờ rìa vòng cấm** (đứng ngoài vòng cấm đón bóng bật ra) và **che trục** (khi mất bóng đứng trên đường từ bóng tới khung thành nhà). Lối chơi gắn với cầu thủ (đi theo khi thay người; vào ở vị trí khác thì nhận kiểu hợp vị trí đó). Người đang được điều khiển đi theo phím bấm; lối chơi quyết định phần còn lại.
 
 | Vùng | Khi có bóng · tấn công | Khi mất bóng · phòng ngự |
 |---|---|---|
-| Tiền đạo | **Săn bàn** (Goal Poacher): đứng cao, được tìm bằng bóng chọc khe, sút sớm. **Cáo vòng cấm** (Fox in the Box): đứng giữa vòng cấm, nhận bóng tạt, đánh đầu nhiều. **Mục tiêu** (Target Man): nhận bóng dài, đánh đầu, ít đi bóng. **Cánh săn bàn** (Prolific Winger): dạt cánh, đi bóng bó vào, sút từ xa hơn. **Hộ công lùi sâu** (Deep-lying Forward): lùi về, phối hợp nhiều gấp 1,8 lần. | **Pressing tuyến đầu** (Front Line Pressure): ưu tiên áp sát khi bóng ở phần sân đối phương. **Chờ phản công** (Front Line Poacher): ở lại phía trên, không đi áp sát, được ưu tiên chuyền tới khi phản công. **Lùi về hỗ trợ** (Press Back): lùi sâu về phần sân nhà. |
-| Tiền vệ | **Số 10 cổ điển** (Classic No. 10): sau tiền đạo, đi bóng, sút xa. **Xâm nhập** (Hole Player): băng cao nhất, sút sớm, nhận bóng chọc khe. **Điều phối** (Orchestrator): lùi sâu, chuyền dài phát động. | **Con thoi** (Box-to-Box): lùi về và áp sát liên tục. **Mỏ neo** (Anchor Man): đứng chắn trước hàng thủ, hẹp, gần như không đi áp sát. **Đánh chặn** (The Destroyer): ưu tiên áp sát, chạy nhanh hơn, vào bóng nhiều hơn 50%. **Cắt đường chuyền** (Pass Disruptor): thêm 14% khả năng cắt đường chuyền sệt đi gần mình. |
-| Hậu vệ | **Phát động** (Build Up): ở lại phía sau, chuyền dài. **Trung vệ dâng cao** (Extra Frontman): dâng cao hơn, có thể đi bóng lên. **Hậu vệ cánh công** (Attacking Full-back): băng dọc biên, tạt bóng. | **Kèm người** (Tough Marker): đứng sát phía trong tiền đạo gần nhất, vào bóng nhiều hơn. **Bọc lót** (Covering Role): lùi sau đồng đội, thu vào giữa. **Giữ tuyến cao** (High Line Master): dâng hàng thủ cao. **Lùi sâu** (Deep Defender): lùi sát vòng cấm. |
-| Thủ môn | **Thủ môn phát động** (Build-up GK): chuyền/lăn ngắn cho hậu vệ. **Thủ môn dâng cao** (High Line GK): đứng cao khi đội mình tấn công. | **Thủ môn giữ khung** (Defensive GK): bám vạch, lao ra ít hơn, giảm 4 điểm % khả năng thủng lưới. **Thủ môn băng ra** (Sweeper GK): đứng cao hơn, lao ra xa thêm 3 m, tự tin hơn. |
+| Tiền đạo | **Mũi khoan**: rình phía xa bóng rồi xé khe. **Nam châm**: đứng giữa vòng cấm hút bóng tạt, đánh đầu. **Bức tường**: lùi về phía bóng làm điểm tựa, nhả bóng. **Vũ công biên**: ôm biên, rê bó vào. **Kẻ đón lõng**: chờ rìa vòng cấm, sút một chạm. | **Thợ săn**: áp sát thủ môn và hậu vệ ngay khi mất bóng. **Lò xo**: đứng cao chờ phản công. **Cái bóng**: lùi che trục giữa. |
+| Tiền vệ | **Máy đếm nhịp**: chuyền ngắn giữ nhịp. **Cơn gió muộn**: băng muộn vào vòng cấm. **Người rải bóng**: đứng phía ít người, phất dài đổi cánh. **Tự do**: đi khắp sân, rê và sút. | **Lá chắn**: chắn trước hàng thủ, che đường bóng. **Pít-tông**: lên xuống, áp sát liên tục. **Máy cắt cỏ**: lao vào tranh chấp. **Người đọc trận**: đón lõng cắt bóng. |
+| Hậu vệ | **Bệ phóng**: đứng lại, phất dài. **Trung vệ cầm bóng**: dẫn bóng vượt tuyến. **Đường chồng biên**: chạy chồng phía có bóng và tạt. | **Con đỉa**: bám người. **Chốt chặn cuối**: đứng thấp nhất, bọc lót. **Bẫy việt vị**: dâng hàng thủ. **Tường thành**: lùi sát vòng cấm, che đường sút. |
+| Thủ môn | **Thủ môn chia bài**: triển khai ngắn. **Máy bắn đá**: đứng cao, phát bóng thật xa. | **Gác đền**: bám vạch vôi, cứu thua tốt hơn. **Thủ môn quét**: lao ra rất sớm. |
 
-Tên tiếng Việt khác tên skill để không nhầm (Sweeper GK là **Thủ môn băng ra** vì đã có skill **Thủ môn quét**).
+### Kế hoạch trận
+
+Mở từ menu trận (**Esc → Kế hoạch trận**; khi chỉ xem: **Đội hình & chỉ số**). Hai đội đặt cạnh nhau, mỗi đội một sân nhỏ có chân dung, vị trí và OVR, cùng danh sách đá chính và dự bị (thể lực, thẻ, lượt thay).
+
+- **Đội hình:** chọn cầu thủ bất kỳ (cả đội máy) bằng Enter để xem **Thông tin cầu thủ** (chiều cao, cân nặng, tầm với, thể lực, thẻ, hai lối chơi, skill, biểu đồ 6 cạnh) và trang **Chỉ số** (10 chỉ số tô màu theo mức). ← → đổi trang, ↑ ↓ đổi cầu thủ.
+- **Thay người** (X, hoặc nút trong trang cầu thủ): chọn một người trên sân và một người dự bị. Trước giờ bóng lăn đội hình đổi ngay; trong trận, lượt thay chờ tới lần bóng chết kế tiếp (▼ sẽ ra, ▲ sẽ vào; chọn lại để hủy). Không thay được thủ môn (không có thủ môn dự bị) và người đang bị thương.
+- **Chiến thuật:** chọn sơ đồ 2-1-2, 3-1-1, 1-2-2 hoặc 1-1-3 (khi thiếu người là các sơ đồ 4 hoặc 3 người). Sơ đồ đã chọn được giữ nguyên; bị đuổi người thì đội tự bớt một vị trí cùng kiểu.
+- **Hỗ trợ:** bật/tắt **Tự động đổi chiến thuật** (mặc định tắt: máy đổi sơ đồ theo tỉ số), **Tự động thay người** (mặc định bật: máy thay người mệt lúc bóng chết; chấn thương luôn được thay) và **Hỗ trợ ngắm**. Hai tùy chọn tự động cũng có ở màn chuẩn bị trận.
+- Phím: **Q/E** đổi mục, **↑ ↓** chọn, **← →** đổi đội, **Enter** xem cầu thủ, **X** thay người, **Esc** quay lại. Đội máy chỉ xem, không sửa được.
 
 ### Chỉ số cầu thủ
 
-Mỗi cầu thủ có 10 chỉ số (35–95): **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Chỉ số = nền theo vị trí sở trường + điểm cộng/trừ của lối chơi tấn công và phòng ngự (ví dụ Săn bàn +10 Dứt điểm +6 Tốc độ, Mục tiêu +10 Đánh đầu +10 Sức mạnh −6 Tốc độ, Đánh chặn +8 Phòng ngự +8 Sức mạnh) + ngôi sao (#10, #7) + ngẫu nhiên ±5. **OVR** tính theo trọng số của vị trí đang đá. Dự bị có vị trí sở trường riêng.
+Mỗi cầu thủ có 10 chỉ số (35–95): **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Chỉ số = nền theo vị trí sở trường + điểm cộng/trừ của lối chơi tấn công và phòng ngự (ví dụ Mũi khoan +8 Tốc độ +6 Dứt điểm, Bức tường +10 Sức mạnh +6 Chuyền ngắn −4 Tốc độ, Máy cắt cỏ +8 Phòng ngự +8 Sức mạnh) + ngôi sao (#10, #7) + ngẫu nhiên ±5. **OVR** tính theo trọng số của vị trí đang đá. Dự bị có vị trí sở trường riêng.
 
 | Chỉ số | Tác động trong game |
 |---|---|
@@ -159,17 +167,17 @@ Chỉ áp dụng cho đội máy trong chế độ đấu với máy; đội c�
 
 ### Thẻ thông tin
 
-Mỗi đội có một thẻ lớn: OVR, tên, vị trí, chiều cao/cân nặng, thể lực (số lớn và thanh), skill (icon, tên, trạng thái, mô tả), 10 chỉ số dạng ô số lớn tô màu theo mức (xanh ≥80, vàng 65–79, đỏ dưới 65) và hai chip lối chơi. Đội do người chơi điều khiển hiện người đang chọn; **đội máy** hiện người đang cầm bóng hoặc gần bóng nhất. Thẻ nằm trong **Đội hình & chỉ số** của menu trận (kèm bảng đội hình đủ chỉ số) và hiện nhanh khi giữ Tab. Màn **Chỉ xem** cũng có thẻ, ô thể lực + skill trong sân và bảng đội hình cho cả hai đội. Ô trong sân của đội máy hiện thể lực và skill, không có phím.
+Mỗi đội có một thẻ lớn: OVR, tên, vị trí, chiều cao/cân nặng, thể lực (số lớn và thanh), skill (icon, tên, trạng thái, mô tả), 10 chỉ số dạng ô số lớn tô màu theo mức (xanh ≥80, vàng 65–79, đỏ dưới 65) và hai chip lối chơi. Đội do người chơi điều khiển hiện người đang chọn; **đội máy** hiện người đang cầm bóng hoặc gần bóng nhất. Thẻ hiện nhanh khi giữ Tab; xem từng cầu thủ của cả hai đội trong **Kế hoạch trận**. Màn **Chỉ xem** cũng có thẻ, ô thể lực + skill trong sân và Đội hình & chỉ số cho cả hai đội. Ô trong sân của đội máy hiện thể lực và skill, không có phím.
 
 ### Phạt góc
 
 Phạt góc chỉ xảy ra khi bóng thực sự chạm người: thủ môn đẩy ra ngoài, hoặc hậu vệ đứng trên đường bóng (cách đường bóng khoảng 1 m, giữa người sút và khung thành) chặn cú sút đi chệch. Khi đó bóng bay tới, chạm người hậu vệ rồi mới đổi hướng ra ngoài. Không có ai chắn thì là phát bóng lên.
 
-Tranh bóng bằng phím (B/M) vẫn giữ tỷ lệ cố định 30/50/15/5% như mô tả ở trên. Chế độ xem vẫn theo kịch bản bàn thắng. Thẻ cầu thủ hiện OVR và 10 chỉ số; HUD trên sân ghi OVR cạnh tên; bảng **Đội hình & chỉ số** liệt kê cả hai đội, kể cả dự bị.
+Tranh bóng bằng phím (B/M) vẫn giữ tỷ lệ cố định 30/50/15/5% như mô tả ở trên. Chế độ xem vẫn theo kịch bản bàn thắng. Thẻ cầu thủ hiện OVR và 10 chỉ số; HUD trên sân ghi OVR cạnh tên; **Kế hoạch trận** liệt kê cả hai đội, kể cả dự bị.
 
 ### Hình thể cầu thủ (player model)
 
-Mỗi cầu thủ có chiều cao, cân nặng, tỉ lệ chân và tay; từ đó tính sải với tay (m) và tầm quét chân khi tranh bóng (m). Chiều cao theo vị trí (thủ môn 182–196 cm, hậu vệ 174–192, tiền vệ 164–184, tiền đạo 165–191) và lối chơi (Mục tiêu +8 cm, Cánh săn bàn −4 cm…); cân nặng theo chỉ số khối cơ thể 20,5–25. Hình vẽ cao/thấp, to/gầy, chân tay dài/ngắn theo đúng số đo.
+Mỗi cầu thủ có chiều cao, cân nặng, tỉ lệ chân và tay; từ đó tính sải với tay (m) và tầm quét chân khi tranh bóng (m). Chiều cao theo vị trí (thủ môn 182–196 cm, hậu vệ 174–192, tiền vệ 164–184, tiền đạo 165–191) và lối chơi (Bức tường +8 cm, Nam châm +4 cm, Vũ công biên −4 cm…); cân nặng theo chỉ số khối cơ thể 20,5–25. Hình vẽ cao/thấp, to/gầy, chân tay dài/ngắn theo đúng số đo.
 
 | Yếu tố | Tác động |
 |---|---|
@@ -188,10 +196,10 @@ Thẻ cầu thủ ghi chiều cao và cân nặng; bảng đội hình có cột
 ```js
 PTSCFootball.mount(el, { mode: "cpu", squads: { R: {
   players: [
-    { name: "Thủ Thành", head: "buzz", skin: 1, num: 1, stats: { goalkeeping: 90 }, defense: "sweeperGK" },
+    { name: "Thủ Thành", head: "buzz", skin: 1, num: 1, stats: { goalkeeping: 90 }, defense: "libero" },
     { name: "Hậu A", head: "spiky", skin: 1, num: 2 }, { name: "Hậu B", head: "curly", skin: 2, num: 3 },
-    { name: "Tiền Vệ", head: "beard", skin: 1, num: 8, attack: "orchestrator" },
-    { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, star: 7, stats: { finishing: 92, speed: 88 }, attack: "goalPoacher" },
+    { name: "Tiền Vệ", head: "beard", skin: 1, num: 8, attack: "spray" },
+    { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, star: 7, stats: { finishing: 92, speed: 88 }, attack: "drill" },
     { name: "Cánh Phải", head: "glasses", skin: 1, num: 11 }
   ],
   bench: [{ name: "Dự Bị", head: "buzz", skin: 2, num: 12, natural: "DF" }]

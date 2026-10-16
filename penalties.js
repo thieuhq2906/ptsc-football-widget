@@ -128,7 +128,7 @@
       if (!p || p.phase === "finished") { this.clearTimers(); this.turn = null; this.phase = null; return; }
       if (!this.paletteApplied) {
         for (const [name, value] of Object.entries(this.api.palette())) if (value) this.host.style.setProperty(name, value);
-        this.paletteApplied = true;
+        this.paletteApplied = !!this.host.style.getPropertyValue("--color-ink");
       }
       text(this.nodes.title, p.kind === "inMatch" ? "PENALTY" : "LUÂN LƯU");
       const team = t => `<span class="pen-team${p.attack === t ? " is-attacking" : ""}"><i class="pen-dot" style="background:${colors[t]}"></i>${names[t].toUpperCase()}</span>`;
