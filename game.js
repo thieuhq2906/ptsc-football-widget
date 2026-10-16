@@ -15,6 +15,7 @@
   const PENALTY_ACTIONS = { left: "left", down: "center", right: "right" };
   const gameData = window.PTSCFootball.data;
   const defaultSkillIcon = gameData.skills.freeKick.icon;
+  const game = document.getElementById("game");
   // Per mode: the key sets in use and a code → { slot, action } lookup.
   const controls = new Map();
   const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -31,10 +32,11 @@
   const bindingsOf = mode => controls.get(mode)?.bindings ?? {};
   const lookup = (mode, code) => controls.get(mode)?.codes.get(code) ?? null;
   function renderGuide(guide, set) {
-    const slot = guide.dataset.slot, clickableArea = !!guide.closest(".controls");
+    // The guide on the pitch can also be clicked: switch player, and shoot or slide.
+    const slot = guide.dataset.slot, clickableArea = !!guide.closest(".arena-hints");
     guide.innerHTML = `<div class="movement-help"><strong>NGƯỜI ${slot}</strong><div class="pad-diagram"><img src="assets/control-pad.svg" alt="Pad di chuyển của người ${slot}" width="343" height="343"><span class="pad-player">${slot}</span>${["up", "left", "down", "right"].map(direction => `<span class="pad-key pad-${direction}" data-code="${escapeHtml(set[direction])}">${escapeHtml(label(set[direction]))}</span>`).join("")}</div></div><div class="action-grid">${GUIDE_ACTIONS.map((action, i) => {
       const clickable = clickableArea && (action === "switch" || action === "shoot"), tag = clickable ? "button" : "div";
-      return `<${tag} class="action-key${clickable ? action === "switch" ? " switch-action" : " slide-action" : ""}" data-code="${escapeHtml(set[action])}" data-action="${action}"${clickable ? ` type="button" data-slot="${slot}" disabled` : ""}>${kbd(set[action])}<span><span class="action-label">${GUIDE_LABELS[i]}</span><small>${GUIDE_GESTURES[i]}</small></span></${tag}>`;
+      return `<${tag} class="action-key${clickable ? action === "switch" ? " switch-action" : " slide-action" : ""}" data-code="${escapeHtml(set[action])}" data-action="${action}"${clickable ? ` type="button" tabindex="-1" data-slot="${slot}" disabled` : ""}>${kbd(set[action])}<span><span class="action-label">${GUIDE_LABELS[i]}</span><small>${GUIDE_GESTURES[i]}</small></span></${tag}>`;
     }).join("")}</div>`;
   }
   function renderAdvanced(details, set) {
@@ -89,7 +91,7 @@
       + '<h3>OVR theo vị trí đang đá</h3><ul class="info-list">' + weights + "</ul>"
       + '<h3>Hình thể</h3><ul class="info-list"><li><b>Chiều cao:</b> thủ môn ' + body.GK.join("–") + " cm, hậu vệ " + body.DF.join("–") + ", tiền vệ " + body.MF.join("–") + ", tiền đạo " + body.FW.join("–") + "; lối chơi cộng/trừ thêm.</li>"
       + "<li><b>Cao, tay dài:</b> thắng không chiến, đánh đầu nhiều hơn; thủ môn ôm bóng và cứu thua rộng hơn.</li><li><b>Thấp (trọng tâm thấp):</b> khó bị cướp bóng hơn.</li><li><b>Nặng:</b> tranh chấp khỏe hơn, chậm hơn một chút.</li><li><b>Chân dài:</b> tầm tranh bóng và xoạc xa hơn.</li></ul>"
-      + '<p class="pane-lead">Đội hình đầy đủ kèm chỉ số từng người hiện dưới sân khi đang đá hoặc đang xem.</p>';
+      + '<p class="pane-lead">Trong trận: giữ <kbd>Tab</kbd> để xem nhanh thẻ chỉ số, hoặc mở menu (<kbd>Esc</kbd>) → Đội hình &amp; chỉ số để xem cả đội hình.</p>';
   }
   function renderRulesGuide(container) {
     const rows = Object.values(gameData.difficulty).map(d => "<tr><td><b>" + d.name + "</b></td><td>" + (d.stats > 0 ? "+" : "") + d.stats + "</td><td>×" + d.tackle + "</td><td>×" + d.intercept + "</td><td>×" + d.finishing + "</td><td>" + (d.keeper > 0 ? "+" : "") + Math.round(d.keeper * 100) + "</td><td>×" + d.think + "</td></tr>").join("");
@@ -99,19 +101,19 @@
       + '<h3>Trận đấu</h3><ul class="info-list"><li>Thời lượng 2–10 phút bóng lăn, hai hiệp đổi sân; hiệp phụ và luân lưu tuỳ chọn.</li><li>Phạt góc chỉ khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra.</li><li>Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc.</li><li>Sau bàn thắng, trọng tài chỉ thổi khi hai đội đã về hết nửa sân nhà.</li><li>Chấn thương: xe cấp cứu đưa đi, không vào lại trận đó.</li></ul>';
   }
   /** Both squads with every rating; redrawn only when someone comes on or off. */
-  function renderRoster(session) {
-    const roster = session.api.roster?.();
+  function renderRoster(view) {
+    const roster = view.api?.roster?.();
     if (!roster) return;
     const key = JSON.stringify(Object.values(roster).map(list => list.map(p => [p.name, p.onPitch, p.role, p.injured])));
-    if (session.rosterKey === key) return;
-    session.rosterKey = key;
+    if (view.rosterKey === key) return;
+    view.rosterKey = key;
     const roles = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" }, keys = gameData.stats.keys;
     const cell = v => `<td data-level="${v >= 80 ? "high" : v >= 65 ? "mid" : "low"}">${v}</td>`;
     const table = (t, list) => `<div class="roster-team" data-team="${t}"><h3>Đội ${names[t]}</h3><div class="roster-scroll"><table><thead><tr><th>#</th><th>Cầu thủ</th><th>VT</th><th>OVR</th><th title="Chiều cao">CAO</th><th title="Cân nặng">NẶNG</th>${keys.map(k => `<th title="${gameData.stats.labels[k]}">${gameData.stats.short[k]}</th>`).join("")}<th>Skill</th><th>Lối chơi (tấn công · phòng ngự)</th></tr></thead><tbody>${list.map(p => `<tr class="${p.onPitch ? "" : "is-bench"}"><td>${p.num}</td><td>${escapeHtml(p.name)}${p.onPitch ? "" : " <small>dự bị</small>"}</td><td>${roles[p.role] ?? p.role}</td><td class="ovr">${p.ovr ?? "–"}</td><td>${p.body.height}</td><td>${p.body.weight}</td>${keys.map(k => cell(p.stats[k])).join("")}<td class="styles">${escapeHtml(p.skillName)}${p.penaltySkill ? " · " + escapeHtml(gameData.skills[p.penaltySkill].short) : ""}</td><td class="styles">${escapeHtml(p.attack)} · ${escapeHtml(p.defense)}</td></tr>`).join("")}</tbody></table></div></div>`;
-    session.panel.querySelector(".roster-body").innerHTML = Object.entries(roster).map(([t, list]) => table(t, list)).join("");
-    session.panel.querySelector(".roster").hidden = false;
+    view.arena.querySelector(".roster-body").innerHTML = Object.entries(roster).map(([t, list]) => table(t, list)).join("");
+    view.arena.querySelector(".roster").hidden = false;
   }
-  /** Redraws every key hint in a panel from the layouts its players use. */
+  /** The controls section of Game info: every mode's players, redrawn when layouts change. */
   function renderControlsGuide() {
     const pane = document.querySelector('#screen-info .info-pane[data-pane="controls"]');
     if (!pane) return;
@@ -119,13 +121,14 @@
     const cpu = bindingsOf("cpu"), local = bindingsOf("local");
     if (!pane.dataset.built) {
       pane.dataset.built = "1";
-      pane.innerHTML = '<h2 class="pane-title">Điều khiển</h2><p class="pane-lead"><kbd>Space</kbd> bắt đầu, tạm dừng, tiếp tục · <kbd>Esc</kbd> tạm dừng, thoát toàn màn hình, quay lại màn trước · đổi phím ở mục Layout phím.</p>'
+      pane.innerHTML = '<h2 class="pane-title">Điều khiển</h2><p class="pane-lead"><kbd>Space</kbd> bắt đầu, tạm dừng, tiếp tục · <kbd>Esc</kbd> mở menu trận, quay lại màn trước · giữ <kbd>Tab</kbd> trong trận: xem nhanh chỉ số · trong menu: <kbd>↑</kbd><kbd>↓</kbd> chọn, <kbd>←</kbd><kbd>→</kbd> đổi, <kbd>Enter</kbd> xác nhận · đổi phím ở mục Layout phím.</p>'
         + '<div class="guide-block"><h3>Đấu với máy · Bạn</h3><div class="controls"><article><div class="pad-help" data-slot="A" data-mode="cpu"></div></article></div><div class="advanced" data-slot="A" data-mode="cpu" data-title="Bạn"></div></div>'
         + '<div class="guide-block"><h3>Hai người</h3><div class="controls"><article><div class="pad-help" data-slot="A" data-mode="local"></div></article><article><div class="pad-help" data-slot="B" data-mode="local"></div></article></div><div class="advanced-grid"><div class="advanced" data-slot="A" data-mode="local"></div><div class="advanced" data-slot="B" data-mode="local"></div></div></div>';
     }
     for (const guide of pane.querySelectorAll(".pad-help")) renderGuide(guide, (guide.dataset.mode === "cpu" ? cpu : local)[guide.dataset.slot]);
     for (const notes of pane.querySelectorAll(".advanced")) renderAdvanced(notes, (notes.dataset.mode === "cpu" ? cpu : local)[notes.dataset.slot]);
   }
+  /** Redraws every key hint in a mode's panel (pitch guide, controls sheet, skill keys) from the layouts in use. */
   function renderPanelKeys(panel) {
     const mode = panel.dataset.mode;
     refreshControls(mode);
@@ -198,20 +201,188 @@
     };
     repeat.timer = setTimeout(advance, gameData.controls.switchHoldDelayMs);
   }
-  function setPaused(session, paused) {
+  const focusOn = node => node?.focus({ preventScroll: true });
+
+  /* ------------------------------ in-game menus ------------------------------ */
+  // A match (or the watched match) has one menu over the stage: before kick-off, when paused and at full time.
+  // Sheets open from it: the squads with every rating, and this match's controls.
+  function buildOverlay(arena, items) {
+    const overlay = document.createElement("div"); overlay.className = "start-overlay"; overlay.hidden = true;
+    overlay.innerHTML = '<div class="pause-layout"><div class="pause-menu" role="menu" aria-label="Menu trận">'
+      + items.map(([act, text, extra = ""]) => `<button type="button" class="menu-item${extra}" role="menuitem" data-nav data-act="${act}"><span class="menu-item-text">${text}</span></button>`).join("")
+      + '</div><div class="pause-card"><span class="pause-kicker"></span><strong class="pause-title"></strong><span class="pause-text"></span><span class="pause-prompts"><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>Enter</kbd> Xác nhận</span><span class="pause-prompt-space"><kbd>Space</kbd> <i>Tiếp tục</i></span></span></div></div>';
+    arena.append(overlay);
+    return overlay;
+  }
+  function buildSheet(arena, name, title, body) {
+    const sheet = document.createElement("div"); sheet.className = "sheet"; sheet.dataset.sheet = name; sheet.hidden = true;
+    sheet.setAttribute("role", "dialog"); sheet.setAttribute("aria-label", title);
+    sheet.innerHTML = '<div class="sheet-head"><button type="button" class="sheet-back" data-nav data-act="close-sheet"><span aria-hidden="true">‹</span> Quay lại <kbd>Esc</kbd></button><h2>' + title + '</h2><span class="sheet-peek-note">Thả <kbd>Tab</kbd> để đá tiếp</span></div><div class="sheet-body">' + body + "</div>";
+    arena.append(sheet);
+    sheet.querySelector(".sheet-back").addEventListener("click", () => closeSheet(sheet));
+    return sheet;
+  }
+  const SQUAD_SHEET = '<div class="player-status"></div><div class="roster" hidden><h3 class="roster-title">Đội hình · OVR tính theo vị trí đang đá</h3><div class="roster-body"></div></div>';
+  function setBackdropInert(arena, sheet, on) {
+    for (const child of arena.children) if (child !== sheet) child.inert = on;
+  }
+  function openSheet(view, name, opener) {
+    const sheet = view.arena.querySelector('.sheet[data-sheet="' + name + '"]');
+    if (!sheet) return;
+    sheet.classList.remove("is-peek"); sheet.hidden = false; sheet.opener = opener ?? null;
+    setBackdropInert(view.arena, sheet, true);
+    sheet.querySelector(".sheet-body").scrollTop = 0;
+    focusOn(sheet.querySelector(".sheet-back"));
+  }
+  function closeSheet(sheet) {
+    setBackdropInert(sheet.parentElement, sheet, false);
+    sheet.hidden = true; sheet.classList.remove("is-peek");
+    const opener = sheet.opener; sheet.opener = null;
+    if (opener && !opener.closest("[hidden]")) focusOn(opener);
+  }
+  function closeSheets(root) {
+    for (const sheet of root.querySelectorAll(".sheet")) { if (!sheet.hidden) setBackdropInert(sheet.parentElement, sheet, false); sheet.hidden = true; sheet.classList.remove("is-peek"); sheet.opener = null; }
+  }
+  /** Holding Tab during play shows the rating cards over the pitch without stopping the match. */
+  function peek(view, on) {
+    const sheet = view?.arena.querySelector('.sheet[data-sheet="squad"]');
+    if (!sheet) return;
+    if (on) { if (sheet.hidden) { sheet.classList.add("is-peek"); sheet.hidden = false; } }
+    else if (sheet.classList.contains("is-peek")) { sheet.hidden = true; sheet.classList.remove("is-peek"); }
+  }
+  const endPeeks = () => { for (const view of [watchView, ...sessions.values()]) peek(view, false); };
+  /** Shows the match menu: "start" before kick-off, "pause", "end" at full time; null hides it. */
+  function showOverlay(view, kind, focusMenu = false) {
+    const overlay = view.overlay;
+    if (!kind) {
+      const hadFocus = overlay.contains(document.activeElement);
+      overlay.hidden = true;
+      if (hadFocus) focusOn(view.arena);
+      syncPauseTools(view);
+      return;
+    }
+    const state = view.api?.status?.();
+    if (state?.ended && view !== watchView) kind = "end";
+    overlay.hidden = false; overlay.dataset.kind = kind;
+    const score = state ? `Đỏ ${state.score.R} – ${state.score.B} Xanh` : "";
+    const minute = state && !state.ended && !view.awaitingStart ? ` · ${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}'` : "";
+    const kicker = view === watchView ? "Chỉ xem · tạm dừng" : { start: "Sẵn sàng", pause: "Tạm dừng", end: "Hết trận" }[kind];
+    const title = kind === "end" ? (state.winner ? `Đội ${names[state.winner]} chiến thắng!` : "Hai đội hòa!") : view.awaitingStart ? `${names[view.options.teamA]} vs ${names[opposite(view.options.teamA)]}` : score + minute;
+    const text = kind === "end" ? score + (state.penalty ? ` · Luân lưu ${state.penalty.score.R}–${state.penalty.score.B}` : "")
+      : kind === "start" ? "Nhấn Space để bắt đầu trận đấu" : view === watchView ? "Nhấn Space để xem tiếp" : "Nhấn Space để tiếp tục trận đấu";
+    writeText(overlay.querySelector(".pause-kicker"), kicker);
+    writeText(overlay.querySelector(".pause-title"), title);
+    overlay.querySelector(".pause-text").innerHTML = escapeHtml(text).replace("Space", "<kbd>Space</kbd>");
+    const resume = overlay.querySelector('[data-act="resume"]');
+    resume.hidden = kind === "end";
+    writeText(resume.querySelector(".menu-item-text"), kind === "start" ? "Bắt đầu" : "Tiếp tục");
+    overlay.querySelector(".pause-prompt-space").hidden = kind === "end";
+    writeText(overlay.querySelector(".pause-prompt-space i"), kind === "start" ? "Bắt đầu" : "Tiếp tục");
+    overlay.querySelector('[data-act="restart"]')?.classList.toggle("is-featured", kind === "end");
+    if (focusMenu) focusOn((kind === "end" && overlay.querySelector('[data-act="restart"]')) || [...overlay.querySelectorAll(".menu-item")].find(item => !item.hidden));
+    syncPauseTools(view);
+  }
+  function syncPauseTools(view) {
+    const button = view.arena.querySelector(".arena-tools .pause");
+    if (!button) return;
+    const resume = !view.overlay.hidden && view.overlay.dataset.kind !== "end", text = resume ? (view.awaitingStart ? "Bắt đầu" : "Tiếp tục") + " (Space)" : "Tạm dừng (Space)";
+    button.classList.toggle("is-paused", resume);
+    button.setAttribute("aria-label", text); button.title = text;
+  }
+  function setPaused(session, paused, focusMenu = false) {
     session.paused = paused;
-    if (!paused) session.awaitingStart = false;
-    const overlay = session.panel.querySelector(".start-overlay");
-    overlay.hidden = !paused;
-    overlay.querySelector(".pause-text").innerHTML = session.awaitingStart ? 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu' : 'Nhấn <kbd>Space</kbd> để tiếp tục trận đấu';
-    overlay.querySelector('[data-act="resume"]').textContent = session.awaitingStart ? "Bắt đầu" : "Tiếp tục";
+    if (!paused) { session.awaitingStart = false; closeSheets(session.arena); }
     // Kicks and switch repeats stop, but directions still held carry on as soon as play resumes.
     stopSwitchRepeats(); cancelKicks();
     if (paused) session.api.pause(); else session.api.play();
+    peek(session, false);
+    showOverlay(session, paused ? (session.awaitingStart ? "start" : "pause") : null, focusMenu);
+    if (!paused && sessions.get(activeMode) === session && route.sub === "match") focusOn(session.arena);
     applyKeys(session); highlightPads();
-    session.panel.querySelector(".pause").textContent = session.awaitingStart ? "Bắt đầu" : paused ? "Tiếp tục" : "Tạm dừng";
     updateHud(session);
   }
+  function resumeView(view, key) {
+    if (view === watchView) { setWatchPaused(false); return true; }
+    if (view.api.status().ended) return false;
+    const kind = view.overlay.dataset.kind;
+    if (key === "Escape" && kind === "start") { focusOn(view.arena); return true; }
+    setPaused(view, false);
+    return true;
+  }
+
+  /* ------------------------------ fullscreen ------------------------------ */
+  // The whole game goes full screen, from any screen. Esc stays a game key there where the browser allows it.
+  const fsElement = () => document.fullscreenElement ?? document.webkitFullscreenElement ?? null;
+  const canFullscreen = !!(game.requestFullscreen || game.webkitRequestFullscreen);
+  let escLocked = false;
+  function syncFullscreen() {
+    const on = !!fsElement();
+    game.classList.toggle("is-fullscreen", on);
+    for (const button of document.querySelectorAll("[data-fullscreen]")) {
+      const text = on ? "Thu nhỏ" : "Toàn màn hình";
+      button.hidden = !canFullscreen;
+      button.classList.toggle("is-expanded", on);
+      button.setAttribute("aria-pressed", String(on)); button.setAttribute("aria-label", text); button.title = text;
+      const visible = button.querySelector(".fullscreen-label");
+      if (visible) visible.textContent = text;
+    }
+    if (!on && escLocked) { escLocked = false; try { navigator.keyboard?.unlock?.(); } catch {} }
+  }
+  async function toggleFullscreen() {
+    cancelKicks();
+    try {
+      if (fsElement()) await (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen?.());
+      else {
+        await (game.requestFullscreen ? game.requestFullscreen({ navigationUI: "hide" }) : game.webkitRequestFullscreen?.());
+        navigator.keyboard?.lock?.(["Escape"]).then(() => { escLocked = !!fsElement(); }, () => {});
+      }
+    } catch {}
+    syncFullscreen();
+    const session = sessions.get(activeMode);
+    if (route.sub === "match" && session && !session.paused) focusOn(session.arena);
+    else if (route.name === "watch" && !watchView.paused) focusOn(watchArena);
+    else if (document.activeElement?.matches?.("[data-fullscreen]") || document.activeElement === document.body) focusCursor();
+    applyKeys();
+  }
+  function focusCursor() {
+    const screen = screenOf(route);
+    if (screen === "menu") focusOn(mainMenu.lastItem ?? mainMenu.querySelector(".menu-item"));
+    else if (screen === "setup") { const panel = document.getElementById(SCREENS[route.name]); focusOn(panel.lastOpt?.isConnected ? panel.lastOpt : panel.querySelector(".opt")); }
+    else if (screen === "info") focusOn(infoScreen.querySelector(".info-nav .is-current"));
+    else {
+      const view = currentView();
+      if (view && !view.overlay.hidden) focusOn([...view.overlay.querySelectorAll(".menu-item")].find(item => !item.hidden));
+      else if (view) focusOn(view.arena);
+    }
+  }
+  for (const button of document.querySelectorAll("[data-fullscreen]")) button.addEventListener("click", toggleFullscreen);
+  game.addEventListener("mousedown", event => { if (event.target.closest(".prompt, [data-fullscreen], .arena-tools .tool")) event.preventDefault(); });
+  for (const type of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(type, () => {
+    syncFullscreen(); cancelKicks();
+    const session = sessions.get(activeMode);
+    if (session && route.sub === "match" && !session.arena.contains(document.activeElement)) focusOn(session.arena);
+    applyKeys();
+  });
+
+  /* ------------------------------ in-game dialog ------------------------------ */
+  const dialog = game.querySelector(".game-dialog");
+  let dialogAnswer = null;
+  function gameConfirm(message, yes = "Đồng ý") {
+    dialogAnswer?.(false);
+    const back = document.activeElement;
+    dialog.querySelector(".dialog-text").textContent = message;
+    dialog.querySelector('[data-answer="yes"]').textContent = yes;
+    dialog.hidden = false;
+    focusOn(dialog.querySelector('[data-answer="no"]'));
+    return new Promise(resolve => {
+      dialogAnswer = answer => { dialogAnswer = null; dialog.hidden = true; if (back?.isConnected) focusOn(back); resolve(answer); };
+    });
+  }
+  dialog.addEventListener("click", event => {
+    const button = event.target.closest("[data-answer]");
+    if (button) dialogAnswer?.(button.dataset.answer === "yes");
+  });
+
   /* ------------------------------ screens ------------------------------ */
   // One game, several screens: the menu (over a live match), watching, match setup and play for each mode, and the
   // game info screen with its sections. The URL hash holds the screen so the browser's back button works.
@@ -226,106 +397,278 @@
   }
   function go(path) {
     const next = "#/" + path;
-    if (location.hash === next) showRoute(); else location.hash = next;
+    if (location.hash === next) showRoute();
+    // Moving between sections of Game info replaces the entry, so Back leaves the info screen.
+    else if (route.name === "info" && path.startsWith("info/")) { history.replaceState(null, "", next); showRoute(); }
+    else location.hash = next;
   }
   function backTarget() {
     if (route.name === "watch") return "menu";
-    if (route.name === "cpu" || route.name === "local") return route.sub === "match" ? route.name : "menu";
+    if (route.name === "cpu" || route.name === "local") return route.sub === "match" ? route.name : sessions.has(route.name) ? route.name + "/match" : "menu";
     if (route.name === "info") return infoReturn ? pathOf(infoReturn) : "menu";
     return null;
   }
+  const backLabel = path => path === "menu" ? "Menu chính" : path.endsWith("/match") ? "Về trận đấu" : TITLES[path.split("/")[0]] ?? "Quay lại";
+  const screenOf = r => r.name === "cpu" || r.name === "local" ? (r.sub === "match" ? "match" : "setup") : r.name;
+  const PROMPTS = {
+    menu: [["↑ ↓", "Chọn"], ["Enter", "Vào", "enter"]],
+    setup: [["↑ ↓", "Chọn mục"], ["← →", "Đổi"], ["Enter", "Vào sân", "start"], ["Esc", "Quay lại", "back"]],
+    info: [["↑ ↓", "Chọn mục"], ["→", "Đọc nội dung"], ["Esc", "Quay lại", "back"]]
+  };
+  const promptBar = game.querySelector(".prompt-bar");
+  function renderPrompts(screen) {
+    promptBar.innerHTML = (PROMPTS[screen] ?? []).map(([key, text, act]) => act
+      ? `<button type="button" class="prompt" data-prompt="${act}"><kbd>${key}</kbd>${text}</button>`
+      : `<span class="prompt"><kbd>${key}</kbd>${text}</span>`).join("");
+  }
+  promptBar.addEventListener("click", event => {
+    const act = event.target.closest("[data-prompt]")?.dataset.prompt;
+    if (act === "back") { const back = backTarget(); if (back) go(back); }
+    else if (act === "start") startMatch(document.getElementById(SCREENS[route.name]));
+    else if (act === "enter") (mainMenu.lastItem ?? mainMenu.querySelector(".menu-item")).click();
+  });
+  const navBack = game.querySelector(".nav-back");
+  navBack.addEventListener("click", () => { const back = backTarget(); if (back) go(back); });
   function showRoute() {
     const next = parseRoute();
     if (next.name === "info" && !(next.sub in PANES)) next.sub = "skills";
     if ((next.name === "cpu" || next.name === "local") && next.sub === "match" && !sessions.has(next.name)) next.sub = null;
     if (next.name === "info" && route.name !== "info") infoReturn = route.name && route.name !== "menu" ? { ...route } : null;
-    const screenChanged = route.name !== next.name || route.sub !== next.sub;
+    const previous = route;
     route = next;
-    releaseKeys();
-    for (const session of sessions.values()) setPaused(session, true);
+    dialogAnswer?.(false);
+    if (capture) { capture = null; renderKeymaps(); }
+    releaseKeys(); endPeeks();
+    watchArena.tabIndex = next.name === "menu" ? -1 : 0;
+    for (const session of sessions.values()) { closeSheets(session.arena); setPaused(session, true); }
     activeMode = next.name === "menu" || next.name === "watch" ? "watch" : next.name;
-    document.body.dataset.screen = next.name;
-    for (const screen of document.querySelectorAll(".screen")) screen.hidden = screen.id !== SCREENS[next.name];
-    const watchScreen = document.getElementById("panel-watch");
-    watchScreen.classList.toggle("is-attract", next.name === "menu");
-    watchScreen.querySelector(".main-menu").hidden = next.name !== "menu";
-    if (activeMode === "watch" && !document.hidden) watcher?.play(); else watcher?.pause();
+    const screen = screenOf(next);
+    game.dataset.screen = screen;
+    game.dataset.route = "#/" + pathOf(next);
+    for (const section of document.querySelectorAll(".screen")) section.hidden = section.id !== SCREENS[next.name];
+    watchPanel.classList.toggle("is-attract", next.name === "menu");
+    mainMenu.hidden = next.name !== "menu";
+    if (next.name !== "watch" || previous.name !== "watch") { watchView.paused = false; closeSheets(watchArena); showOverlay(watchView, null); }
+    if (activeMode === "watch" && !document.hidden && !watchView.paused) watcher?.play(); else watcher?.pause();
     if (next.name === "cpu" || next.name === "local") {
       const panel = document.getElementById(SCREENS[next.name]), inMatch = next.sub === "match";
       panel.querySelector(".setup").hidden = inMatch;
       panel.querySelector(".match-screen").hidden = !inMatch;
-      setupSummary(panel);
-      if (inMatch) panel.querySelector(".arena").focus({ preventScroll: true });
+      renderSetup(panel);
     }
     if (next.name === "info") showPane(next.sub);
-    const back = backTarget(), backButton = document.querySelector(".nav-back");
-    backButton.hidden = !back;
-    backButton.querySelector(".nav-back-label").textContent = back === "menu" ? "Menu chính" : back ? (TITLES[back.split("/")[0]] ?? "Quay lại") : "";
-    const detail = next.name === "info" ? PANES[next.sub] : next.name === "cpu" || next.name === "local" ? (next.sub === "match" ? "Trận đấu" : "Cài đặt trận") : "";
-    document.querySelector(".crumbs").textContent = TITLES[next.name] + (detail ? " · " + detail : "");
-    document.title = (next.name === "menu" ? "" : TITLES[next.name] + " · ") + "PTSC Cup 6v6";
-    if (screenChanged && next.name !== "info") window.scrollTo({ top: 0 });
-  }
-  function showPane(name) {
-    for (const tab of document.querySelectorAll(".info-nav [data-pane]")) { const on = tab.dataset.pane === name; tab.setAttribute("aria-selected", String(on)); tab.classList.toggle("is-current", on); }
-    for (const pane of document.querySelectorAll(".info-pane")) pane.hidden = pane.dataset.pane !== name;
-  }
-  document.querySelector(".nav-back").addEventListener("click", () => { const back = backTarget(); if (back) go(back); });
-  window.addEventListener("hashchange", showRoute);
-  // Esc goes back one screen when no match has the keyboard.
-  window.addEventListener("keydown", event => {
-    if (event.code !== "Escape" || capture || document.fullscreenElement || document.querySelector(".fullscreen-fallback")) return;
-    const session = sessions.get(activeMode);
-    if (session && session.arena.contains(document.activeElement) && route.sub === "match") return;
-    if (event.target.matches?.("input, select, textarea")) return;
     const back = backTarget();
-    if (back) { event.preventDefault(); go(back); }
+    navBack.hidden = !back || next.name === "menu";
+    writeText(navBack.querySelector(".nav-back-label"), back ? backLabel(back) : "");
+    const detail = next.name === "info" ? PANES[next.sub] : screen === "setup" ? "Chuẩn bị trận" : "";
+    game.querySelector(".crumbs").innerHTML = next.name === "menu" ? "" : `<b>${TITLES[next.name]}</b>${detail ? `<span aria-hidden="true">›</span>${escapeHtml(detail)}` : ""}`;
+    document.title = (next.name === "menu" ? "" : TITLES[next.name] + " · ") + "PTSC Cup 6v6";
+    renderPrompts(screen);
+    // Every screen opens with its cursor on something, like a console menu.
+    const sameScreen = previous.name === next.name && screenOf(previous) === screen;
+    if (screen === "menu") focusOn(mainMenu.lastItem ?? mainMenu.querySelector(".menu-item"));
+    else if (screen === "watch") watchView.paused ? showOverlay(watchView, "pause", true) : focusOn(watchArena);
+    else if (screen === "match") { const session = sessions.get(next.name); if (session.awaitingStart) focusOn(session.arena); else showOverlay(session, "pause", true); }
+    else if (screen === "setup") { const panel = document.getElementById(SCREENS[next.name]); if (!sameScreen || !panel.contains(document.activeElement)) focusOn(panel.lastOpt?.isConnected ? panel.lastOpt : panel.querySelector(".opt")); }
+    else if (screen === "info" && !infoScreen.querySelector(".info-panes").contains(document.activeElement)) focusOn(infoScreen.querySelector(`.info-nav [data-pane="${next.sub}"]`));
+  }
+  const infoScreen = document.getElementById("screen-info");
+  function showPane(name) {
+    for (const tab of infoScreen.querySelectorAll(".info-nav [data-pane]")) { const on = tab.dataset.pane === name; tab.setAttribute("aria-selected", String(on)); tab.classList.toggle("is-current", on); }
+    for (const pane of infoScreen.querySelectorAll(".info-pane")) pane.hidden = pane.dataset.pane !== name;
+    if (infoScreen.dataset.pane !== name) { infoScreen.dataset.pane = name; infoScreen.querySelector(".info-panes").scrollTop = 0; }
+  }
+  infoScreen.querySelector(".info-nav").addEventListener("click", event => {
+    const tab = event.target.closest("[data-pane]");
+    if (!tab) return;
+    event.preventDefault(); go("info/" + tab.dataset.pane); focusOn(tab);
   });
-  document.getElementById("new-watch").addEventListener("click", () => {
+  window.addEventListener("hashchange", showRoute);
+
+  /* ------------------------------ main menu and watching ------------------------------ */
+  const watchPanel = document.getElementById("panel-watch"), watchArena = watchPanel.querySelector(".arena");
+  const mainMenu = watchPanel.querySelector(".main-menu");
+  const watchView = { panel: watchPanel, arena: watchArena, overlay: null, paused: false, rosterKey: null, rosterApi: null, get api() { return watcher; } };
+  function showPreview(item) {
+    mainMenu.lastItem = item;
+    writeText(mainMenu.querySelector(".menu-preview-kicker"), item.dataset.kicker);
+    writeText(mainMenu.querySelector(".menu-preview-title"), item.querySelector("b").textContent);
+    writeText(mainMenu.querySelector(".menu-preview-text"), item.dataset.desc);
+    for (const other of mainMenu.querySelectorAll(".menu-item")) other.classList.toggle("is-current", other === item);
+  }
+  mainMenu.addEventListener("focusin", event => { const item = event.target.closest(".menu-item"); if (item) showPreview(item); });
+  showPreview(mainMenu.querySelector(".menu-item"));
+  function newWatch() {
     watcher?.destroy();
     watcher = window.PTSCFootball.mount(document.getElementById("watch-match"));
-    if (activeMode !== "watch") watcher.pause();
-  });
-  const watchRestart = document.createElement("button"); watchRestart.type = "button"; watchRestart.className = "arena-restart";
-  watchRestart.setAttribute("aria-label", "Xem trận mới"); watchRestart.title = "Xem trận mới";
-  watchRestart.innerHTML = '<span aria-hidden="true">↻</span> Trận mới';
-  document.querySelector("#panel-watch .arena-surface").append(watchRestart);
-  watchRestart.addEventListener("click", () => document.getElementById("new-watch").click());
-
-  const watchPanel = document.getElementById("panel-watch");
-  const watchView = { panel: watchPanel, api: null, rosterKey: null };
-  function initWatchHud() {
+    if (activeMode !== "watch" || watchView.paused || document.hidden) watcher.pause();
+  }
+  function setWatchPaused(paused, focusMenu = false) {
+    watchView.paused = paused;
+    peek(watchView, false);
+    if (!paused) closeSheets(watchArena);
+    if (paused || document.hidden || activeMode !== "watch") watcher?.pause(); else watcher?.play();
+    showOverlay(watchView, paused ? "pause" : null, focusMenu);
+    if (!paused && route.name === "watch") focusOn(watchArena);
+  }
+  function initWatch() {
+    watchView.overlay = buildOverlay(watchArena, [["resume", "Tiếp tục"], ["new-watch", "Trận mới"], ["squad", "Đội hình &amp; chỉ số"], ["menu", "Menu chính"]]);
+    buildSheet(watchArena, "squad", "Đội hình &amp; chỉ số", SQUAD_SHEET);
+    watchView.overlay.addEventListener("click", event => {
+      const button = event.target.closest("[data-act]"), act = button?.dataset.act;
+      if (act === "resume") setWatchPaused(false);
+      else if (act === "new-watch") { newWatch(); setWatchPaused(false); }
+      else if (act === "squad") openSheet(watchView, "squad", button);
+      else if (act === "menu") go("menu");
+    });
+    watchPanel.querySelector(".pause").addEventListener("click", () => setWatchPaused(!watchView.paused, !watchView.paused));
+    watchArena.addEventListener("pointerdown", event => { if (route.name === "watch" && !event.target.closest("button, .start-overlay, .sheet")) focusOn(watchArena); });
     const energy = document.createElement("div"); energy.className = "arena-energy";
-    watchPanel.querySelector(".arena-surface").append(energy);
-    const cards = document.createElement("div"); cards.className = "player-status";
-    const roster = document.createElement("details"); roster.className = "advanced roster"; roster.open = true; roster.hidden = true;
-    roster.innerHTML = '<summary>Đội hình &amp; chỉ số · OVR tính theo vị trí đang đá</summary><div class="roster-body"></div>';
-    watchPanel.querySelector(".watch-actions").after(cards, roster);
-    buildTeamCards(cards, cardOrder("watch"));
+    watchArena.querySelector(".arena-surface").append(energy);
+    buildTeamCards(watchArena.querySelector(".player-status"), cardOrder("watch"));
     buildEnergyBoxes(energy, cardOrder("watch"));
   }
   function updateWatchHud() {
     if (activeMode !== "watch" || !watcher?.status) return;
-    if (watchView.api !== watcher) { watchView.api = watcher; watchView.rosterKey = null; }
+    if (watchView.rosterApi !== watcher) { watchView.rosterApi = watcher; watchView.rosterKey = null; }
     const state = watcher.status(), ctx = { id: "watch", leftTeam: state.leftTeam, paused: false, ended: state.ended };
-    for (const card of watchPanel.querySelector(".player-status").cards ?? []) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
-    for (const box of watchPanel.querySelector(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
+    for (const card of watchArena.querySelector(".player-status").cards ?? []) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
+    for (const box of watchArena.querySelector(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
     renderRoster(watchView);
   }
+
+  /* ------------------------------ match setup ------------------------------ */
+  // Settings are rows like a console's match settings: ↑↓ picks a row, ←→ (or the arrows) changes it, Enter kicks off.
+  const onOff = [[false, "Tắt"], [true, "Bật"]];
+  function layoutSummary(layout) {
+    if (!layout) return "";
+    const k = layout.keys;
+    return "Di chuyển " + ["up", "left", "down", "right"].map(a => label(k[a])).join(" ") + " · " + ["pass", "shoot", "switch", "sprint", "press", "challenge", "special"].map(a => keymap.LABELS[a] + " " + label(k[a])).join(" · ");
+  }
+  function setupSpecs(panel) {
+    const mode = panel.dataset.mode, cpu = mode === "cpu";
+    let savedLevel = "normal";
+    try { const stored = localStorage.getItem("ptsc-football.difficulty"); if (stored && Object.hasOwn(gameData.difficulty, stored)) savedLevel = stored; } catch {}
+    const levelNote = d => (d.stats > 0 ? "+" : "") + d.stats + " chỉ số đội máy · tranh bóng ×" + d.tackle + " · dứt điểm ×" + d.finishing + " · ra quyết định ×" + d.think;
+    const keyRow = slot => ({ key: "keys" + slot, label: cpu ? "Bố trí phím" : "Phím người " + slot,
+      values: () => keymap.list().map(layout => [layout.id, layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : "")]),
+      get: () => keymap.assigned(mode, slot)?.id, set: id => keymap.assign(mode, slot, id),
+      desc: id => layoutSummary(keymap.get(id)) });
+    return [
+      { key: "team", label: cpu ? "Màu áo của bạn" : "Màu áo người A", swatch: true, initial: "R", values: () => [["R", "Đội Đỏ"], ["B", "Đội Xanh"]],
+        desc: v => cpu ? `Bạn đá cho đội ${names[v]}, máy nhận đội ${names[opposite(v)]}.` : `Người A đá cho đội ${names[v]}, người B nhận đội ${names[opposite(v)]}.` },
+      cpu && { key: "level", label: "Độ khó máy", initial: savedLevel, values: () => Object.entries(gameData.difficulty).map(([id, d]) => [id, d.name]),
+        desc: v => gameData.difficulty[v].name + ": " + levelNote(gameData.difficulty[v]) + ". Đội của bạn không đổi.",
+        changed: v => { try { localStorage.setItem("ptsc-football.difficulty", v); } catch {} } },
+      !cpu && { key: "side", label: "Sân bắt đầu của B", initial: "right", values: () => [["left", "Sân trái"], ["right", "Sân phải"]],
+        desc: v => `Người B bắt đầu ở ${v === "left" ? "sân trái" : "sân phải"}; hai đội đổi sân giữa hiệp.` },
+      { key: "duration", label: "Thời gian", initial: 2, values: () => [2, 4, 6, 10].map(min => [min, min + " phút"]), desc: v => `${v} phút bóng lăn, chia hai hiệp.` },
+      { key: "extraTime", label: "Hiệp phụ nếu hòa", initial: false, values: () => onOff, desc: () => "Hòa sau thời gian chính thức thì đá thêm hiệp phụ." },
+      { key: "penalties", label: "Luân lưu nếu vẫn hòa", initial: false, values: () => onOff, desc: () => "Vẫn hòa thì phân thắng thua bằng loạt sút luân lưu." },
+      { key: "support", label: cpu ? "Hỗ trợ ngắm" : "Hỗ trợ ngắm (A và B)", initial: true, values: () => onOff,
+        desc: () => "Chuyền tới đồng đội gần hướng ngắm và sút trúng khung thành. Đổi được ngay trong trận (Esc → menu).",
+        changed: v => { sessions.get(mode)?.api.setSupport(v); syncSupport(panel); } },
+      keyRow("A"), !cpu && keyRow("B")
+    ].filter(Boolean);
+  }
+  function buildSetup(panel) {
+    const specs = setupSpecs(panel), list = panel.querySelector(".opt-list");
+    panel.setup = { specs: new Map(specs.map(spec => [spec.key, spec])), values: Object.fromEntries(specs.filter(spec => !spec.get).map(spec => [spec.key, spec.initial])), note: null };
+    list.innerHTML = specs.map(spec => `<div class="opt" data-opt="${spec.key}" data-nav tabindex="0" role="slider" aria-label="${escapeHtml(spec.label)}" aria-valuemin="0"><span class="opt-label">${escapeHtml(spec.label)}</span><button type="button" class="opt-arrow opt-prev" tabindex="-1" aria-label="${escapeHtml(spec.label)}: lựa chọn trước"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><span class="opt-value"></span><button type="button" class="opt-arrow opt-next" tabindex="-1" aria-label="${escapeHtml(spec.label)}: lựa chọn sau"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>`).join("")
+      + '<button type="button" class="opt opt-link keymap-open" data-nav><span class="opt-label">Tùy chỉnh phím</span><span class="opt-value">Mở bộ sửa phím <span aria-hidden="true">›</span></span></button>';
+    list.addEventListener("click", event => {
+      const row = event.target.closest(".opt");
+      if (!row) return;
+      if (row.classList.contains("keymap-open")) { go("info/keys"); return; }
+      focusOn(row);
+      stepOpt(panel, row, event.target.closest(".opt-prev") ? -1 : 1);
+    });
+    list.addEventListener("focusin", event => { const row = event.target.closest(".opt"); if (row) { panel.lastOpt = row; panel.setup.note = null; describe(panel, row); } });
+    panel.querySelector(".start").addEventListener("click", () => startMatch(panel));
+    keymapRenders.add(() => renderSetup(panel));
+    renderSetup(panel);
+  }
+  const optValue = (panel, spec) => spec.get ? spec.get() : panel.setup.values[spec.key];
+  function stepOpt(panel, row, dir) {
+    const spec = panel.setup.specs.get(row.dataset.opt);
+    if (!spec) return;
+    const values = spec.values(), current = optValue(panel, spec), count = values.length;
+    const at = Math.max(0, values.findIndex(([v]) => v === current));
+    let clash = null, changed = false;
+    for (let n = 1; n < count && !changed; n++) {
+      const [value] = values[((at + dir * n) % count + count) % count];
+      if (spec.set) { const result = spec.set(value); if (result.ok) changed = true; else clash ??= result.clash; }
+      else { panel.setup.values[spec.key] = value; spec.changed?.(value); changed = true; }
+    }
+    // A layout that would share keys with the other player is skipped; say so when nothing else is left.
+    panel.setup.note = !changed && clash ? "Không đổi được: các layout khác trùng phím " + clash.map(label).join(", ") + " với người còn lại. Sửa layout ở Thông tin game → Layout phím." : null;
+    renderSetup(panel);
+    describe(panel, row);
+  }
+  function describe(panel, row) {
+    if (!row) return;
+    const spec = panel.setup.specs.get(row?.dataset.opt), desc = panel.querySelector(".opt-desc");
+    const text = panel.setup.note ?? (spec ? spec.desc(optValue(panel, spec)) : row?.classList.contains("keymap-open") ? "Đổi phím, tạo layout mới hoặc khôi phục phím gốc." : "");
+    writeText(desc, text); desc.dataset.tone = panel.setup.note ? "error" : "";
+  }
+  function renderSetup(panel) {
+    if (!panel.setup) return;
+    for (const row of panel.querySelectorAll(".opt[data-opt]")) {
+      const spec = panel.setup.specs.get(row.dataset.opt), values = spec.values(), current = optValue(panel, spec);
+      const index = Math.max(0, values.findIndex(([v]) => v === current)), text = values[index]?.[1] ?? "";
+      row.dataset.value = String(current);
+      row.querySelector(".opt-value").innerHTML = (spec.swatch ? `<i class="swatch ${current === "R" ? "red" : "blue"}" aria-hidden="true"></i>` : "") + escapeHtml(text);
+      row.setAttribute("aria-valuemax", String(values.length - 1)); row.setAttribute("aria-valuenow", String(index)); row.setAttribute("aria-valuetext", text);
+    }
+    renderMatchup(panel);
+    if (panel.contains(document.activeElement)) describe(panel, document.activeElement.closest(".opt"));
+  }
   function optionsFor(panel) {
-    const teamA = panel.querySelector('input[name$="-team"]:checked').value;
-    const teamB = opposite(teamA);
-    const sideB = panel.querySelector('input[name="local-side"]:checked')?.value ?? "right";
-    return { mode: panel.dataset.mode, duration: Number(panel.querySelector(".duration input:checked")?.value ?? 2), extraTime: panel.querySelector(".extra-time").checked, penalties: panel.querySelector(".penalties").checked,
-      support: panel.querySelector(".support").checked, difficulty: panel.querySelector('.level-choices input:checked')?.value ?? "normal", teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
+    const v = panel.setup.values, mode = panel.dataset.mode, teamA = v.team, teamB = opposite(teamA);
+    return { mode, duration: v.duration, extraTime: v.extraTime, penalties: v.penalties, support: v.support, difficulty: v.level ?? "normal",
+      teamA, leftTeam: mode === "local" ? (v.side === "left" ? teamB : teamA) : "R" };
   }
-  function setupSummary(panel) {
-    const options = optionsFor(panel), sideA = options.leftTeam === options.teamA ? "trái" : "phải";
-    const description = options.mode === "cpu" ? `Bạn: đội ${names[options.teamA]} · Máy: đội ${names[opposite(options.teamA)]} (${gameData.difficulty[options.difficulty]?.name ?? "Thường"})`
-      : `A: đội ${names[options.teamA]}, sân ${sideA} · B: đội ${names[opposite(options.teamA)]}, sân ${sideA === "trái" ? "phải" : "trái"}`;
-    panel.querySelector(".setup-summary").textContent = description + " · " + options.duration + " phút" + (sessions.has(options.mode) ? " · Áp dụng khi vào trận mới." : "");
-    panel.querySelector(".start").innerHTML = (sessions.has(options.mode) ? "Trận mới với cài đặt này" : "Vào sân") + ' <span aria-hidden="true">→</span>';
+  function renderMatchup(panel) {
+    const o = optionsFor(panel), cpu = o.mode === "cpu", teamB = opposite(o.teamA);
+    const side = team => o.leftTeam === team ? "sân trái" : "sân phải";
+    const who = cpu ? ["Bạn", "Máy"] : ["Người A", "Người B"];
+    const team = (t, name) => `<div class="vs-team" data-team="${t}"><span class="kit-shirt ${t === "R" ? "red" : "blue"}" aria-hidden="true"></span><b>${name}</b><small>Đội ${names[t]} · ${side(t)}</small></div>`;
+    const facts = [["Thời gian", o.duration + " phút"], cpu && ["Độ khó", gameData.difficulty[o.difficulty]?.name ?? "Thường"], ["Hiệp phụ", o.extraTime ? "Có" : "Không"], ["Luân lưu", o.penalties ? "Có" : "Không"], ["Hỗ trợ ngắm", o.support ? "Bật" : "Tắt"]].filter(Boolean);
+    const html = `<div class="vs">${team(o.teamA, who[0])}<span class="vs-mark">VS</span>${team(teamB, who[1])}</div><dl class="vs-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`
+      + (sessions.has(o.mode) ? '<p class="vs-note">Trận đang dở sẽ được thay bằng trận mới.</p>' : "");
+    const matchup = panel.querySelector(".matchup");
+    if (matchup.innerHTML !== html) matchup.innerHTML = html;
+    panel.querySelector(".start").innerHTML = `<span>${sessions.has(o.mode) ? "Trận mới" : "Vào sân"}</span><kbd>Enter</kbd>`;
   }
+  function syncSupport(panel) {
+    const button = panel.querySelector(".support-button"), on = panel.setup.values.support;
+    if (!button) return;
+    button.setAttribute("aria-pressed", String(on));
+    button.querySelector(".menu-item-text").innerHTML = 'Hỗ trợ ngắm <b class="toggle-state">' + (on ? "Bật" : "Tắt") + "</b>";
+  }
+  function startMatch(panel) {
+    releaseKeys();
+    const mode = panel.dataset.mode;
+    const previous = sessions.get(mode);
+    previous?.penaltyView.clearTimers(); previous?.api.destroy();
+    const options = optionsFor(panel), arena = panel.querySelector(".arena");
+    const host = panel.querySelector(".match-host"); host.replaceChildren();
+    const api = window.PTSCFootball.mount(host, options);
+    api.pause();
+    const penaltyKeys = slot => {
+      const set = bindingsOf(mode)[slot] ?? {};
+      return { left: label(set.left), center: label(set.down), right: label(set.right), special: label(set.special) };
+    };
+    const session = { panel, arena, api, options, paused: true, awaitingStart: true, overlay: panel.overlay, rosterKey: null,
+      penaltyView: new window.PTSCPenaltyView(panel.querySelector(".penalty-host"), api, { keys: penaltyKeys }) };
+    sessions.set(mode, session);
+    closeSheets(arena);
+    panel.querySelector(".arena-energy").hidden = false;
+    playerCards(session); updateHud(session); renderSetup(panel); syncSupport(panel);
+    go(mode + "/match");
+  }
+
+  /* ------------------------------ cards and HUD ------------------------------ */
   const ROLE_NAMES = { GK: "Thủ môn", DF: "Hậu vệ", MF: "Tiền vệ", FW: "Tiền đạo" };
   const levelOf = v => v >= 80 ? "high" : v >= 65 ? "mid" : "low";
   const clamp01 = v => Math.max(0, Math.min(1, v));
@@ -412,7 +755,7 @@
   }
   function playerCards(session) {
     const order = cardOrder(session.options.mode, session.options.teamA);
-    buildTeamCards(session.panel.querySelector(".player-status"), order);
+    buildTeamCards(session.arena.querySelector(".player-status"), order);
     buildEnergyBoxes(session.panel.querySelector(".arena-energy"), order);
     renderPanelKeys(session.panel);
   }
@@ -459,24 +802,29 @@
       result.querySelector("span").textContent = `Đỏ ${state.score.R}–${state.score.B} Xanh${state.penalty ? ` · PEN ${state.penalty.score.R}–${state.penalty.score.B}` : ""}`;
     }
     const status = q(".match-status");
-    const pause = q(".pause");
+    q(".pause").disabled = state.ended;
     if (state.ended) {
       const outcome = state.winner ? `Đội ${names[state.winner]} thắng` : "Hai đội hòa";
-      status.textContent = state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${outcome} · Đỏ ${state.score.R}–${state.score.B} Xanh`;
-      pause.disabled = true;
+      writeText(status, state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${outcome} · Đỏ ${state.score.R}–${state.score.B} Xanh`);
       session.api.setInput("A"); session.api.setInput("B");
+      // After the final whistle has had its moment, the full-time menu comes up.
+      session.endedAt ??= performance.now();
+      if (!session.endShown && performance.now() - session.endedAt > 2200) {
+        session.endShown = true; peek(session, false);
+        const watching = sessions.get(activeMode) === session && route.sub === "match";
+        showOverlay(session, "end", watching && (document.activeElement === session.arena || session.overlay.contains(document.activeElement)));
+      }
     } else {
-      pause.disabled = false;
       const phase = { reset: "Chuẩn bị giao bóng", celebrate: "Bàn thắng!", halftime: "Nghỉ giữa hiệp · đổi sân" }[state.phase];
-      status.textContent = session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`);
+      writeText(status, session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`));
     }
     const ctx = { id: session.options.mode, leftTeam: state.leftTeam, paused: session.paused && !session.awaitingStart, ended: state.ended, keyFor: c => bindings[c] ? label(bindings[c].special) : "" };
-    const cards = q(".player-status").cards ?? [];
+    const cards = session.arena.querySelector(".player-status").cards ?? [];
     for (const card of cards) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
     for (const box of q(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
     for (const player of state.players) {
       const switchButton = q('.switch-action[data-slot="' + player.slot + '"]');
-      if (switchButton) switchButton.disabled = false;
+      if (switchButton) switchButton.disabled = session.paused || state.ended;
       const kbdNode = q(".arena-energy").querySelector('[data-slot="' + player.slot + '"] kbd');
       if (kbdNode && bindings[player.slot]) writeText(kbdNode, label(bindings[player.slot].special));
       const slideButton = q('.slide-action[data-slot="' + player.slot + '"]');
@@ -490,65 +838,11 @@
       writeText(card.querySelector(".charge-text"), player.charge ? (player.charge.action === "pass" ? "Lực chuyền" : "Lực sút") + ": " + Math.round(player.charge.power * 100) + "%" : player.pressing ? "Đang bám người · giữ phím áp sát" : "Giữ phím chuyền/sút để nạp lực");
     }
   }
-  for (const arena of document.querySelectorAll(".arena")) {
-    const fullscreen = arena.querySelector(".fullscreen");
-    function syncFullscreenButton() {
-      const expanded = document.fullscreenElement === arena || arena.classList.contains("fullscreen-fallback");
-      fullscreen.classList.toggle("is-expanded", expanded);
-      fullscreen.setAttribute("aria-label", expanded ? "Thu nhỏ" : "Toàn màn hình");
-      fullscreen.setAttribute("title", expanded ? "Thu nhỏ" : "Toàn màn hình");
-      fullscreen.setAttribute("aria-pressed", String(expanded));
-    }
-    async function toggleFullscreen() {
-      cancelKicks();
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else if (arena.classList.contains("fullscreen-fallback")) { arena.classList.remove("fullscreen-fallback"); document.body.classList.remove("has-fullscreen"); }
-      else if (arena.requestFullscreen) {
-        try { await arena.requestFullscreen(); } catch { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
-      } else { arena.classList.add("fullscreen-fallback"); document.body.classList.add("has-fullscreen"); }
-      syncFullscreenButton();
-      arena.focus({ preventScroll: true });
-      applyKeys();
-    }
-    fullscreen.addEventListener("click", toggleFullscreen);
-    arena.addEventListener("keydown", event => {
-      if (event.code === "Escape" && arena.classList.contains("fullscreen-fallback")) { event.preventDefault(); event.stopPropagation(); toggleFullscreen(); }
-    });
-    document.addEventListener("fullscreenchange", () => {
-      syncFullscreenButton();
-      cancelKicks();
-      if (arena.closest(".screen")?.id === "panel-" + activeMode) arena.focus({ preventScroll: true });
-      applyKeys();
-    });
-  }
 
   /* ------------------------------ key layouts ------------------------------ */
   let capture = null;
   const keymapRenders = new Set();
   const renderKeymaps = () => { for (const render of keymapRenders) render(); };
-  /** The layout pickers in a match setup ("Bố trí phím" card). */
-  function setupKeymapAssign(panel) {
-    const mode = panel.dataset.mode, slots = mode === "local" ? ["A", "B"] : ["A"];
-    const card = document.createElement("fieldset"); card.className = "setup-card keymap-assign";
-    card.innerHTML = '<legend>Bố trí phím</legend><div class="keymap-assign-row">' + slots.map(slot => "<label>" + (mode === "cpu" ? "Bạn" : "Người " + slot) + ' <select data-slot="' + slot + '" aria-label="Bố trí phím người ' + slot + '"></select></label>').join("") + '</div><p class="card-note keymap-assign-note" role="status"></p><a class="link-button keymap-open" href="#/info/keys">Tùy chỉnh phím…</a>';
-    panel.querySelector(".setup-grid").append(card);
-    const note = card.querySelector(".keymap-assign-note");
-    const fill = () => {
-      for (const select of card.querySelectorAll("select")) {
-        select.replaceChildren(...keymap.list().map(layout => new Option(layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : ""), layout.id)));
-        select.value = keymap.assigned(mode, select.dataset.slot).id;
-      }
-    };
-    for (const select of card.querySelectorAll("select")) select.addEventListener("change", () => {
-      const result = keymap.assign(mode, select.dataset.slot, select.value);
-      if (!result.ok) {
-        select.value = keymap.assigned(mode, select.dataset.slot).id;
-        note.textContent = "Không dùng được: trùng phím " + result.clash.map(label).join(", ") + " với người còn lại. Sửa một layout ở mục Layout phím.";
-        note.dataset.tone = "error";
-      } else { note.textContent = (mode === "cpu" ? "Bạn" : "Người " + select.dataset.slot) + " dùng “" + keymap.get(select.value).name + "”."; note.dataset.tone = ""; }
-    });
-    keymapRenders.add(fill); fill();
-  }
   /** The key-layout editor (Game info · Layout phím): pick a layout, rebind, overwrite or save as new, assign. */
   function setupKeymapEditor(container) {
     const targets = [["cpu", "A", "Đấu máy · Bạn"], ["local", "A", "Hai người · A"], ["local", "B", "Hai người · B"]];
@@ -585,9 +879,13 @@
     }
     loadDraft(editingId);
     keymapRenders.add(render);
-    editSelect.addEventListener("change", () => {
-      if (dirty && !confirm("Bỏ các thay đổi chưa lưu của layout đang sửa?")) { editSelect.value = editingId; return; }
-      loadDraft(editSelect.value); say(""); render();
+    editSelect.addEventListener("change", async () => {
+      const chosen = editSelect.value;
+      if (dirty) {
+        editSelect.value = editingId;
+        if (!await gameConfirm("Bỏ các thay đổi chưa lưu của layout đang sửa?", "Bỏ thay đổi")) return;
+      }
+      loadDraft(chosen); say(""); render();
     });
     nameInput.addEventListener("input", () => { dirty = true; render(); });
     for (const button of editor.querySelectorAll(".keymap-key")) button.addEventListener("click", () => {
@@ -627,9 +925,10 @@
       if (result.ok) { loadDraft(editingId); say("Đã khôi phục phím gốc.", "ok"); render(); }
       else say("Chưa khôi phục: trùng phím " + (result.clash?.map(label).join(", ") ?? "") + " với người còn lại.", "error");
     });
-    editor.querySelector(".keymap-delete").addEventListener("click", () => {
+    editor.querySelector(".keymap-delete").addEventListener("click", async () => {
       const layout = keymap.get(editingId);
-      if (!layout || layout.builtIn || !confirm("Xóa layout “" + layout.name + "”?")) return;
+      if (!layout || layout.builtIn || !await gameConfirm("Xóa layout “" + layout.name + "”?", "Xóa")) return;
+      if (editingId !== layout.id) return;
       keymap.remove(editingId); loadDraft(keymap.assigned("cpu", "A").id); say("Đã xóa “" + layout.name + "”.", "ok"); render();
     });
     render();
@@ -658,132 +957,169 @@
   });
   window.addEventListener("storage", event => { if (event.key === null || event.key?.startsWith("ptsc-football.key-layouts")) keymap.reload(); });
 
+  /* ------------------------------ match panels ------------------------------ */
   for (const panel of document.querySelectorAll(".game-panel")) {
-    const form = panel.querySelector("form");
-    const arena = panel.querySelector(".arena");
-    const mode = panel.dataset.mode;
-    const matchOptions = document.createElement("fieldset"); matchOptions.className = "setup-card match-options";
-    matchOptions.innerHTML = '<legend>Thời gian &amp; luật</legend><div class="choices duration" role="radiogroup" aria-label="Thời lượng trận đấu">' + [2, 4, 6, 10].map(min => '<label class="seg"><input type="radio" name="' + mode + '-duration" value="' + min + '"' + (min === 2 ? " checked" : "") + "><span>" + min + " phút</span></label>").join("") + '</div><label class="check"><input type="checkbox" class="extra-time"><span>Hiệp phụ nếu hòa</span></label><label class="check"><input type="checkbox" class="penalties"><span>Luân lưu nếu vẫn hòa</span></label>';
-    panel.querySelector(".setup-grid").insertBefore(matchOptions, panel.querySelector(".support-card"));
-    const levels = panel.querySelector(".level-choices");
-    if (levels) {
-      let saved = "normal";
-      try { const stored = localStorage.getItem("ptsc-football.difficulty"); if (stored && Object.hasOwn(gameData.difficulty, stored)) saved = stored; } catch {}
-      const levelNote = d => (d.stats > 0 ? "+" : "") + d.stats + " chỉ số đội máy · tranh bóng ×" + d.tackle + " · dứt điểm ×" + d.finishing;
-      levels.innerHTML = Object.entries(gameData.difficulty).map(([id, d]) => '<label class="seg level"><input type="radio" name="cpu-level" value="' + id + '"' + (id === saved ? " checked" : "") + "><span>" + d.name + "</span></label>").join("");
-      const note = panel.querySelector(".level-note"), showNote = () => { const d = gameData.difficulty[levels.querySelector("input:checked").value]; note.textContent = levelNote(d); };
-      levels.addEventListener("change", () => { try { localStorage.setItem("ptsc-football.difficulty", levels.querySelector("input:checked").value); } catch {} showNote(); });
-      showNote();
-    }
-    const overlay = document.createElement("div"); overlay.className = "start-overlay"; overlay.hidden = true;
-    overlay.innerHTML = '<div class="pause-panel"><span class="pause-text">Nhấn <kbd>Space</kbd> để bắt đầu trận đấu</span><div class="pause-actions"><button type="button" class="primary" data-act="resume">Bắt đầu</button><button type="button" class="secondary" data-act="setup">Cài đặt trận</button><button type="button" class="secondary" data-act="info">Thông tin game</button><button type="button" class="secondary" data-act="menu">Menu chính</button></div></div>';
-    arena.querySelector(".arena-surface").append(overlay);
-    overlay.addEventListener("click", event => {
-      const act = event.target.closest("[data-act]")?.dataset.act, session = sessions.get(mode);
-      if (!act) return;
-      if (act === "resume" && session && !session.api.status().ended) { setPaused(session, false); arena.focus({ preventScroll: true }); }
+    const arena = panel.querySelector(".arena"), surface = arena.querySelector(".arena-surface");
+    const mode = panel.dataset.mode, slots = mode === "local" ? ["A", "B"] : ["A"];
+    buildSetup(panel);
+    panel.overlay = buildOverlay(arena, [["resume", "Tiếp tục"], ["support", "Hỗ trợ ngắm", " support-button"], ["squad", "Đội hình &amp; chỉ số"], ["controls", "Điều khiển"], ["restart", "Trận mới"], ["setup", "Cài đặt trận"], ["info", "Thông tin game"], ["menu", "Menu chính"]]);
+    buildSheet(arena, "squad", "Đội hình &amp; chỉ số", SQUAD_SHEET);
+    buildSheet(arena, "controls", "Điều khiển trận này", '<div class="controls">' + slots.map(slot => '<article><div class="pad-help" data-slot="' + slot + '"></div></article>').join("") + '</div><div class="advanced-grid">' + slots.map(slot => '<div class="advanced" data-slot="' + slot + '"' + (mode === "cpu" ? ' data-title="Bạn"' : "") + "></div>").join("") + '</div><p class="sheet-tip">Giữ <kbd>Tab</kbd> trong trận để xem nhanh chỉ số · <kbd>Space</kbd> tạm dừng / tiếp tục · đổi phím ở Thông tin game → Layout phím.</p>');
+    syncSupport(panel);
+    panel.overlay.addEventListener("click", event => {
+      const button = event.target.closest("[data-act]"), act = button?.dataset.act, session = sessions.get(mode);
+      if (!act || !session) return;
+      if (act === "resume") resumeView(session);
+      else if (act === "support") {
+        panel.setup.values.support = !panel.setup.values.support;
+        session.api.setSupport(panel.setup.values.support);
+        syncSupport(panel); renderSetup(panel);
+      } else if (act === "squad" || act === "controls") openSheet(session, act, button);
+      else if (act === "restart") startMatch(panel);
       else if (act === "setup") go(mode);
       else if (act === "info") go("info/skills");
       else if (act === "menu") go("menu");
     });
     const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
-    arena.querySelector(".arena-surface").append(penaltyHost);
     const restartChoice = document.createElement("div"); restartChoice.className = "restart-choice"; restartChoice.hidden = true;
     restartChoice.innerHTML = '<span class="restart-label"></span><div class="restart-keys"></div>';
-    arena.querySelector(".arena-surface").append(restartChoice);
     const energy = document.createElement("div"); energy.className = "arena-energy"; energy.hidden = true;
-    energy.innerHTML = "";
-    arena.querySelector(".arena-surface").append(energy);
     const result = document.createElement("div"); result.className = "arena-result"; result.hidden = true;
     result.innerHTML = '<strong></strong><span></span>';
-    arena.querySelector(".arena-surface").append(result);
-    const restart = document.createElement("button"); restart.type = "button"; restart.className = "arena-restart";
-    restart.setAttribute("aria-label", "Bắt đầu trận mới"); restart.title = "Bắt đầu trận mới";
-    restart.innerHTML = '<span aria-hidden="true">↻</span> Trận mới';
-    arena.querySelector(".arena-surface").append(restart);
-    restart.addEventListener("click", () => form.requestSubmit());
-    setupKeymapAssign(panel);
+    surface.insertBefore(penaltyHost, surface.querySelector(".arena-hints"));
+    surface.append(restartChoice, energy, result);
     renderPanelKeys(panel);
-    const roster = document.createElement("details"); roster.className = "advanced roster"; roster.open = true; roster.hidden = true;
-    roster.innerHTML = '<summary>Đội hình &amp; chỉ số · OVR tính theo vị trí đang đá</summary><div class="roster-body"></div>';
-    panel.querySelector(".player-status").after(roster);
-    form.addEventListener("change", event => { if (!event.target.closest(".keymap-assign")) setupSummary(panel); });
-    setupSummary(panel);
-    // Aim assist is chosen in setup and can be switched during the match from the toolbar.
-    const support = panel.querySelector(".support"), supportButton = panel.querySelector(".support-button");
-    const syncSupport = () => { supportButton.textContent = "Hỗ trợ ngắm: " + (support.checked ? "Bật" : "Tắt"); supportButton.setAttribute("aria-pressed", String(support.checked)); };
-    support.addEventListener("change", event => {
-      const session = sessions.get(panel.dataset.mode);
-      session?.api.setSupport(event.target.checked);
-      syncSupport();
-      if (session && !session.paused) arena.focus({ preventScroll: true });
-    });
-    supportButton.addEventListener("click", () => {
-      support.checked = !support.checked; support.dispatchEvent(new Event("change", { bubbles: true }));
-      if (sessions.has(mode)) arena.focus({ preventScroll: true });
-    });
-    syncSupport();
-    // Guides are redrawn when layouts change, so their buttons are handled by delegation.
-    panel.querySelector(".controls").addEventListener("click", event => {
+    // The pitch guide's switch and shoot/slide keys can be clicked too.
+    surface.querySelector(".arena-hints").addEventListener("click", event => {
       const button = event.target.closest(".slide-action, .switch-action");
-      const session = sessions.get(panel.dataset.mode);
+      const session = sessions.get(mode);
       if (!button || !session) return;
       if (button.classList.contains("switch-action")) session.api.action(button.dataset.slot, "switch");
       else if (!session.paused) {
         const player = session.api.status().players.find(p => p.slot === button.dataset.slot);
         session.api.action(button.dataset.slot, player?.hasBall ? "shoot" : "slide");
       }
-      arena.focus({ preventScroll: true }); updateHud(session);
-    });
-    form.addEventListener("submit", event => {
-      event.preventDefault(); releaseKeys();
-      const mode = panel.dataset.mode;
-      sessions.get(mode)?.api.destroy();
-      const options = optionsFor(panel);
-      const host = panel.querySelector(".match-host"); host.replaceChildren();
-      const api = window.PTSCFootball.mount(host, options);
-      api.pause();
-      const penaltyKeys = slot => {
-        const set = bindingsOf(mode)[slot] ?? {};
-        return { left: label(set.left), center: label(set.down), right: label(set.right), special: label(set.special) };
-      };
-      const session = { panel, arena, api, options, paused: true, awaitingStart: true,
-        penaltyView: new window.PTSCPenaltyView(penaltyHost, api, { keys: penaltyKeys }) };
-      sessions.set(mode, session);
-      energy.hidden = false;
-      panel.querySelector(".pause").textContent = "Bắt đầu";
-      overlay.hidden = false;
-      overlay.querySelector(".pause-text").innerHTML = 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu';
-      overlay.querySelector('[data-act="resume"]').textContent = "Bắt đầu";
-      playerCards(session); updateHud(session); setupSummary(panel);
-      go(mode + "/match");
-      arena.focus({ preventScroll: true });
+      focusOn(arena); updateHud(session);
     });
     panel.querySelector(".pause").addEventListener("click", () => {
-      const session = sessions.get(panel.dataset.mode);
+      const session = sessions.get(mode);
       if (!session || session.api.status().ended) return;
-      setPaused(session, !session.paused);
-      if (!session.paused) arena.focus({ preventScroll: true });
+      if (session.paused) resumeView(session); else setPaused(session, true, true);
     });
-    arena.addEventListener("pointerdown", () => { if (sessions.has(panel.dataset.mode)) arena.focus({ preventScroll: true }); });
+    arena.addEventListener("pointerdown", event => { if (sessions.has(mode) && !event.target.closest("button, .start-overlay, .sheet")) focusOn(arena); });
     // Leaving the pitch for another control stops movement; keys are still tracked until they are released.
     arena.addEventListener("focusout", event => { if (!arena.contains(event.relatedTarget)) { stopSwitchRepeats(); cancelKicks(); applyKeys(); } });
     arena.addEventListener("focusin", () => applyKeys());
   }
+
+  /* ------------------------------ keyboard: menus ------------------------------ */
+  // Menus answer to the arrows (and W A S D when nothing is being typed), Enter, Space and Esc, like a console pad.
+  const NAV_KEYS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", KeyW: "up", KeyS: "down", KeyA: "left", KeyD: "right" };
+  const navItems = scope => [...scope.querySelectorAll("[data-nav]")].filter(el => !el.disabled && !el.closest("[hidden]") && el.getClientRects().length);
+  function moveFocus(scope, delta) {
+    const items = navItems(scope);
+    if (!items.length) return null;
+    const at = items.indexOf(document.activeElement?.closest?.("[data-nav]"));
+    const next = at < 0 ? items[delta > 0 ? 0 : items.length - 1] : items[(at + delta + items.length) % items.length];
+    focusOn(next); next.scrollIntoView?.({ block: "nearest" });
+    return next;
+  }
+  function currentView() {
+    if (route.name === "watch") return watchView;
+    return route.sub === "match" ? sessions.get(route.name) ?? null : null;
+  }
+  window.addEventListener("keydown", event => {
+    if (event.defaultPrevented || capture || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.code === "Escape" && fsElement() && !escLocked) return; // the browser leaves full screen
+    const active = document.activeElement, typing = !!active?.matches?.("input, select, textarea");
+    let dir = NAV_KEYS[event.code] ?? null;
+    if (dir && event.code.startsWith("Key") && (typing || event.repeat)) dir = null;
+    if (dir && typing) dir = null;
+    const vertical = dir === "up" || dir === "down", delta = dir === "up" || dir === "left" ? -1 : 1;
+    const handled = () => event.preventDefault();
+    if (!dialog.hidden) {
+      if (event.code === "Escape") { handled(); dialogAnswer?.(false); }
+      else if (event.code === "Tab") { handled(); moveFocus(dialog, event.shiftKey ? -1 : 1); }
+      else if (dir) { handled(); moveFocus(dialog, delta); }
+      return;
+    }
+    const view = currentView();
+    if (view) {
+      const sheet = [...view.arena.querySelectorAll(".sheet")].find(s => !s.hidden && !s.classList.contains("is-peek"));
+      if (sheet) {
+        if (event.code === "Escape") { handled(); closeSheet(sheet); }
+        else if (event.code === "Tab") { handled(); moveFocus(sheet, event.shiftKey ? -1 : 1); }
+        else if (vertical) { handled(); sheet.querySelector(".sheet-body").scrollBy({ top: delta * 90 }); }
+        return;
+      }
+      const overlay = view.overlay;
+      if (!overlay.hidden && overlay.contains(active)) {
+        if (vertical) { handled(); if (!event.repeat) moveFocus(overlay, delta); }
+        else if ((event.code === "Escape" || event.code === "Space") && !event.repeat && overlay.dataset.kind !== "end") { handled(); resumeView(view, event.code); }
+        return;
+      }
+      if (!overlay.hidden && active === view.arena && overlay.dataset.kind !== "start" && (vertical || event.code === "Enter")) { handled(); focusCursor(); return; }
+      if (view === watchView && active === watchArena) {
+        if ((event.code === "Escape" || event.code === "Space") && !event.repeat) { handled(); setWatchPaused(!watchView.paused, true); }
+        else if (event.code === "Tab" && !watchView.paused) { handled(); if (!event.repeat) peek(watchView, true); }
+      }
+      return;
+    }
+    if (route.name === "menu") {
+      if (vertical) { handled(); moveFocus(mainMenu, delta); }
+      else if (event.code === "Space" && active?.matches?.(".menu-item")) { handled(); active.click(); }
+      return;
+    }
+    if (event.code === "Escape") { const back = backTarget(); if (back) { handled(); go(back); } return; }
+    if (route.name === "cpu" || route.name === "local") {
+      const panel = document.getElementById(SCREENS[route.name]), setup = panel.querySelector(".setup"), row = active?.closest?.(".opt[data-opt]");
+      if (vertical) { handled(); moveFocus(setup, delta); }
+      else if (dir && row) { handled(); stepOpt(panel, row, delta); }
+      else if (dir === "right" && active?.matches?.(".keymap-open")) { handled(); go("info/keys"); }
+      else if (event.code === "Space" && row && !event.repeat) { handled(); stepOpt(panel, row, 1); }
+      else if (event.code === "Enter" && row && !event.repeat) { handled(); startMatch(panel); }
+      return;
+    }
+    if (route.name === "info") {
+      const nav = infoScreen.querySelector(".info-nav"), panes = infoScreen.querySelector(".info-panes");
+      if (nav.contains(active) || active === document.body || !active) {
+        if (vertical) { handled(); const tab = moveFocus(nav, delta); if (tab) go("info/" + tab.dataset.pane); }
+        else if (dir === "right") { handled(); focusOn(panes); }
+      } else if (active === panes && dir === "left") { handled(); focusOn(nav.querySelector(".is-current")); }
+    }
+  });
+  // A console-style cursor: pointing at a menu entry selects it.
+  // Only a real mouse movement moves the cursor: a menu opening under a resting pointer keeps its own selection.
+  let lastPointer = "";
+  game.addEventListener("pointermove", event => {
+    const at = event.clientX + "," + event.clientY;
+    if (event.pointerType !== "mouse" || at === lastPointer) return;
+    lastPointer = at;
+    if (document.activeElement?.matches?.("input, select, textarea")) return;
+    const item = event.target.closest(".menu-item, .opt, .info-nav a, .setup .start, .sheet-back");
+    if (item && item !== document.activeElement && !item.closest("[hidden]") && !capture) focusOn(item);
+  });
+
+  /* ------------------------------ keyboard: play ------------------------------ */
   window.addEventListener("keydown", event => {
     const session = sessions.get(activeMode);
-    if (!session || !session.arena.contains(document.activeElement)) return;
+    if (!session || route.sub !== "match" || !session.arena.contains(document.activeElement)) return;
+    if (document.activeElement.closest(".start-overlay, .sheet")) return; // the menu has the keyboard
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.code === "Tab") {
+      if (!session.paused && document.activeElement === session.arena && !session.api.status().ended) { event.preventDefault(); if (!event.repeat) peek(session, true); }
+      return;
+    }
     const mode = session.options.mode, bound = lookup(mode, event.code);
     if (!bound && event.code !== "Space" && event.code !== "Escape") return;
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.code === "Escape" && document.fullscreenElement) { releaseKeys(); return; }
+    if (event.code === "Escape" && fsElement() && !escLocked) { releaseKeys(); return; }
     if (event.code !== "Escape" && document.activeElement.matches("button, input, select, textarea")) return;
     event.preventDefault();
     if (event.code === "Space" || event.code === "Escape") {
-      if (event.code === "Escape" && session.arena.classList.contains("fullscreen-fallback")) {
-        session.panel.querySelector(".fullscreen").click(); return;
-      }
-      if (!event.repeat && !session.api.status().ended) setPaused(session, event.code === "Escape" ? true : !session.paused);
+      if (event.repeat) return;
+      if (session.api.status().ended) { session.endShown = true; showOverlay(session, "end", true); return; }
+      if (event.code === "Escape" || !session.paused) setPaused(session, true, true);
+      else setPaused(session, false);
       return;
     }
     const { slot, action } = bound, state = session.api.status();
@@ -847,6 +1183,7 @@
     highlightPads();
   }, true);
   window.addEventListener("keyup", event => {
+    if (event.code === "Tab") endPeeks();
     const repeat = switchRepeats.get(event.code);
     if (repeat) { clearTimeout(repeat.timer); switchRepeats.delete(event.code); }
     keys.delete(event.code); applyKeys();
@@ -872,22 +1209,24 @@
     } else session.api.releaseCharge(slot);
   }, true);
   function suspend() {
-    releaseKeys(); watcher?.pause();
+    if (capture) { capture = null; renderKeymaps(); }
+    releaseKeys(); endPeeks(); watcher?.pause();
     for (const session of sessions.values()) setPaused(session, true);
   }
   window.addEventListener("blur", suspend);
   window.addEventListener("pagehide", suspend);
-  window.addEventListener("focus", () => { if (activeMode === "watch" && !document.hidden) watcher?.play(); });
+  window.addEventListener("focus", () => { if (activeMode === "watch" && !document.hidden && !watchView.paused) watcher?.play(); });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) suspend();
-    else if (activeMode === "watch") watcher?.play();
+    else if (activeMode === "watch" && !watchView.paused) watcher?.play();
   });
-  initWatchHud();
+  initWatch();
   {
-    const pane = name => document.querySelector('#screen-info .info-pane[data-pane="' + name + '"]');
+    const pane = name => infoScreen.querySelector('.info-pane[data-pane="' + name + '"]');
     renderSkillLegend(pane("skills")); renderStatsGuide(pane("stats")); renderStyleLegend(pane("styles"));
     setupKeymapEditor(pane("keys")); renderControlsGuide(); renderRulesGuide(pane("rules"));
   }
+  syncFullscreen();
   if (!location.hash) history.replaceState(null, "", "#/menu");
   showRoute();
   setInterval(() => { const session = sessions.get(activeMode); if (session) updateHud(session); else updateWatchHud(); highlightPads(); }, 250);

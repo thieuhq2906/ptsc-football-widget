@@ -39,22 +39,40 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(() => document.getElementById("watch-match").__ptscFootball);
     const route = async hash => {
       await page.evaluate(h => { location.hash = h; }, hash);
-      await page.waitForFunction(h => location.hash === h && document.querySelector('.screen:not([hidden])'), hash);
+      await page.waitForFunction(h => document.getElementById("game").dataset.route === h, hash);
     };
     const startMatch = async mode => {
-      if (!(await page.evaluate(m => location.hash === "#/" + m, mode))) await route("#/" + mode);
+      if (!(await page.evaluate(m => document.getElementById("game").dataset.route === "#/" + m, mode))) await route("#/" + mode);
       await page.locator(`#panel-${mode} .start`).click();
-      await page.waitForFunction(m => location.hash === "#/" + m + "/match", mode);
+      await page.waitForFunction(m => document.getElementById("game").dataset.route === "#/" + m + "/match", mode);
+    };
+    const choose = async (mode, opt, value) => {
+      const row = page.locator(`#panel-${mode} .opt[data-opt="${opt}"]`);
+      for (let i = 0; i < 12 && (await row.getAttribute("data-value")) !== String(value); i++) await row.locator(".opt-next").click();
+      assert.equal(await row.getAttribute("data-value"), String(value), `${mode} ${opt} must reach ${value}`);
     };
     assert.equal(await page.evaluate(() => location.hash), "#/menu", "The game opens on the main menu");
     assert(await page.locator("#panel-watch .main-menu").isVisible(), "The menu plays over a live match");
-    assert.equal(await page.locator(".main-menu .menu-card").count(), 4);
-    await page.locator('.menu-card[data-go="cpu"]').click();
-    await page.waitForFunction(() => location.hash === "#/cpu" && !document.getElementById("panel-cpu").hidden);
+    assert.equal(await page.locator(".main-menu .menu-item").count(), 4);
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.go), "cpu", "The menu opens with its cursor on the first entry");
+    assert.equal(await page.locator('body > :not(main):not(script)').count(), 0, "Nothing lives outside the game stage");
+    await page.keyboard.press("ArrowDown");
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.go), "local", "Arrows move the menu cursor");
+    assert.match(await page.locator(".menu-preview-title").textContent(), /Hai người/);
+    await page.keyboard.press("ArrowUp"); await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu" && !document.getElementById("panel-cpu").hidden);
     assert(await page.locator("#panel-cpu .setup").isVisible(), "Choosing a mode opens its setup screen");
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.opt), "team", "Setup opens with the cursor on the first row");
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await page.locator('#panel-cpu .opt[data-opt="team"]').getAttribute("data-value"), "B", "Left/right change a setting");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/menu");
+    await page.locator('.menu-item[data-go="cpu"]').click();
+    await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu");
     await page.locator(".nav-back").click();
-    await page.waitForFunction(() => location.hash === "#/menu");
-    console.log("PASS main menu, mode setup screen and back button");
+    await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/menu");
+    console.log("PASS main menu, keyboard cursor, setting rows, Esc and back button");
 
     const narrativeSides = await page.evaluate(() => {
       const sides = [];
@@ -211,8 +229,8 @@ const server = http.createServer((req, res) => {
     await page.evaluate(() => { document.querySelector("#panel-local .match-host").dataset.seed = "42"; });
     for (const colour of ["R", "B"]) for (const side of ["left", "right"]) {
       await route("#/local");
-      await page.locator(`input[name="local-team"][value="${colour}"]`).locator("..").click();
-      await page.locator(`input[name="local-side"][value="${side}"]`).locator("..").click();
+      await choose("local", "team", colour);
+      await choose("local", "side", side);
       await startMatch("local");
       const state = await page.evaluate(() => {
         const api = document.querySelector("#panel-local .match-host").__ptscFootball;
@@ -260,11 +278,16 @@ const server = http.createServer((req, res) => {
     assert.equal(shotsAfter, shotsBefore + 1, "Shoot key must shoot");
     console.log("PASS human shooting key");
 
+    await page.keyboard.press("Escape");
+    assert(await page.locator("#panel-local .start-overlay").isVisible(), "Esc opens the match menu");
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.act), "resume", "The match menu opens on Resume");
     await page.locator("#panel-local .support-button").click();
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.status().support), false);
     assert.equal(await page.locator("#panel-local .support-button").getAttribute("aria-pressed"), "false");
     await page.locator("#panel-local .support-button").click();
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.status().support), true);
+    await page.keyboard.press("Space");
+    assert(await page.locator("#panel-local .start-overlay").isHidden(), "Space resumes from the match menu");
     assert.equal(await page.evaluate(() => document.activeElement.className), "arena", "Support toggle should return keyboard focus to the pitch");
     const slideSlot = await page.evaluate(() => {
       const api = document.querySelector("#panel-local .match-host").__ptscFootball;
@@ -282,7 +305,6 @@ const server = http.createServer((req, res) => {
       for (let i = 0; i < 500 && !api.status().players.some(p => p.slideReady); i++) __stepPlay(api, .05);
       return api.status().players.find(p => p.slideReady)?.slot;
     });
-    await page.locator("#panel-local .controls-box > summary").click();
     const slideButton = page.locator(`#panel-local .slide-action[data-slot="${buttonSlot}"]`);
     await page.waitForFunction(slot => !document.querySelector(`#panel-local .slide-action[data-slot="${slot}"]`).disabled, buttonSlot);
     const beforeButton = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides ?? 0);
@@ -373,12 +395,12 @@ const server = http.createServer((req, res) => {
     console.log("PASS charged low/high passes and shots, special shot stamina, hold pressing, exact probability thresholds, actual yellow/red cards and overhead indicators");
 
     await page.locator("#panel-local .fullscreen").click();
-    await page.waitForFunction(() => document.fullscreenElement || document.querySelector('#panel-local .arena').classList.contains('fullscreen-fallback'));
+    await page.waitForFunction(() => document.fullscreenElement === document.getElementById("game"));
     assert.equal(await page.locator("#panel-local .arena-hints").evaluate(el => getComputedStyle(el).opacity), "0.3");
     assert(!/×2|thần sầu|30%|nhấn hai/i.test(await page.locator("#panel-local .arena-hints").textContent()), "In-pitch guide must only show basic controls");
     await page.screenshot({ path: path.join(artifacts, "fullscreen.png") });
     await page.locator("#panel-local .fullscreen").click();
-    await page.waitForFunction(() => !document.fullscreenElement && !document.querySelector('#panel-local .arena').classList.contains('fullscreen-fallback'));
+    await page.waitForFunction(() => !document.fullscreenElement);
     console.log("PASS fullscreen, 30% opacity basic guide, advanced instructions outside pitch");
 
     await startMatch("local"); await page.keyboard.press("Space");
@@ -447,12 +469,24 @@ const server = http.createServer((req, res) => {
     await page.waitForTimeout(200);
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__state().T), paused);
     console.log("PASS pause freezes match");
-    await page.locator("#panel-local .pause").click();
+    await page.locator('#panel-local [data-act="squad"]').click();
+    assert(await page.locator('#panel-local .sheet[data-sheet="squad"]').isVisible(), "The squad sheet opens from the match menu");
+    assert.equal(await page.locator('#panel-local .sheet[data-sheet="squad"] .player-card').count(), 2);
+    await page.keyboard.press("Escape");
+    assert(await page.locator('#panel-local .sheet[data-sheet="squad"]').isHidden());
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.act), "squad", "Closing a sheet returns to its menu entry");
+    await page.locator('#panel-local [data-act="resume"]').click();
+    assert(await page.locator("#panel-local .start-overlay").isHidden());
+    await page.keyboard.down("Tab");
+    assert(await page.locator('#panel-local .sheet[data-sheet="squad"].is-peek').isVisible(), "Holding Tab shows the rating cards during play");
+    await page.keyboard.up("Tab");
+    assert(await page.locator('#panel-local .sheet[data-sheet="squad"]').isHidden(), "Releasing Tab hides them");
+    console.log("PASS match menu: squad sheet, Esc back to its entry, Tab peek");
     await page.locator("#panel-local").screenshot({ path: path.join(artifacts, "two-player.png") });
 
     await route("#/cpu");
     await page.evaluate(() => { document.querySelector("#panel-cpu .match-host").dataset.seed = "42"; });
-    await page.locator('input[name="cpu-team"][value="B"]').locator("..").click();
+    await choose("cpu", "team", "B");
     await startMatch("cpu");
     const cpu = await page.evaluate(() => {
       const api = document.querySelector("#panel-cpu .match-host").__ptscFootball;
@@ -503,7 +537,7 @@ const server = http.createServer((req, res) => {
     // Key layouts: edit, overwrite, save as new, persist across reloads, refuse two-player clashes.
     await route("#/cpu");
     await page.locator("#panel-cpu .keymap-open").click();
-    await page.waitForFunction(() => location.hash === "#/info/keys");
+    await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/info/keys");
     const editor = page.locator("#screen-info .keymap");
     assert(await editor.isVisible(), "The setup link opens the key layout editor");
     await editor.locator('.keymap-key[data-action="up"]').click();
@@ -517,19 +551,21 @@ const server = http.createServer((req, res) => {
     await editor.locator(".keymap-name").fill("Bộ phím thử");
     await editor.locator(".keymap-save-new").click();
     await page.locator(".nav-back").click();
-    await page.waitForFunction(() => location.hash === "#/cpu");
+    await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu");
     const savedLayouts = await page.evaluate(() => JSON.parse(localStorage.getItem("ptsc-football.key-layouts.v1")));
     const editedA = savedLayouts.layouts.find(layout => layout.id === "default-a"), custom = savedLayouts.layouts.find(layout => layout.name === "Bộ phím thử");
     assert.deepEqual([editedA.keys.up, editedA.keys.special, editedA.keys.right], ["KeyQ", "KeyD", "KeyE"]);
     assert(custom && custom.id.startsWith("custom-"));
-    await page.locator("#panel-cpu .keymap-assign select").selectOption(custom.id);
+    await choose("cpu", "keysA", custom.id);
     await page.reload();
     await page.waitForFunction(() => window.PTSCKeymap);
     assert.equal(await page.evaluate(() => PTSCKeymap.assigned("cpu", "A").name), "Bộ phím thử", "Layout choice survives a reload");
     assert.equal(await page.locator("#panel-cpu .controls .pad-up").textContent(), "Q", "Guides draw the chosen layout");
     await route("#/local");
-    await page.locator('#panel-local .keymap-assign select[data-slot="B"]').selectOption("default-a");
-    assert.equal(await page.locator('#panel-local .keymap-assign select[data-slot="B"]').inputValue(), "default-b", "Two players can never share keys");
+    const rowB = page.locator('#panel-local .opt[data-opt="keysB"]'), seenB = new Set();
+    for (let i = 0; i < 4; i++) { await rowB.locator(".opt-next").click(); seenB.add(await rowB.getAttribute("data-value")); }
+    assert.deepEqual([...seenB], ["default-b"], "Two players can never share keys");
+    assert.equal(await page.locator("#panel-local .opt-desc").getAttribute("data-tone"), "error", "Refused layouts are explained");
     console.log("PASS key layouts: capture, swap, overwrite, save as new, persistence, two-player clash guard");
 
     // Movement: a direction held through Space (start, pause, resume) keeps moving without pressing it again.
@@ -836,6 +872,57 @@ const server = http.createServer((req, res) => {
     await route("#/cpu");
     console.log("PASS info cards for the computer's side and for both sides when watching");
 
+    // In-game navigation: everything reachable from inside the stage, with the cursor where the player expects it.
+    const routeIs = hash => page.waitForFunction(h => document.getElementById("game").dataset.route === h, hash);
+    const activeAct = () => page.evaluate(() => document.activeElement.dataset.act ?? document.activeElement.className);
+    await startMatch("cpu"); await page.keyboard.press("Space"); await page.keyboard.press("Escape");
+    await page.locator('#panel-cpu [data-act="setup"]').click(); await routeIs("#/cpu");
+    assert.match(await page.locator(".nav-back-label").textContent(), /Về trận đấu/);
+    await page.keyboard.press("Escape"); await routeIs("#/cpu/match");
+    assert.equal(await activeAct(), "resume", "Back in a paused match, the cursor is on its menu");
+    await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+    assert(await page.locator('#panel-cpu .sheet[data-sheet="squad"]').isVisible());
+    await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Shift+Tab");
+    assert(await page.evaluate(() => !!document.activeElement.closest(".sheet")), "Tab stays inside an open sheet");
+    await page.keyboard.press("Escape");
+    assert.equal(await activeAct(), "squad");
+    await page.locator("#panel-cpu .arena-tools .pause").click();
+    assert(await page.locator("#panel-cpu .start-overlay").isHidden(), "The pitch's pause button resumes over the menu");
+    assert.equal(await page.evaluate(() => document.activeElement.className), "arena");
+    await page.evaluate(() => {
+      const api = document.querySelector("#panel-cpu .match-host").__ptscFootball;
+      api.__step(3); api.__fastForward(31); api.__step(30); api.__fastForward(61);
+      for (let i = 0; i < 200 && !api.status().ended; i++) __stepPlay(api, .5);
+    });
+    await page.waitForFunction(() => document.querySelector('#panel-cpu .start-overlay[data-kind="end"]:not([hidden])'), null, { timeout: 8000 });
+    assert.equal(await activeAct(), "restart", "The full-time menu opens on a new match, not on a toggle");
+    await route("#/menu");
+    await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowDown");
+    await page.locator('.prompt[data-prompt="enter"]').click(); await routeIs("#/watch");
+    await route("#/menu");
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-watch .arena").tabIndex), -1, "The pitch behind the menu takes no focus");
+    await page.locator(".bar-fullscreen").click();
+    await page.waitForFunction(() => document.fullscreenElement === document.getElementById("game"));
+    assert(await page.evaluate(() => document.activeElement.matches(".main-menu .menu-item")), "Full screen keeps the menu cursor");
+    await page.locator(".bar-fullscreen").click();
+    await page.waitForFunction(() => !document.fullscreenElement);
+    await route("#/info/keys");
+    await page.locator("#screen-info .keymap-name").click(); await page.keyboard.type("x");
+    await page.locator('.info-nav [data-pane="stats"]').hover(); await page.keyboard.type("s");
+    assert.equal(await page.evaluate(() => document.getElementById("game").dataset.route), "#/info/keys", "Pointing at a tab while typing does not steal the keys");
+    assert.match(await page.locator("#screen-info .keymap-name").inputValue(), /xs/, "Typed letters stay in the name field");
+    await page.locator("#screen-info .keymap-edit").selectOption("default-b");
+    assert(await page.locator(".game-dialog").isVisible(), "Unsaved changes are confirmed in the game");
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+    assert(await page.evaluate(() => !!document.activeElement.closest(".game-dialog")), "Tab stays in the dialog");
+    await page.keyboard.press("Escape");
+    assert(await page.locator(".game-dialog").isHidden());
+    await page.locator('#screen-info .keymap-key[data-action="pass"]').click();
+    await page.goBack(); await routeIs("#/menu");
+    assert.equal(await page.locator(".keymap-key.is-listening").count(), 0, "Leaving the editor stops listening for a key");
+    await route("#/cpu");
+    console.log("PASS in-game navigation: back to a paused match, sheets keep Tab, pause button resumes, full-time cursor, prompts, full screen, typing, dialog, key capture");
+
     // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
     const skillShots = await page.evaluate(() => {
       const results = [];
@@ -938,7 +1025,10 @@ const server = http.createServer((req, res) => {
     await page.waitForTimeout(200);
     assert.equal(await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().T), watcherTime);
     await route("#/watch");
-    await page.locator("#new-watch").click();
+    await page.keyboard.press("Space");
+    assert(await page.locator("#panel-watch .start-overlay").isVisible(), "Space opens the watching menu");
+    await page.locator('#panel-watch [data-act="new-watch"]').click();
+    assert(await page.locator("#panel-watch .start-overlay").isHidden());
     assert.equal(await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().score.R), 0);
     await page.screenshot({ path: path.join(artifacts, "watch.png") });
     await page.setViewportSize({ width: 390, height: 844 });
