@@ -4194,6 +4194,9 @@
     const BACKDROP = { x: -240, y: -660, w: 1430, h: 1000, step: 0.08 };
     const backdrop = { box: R("backdrop"), svg: R("backdrop-svg"), groundWorld: R("ground-world"), tv: R("tv"), unit: 0, zoom: 0, transform: "" };
     backdrop.svg.setAttribute("viewBox", `${BACKDROP.x} ${BACKDROP.y} ${BACKDROP.w} ${BACKDROP.h}`);
+    // A widget mounted while hidden has no size yet: place the backdrop again as soon as it gets one.
+    const backdropResize = typeof ResizeObserver === "function" ? new ResizeObserver(() => placeBackdrop(0)) : null;
+    backdropResize?.observe(backdrop.tv);
     function placeBackdrop(shake) {
       const unit = backdrop.tv.clientWidth / VW;
       if (!unit) return;
@@ -4862,7 +4865,7 @@
     if (query.has("still") || (!interactive && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)) {
       api.__step(query.has("still") ? Number(query.get("still")) || 0 : 9);
       api.pause = api.play = () => {};
-      api.destroy = () => { shadow.innerHTML = ""; delete host.__ptscFootball; };
+      api.destroy = () => { backdropResize?.disconnect(); shadow.innerHTML = ""; delete host.__ptscFootball; };
     } else {
       render();
       let last = performance.now(), acc = 0, raf = 0, visible = true, running = true;
@@ -4896,7 +4899,7 @@
       resumeVisible();
       api.pause = () => { running = false; game.halted = true; cancelAnimationFrame(raf); raf = 0; humans.forEach(h => { h.charge = null; h.pressing = false; }); };
       api.play = () => { running = true; game.halted = false; resumeVisible(); };
-      api.destroy = () => { api.pause(); io.disconnect(); document.removeEventListener("visibilitychange", visibilityChanged); shadow.innerHTML = ""; delete host.__ptscFootball; };
+      api.destroy = () => { api.pause(); io.disconnect(); backdropResize?.disconnect(); document.removeEventListener("visibilitychange", visibilityChanged); shadow.innerHTML = ""; delete host.__ptscFootball; };
     }
 
     return api;

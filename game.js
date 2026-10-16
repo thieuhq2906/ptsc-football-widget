@@ -1,7 +1,5 @@
 (() => {
   "use strict";
-  const tabs = [...document.querySelectorAll("[role=tab]")];
-  const panels = [...document.querySelectorAll("[role=tabpanel]")];
   const sessions = new Map();
   // Physical keys held down. Tracked while paused too, so a direction held through Space keeps working.
   const keys = new Set();
@@ -41,12 +39,11 @@
   }
   function renderAdvanced(details, set) {
     const slot = details.dataset.slot;
-    details.innerHTML = `<summary>Người ${slot} · thao tác nâng cao</summary><p>${kbd(set.special)}: skill theo tình huống, tốn 40%, chung một lượt/cầu thủ/trận; penalty dùng trước khi chốt hướng.</p><p>${kbd(set.shoot)} ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ ${kbd(set.pass)}/${kbd(set.shoot)} rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ ${kbd(set.press)} áp sát; bấm ${kbd(set.challenge)} khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p>${kbd(set.shoot)} khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p><p>Penalty/luân lưu: ${kbd(set.left)} trái · ${kbd(set.down)} giữa · ${kbd(set.right)} phải.</p>`;
+    details.innerHTML = `<h3>${details.dataset.title ?? "Người " + slot} · thao tác nâng cao</h3><p>${kbd(set.special)}: skill theo tình huống, tốn 40%, chung một lượt/cầu thủ/trận; penalty dùng trước khi chốt hướng.</p><p>${kbd(set.shoot)} ×2 nhanh khi có bóng: sút thần sầu, cần 23% thể lực, tốn 18%, lấy đà 0,6 giây.</p><p>Giữ ${kbd(set.pass)}/${kbd(set.shoot)} rồi thả: chuyền/sút theo lực nạp; lực mạnh cho bóng cao hơn.</p><p>Giữ ${kbd(set.press)} áp sát; bấm ${kbd(set.challenge)} khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng; thẻ xét theo mức độ.</p><p>${kbd(set.shoot)} khi phòng ngự: xoạc tự bám đối thủ trong 5,5m. Khi trúng: 50% cướp bóng / 50% thẻ đỏ; riêng 30% gây chấn thương.</p><p>Penalty/luân lưu: ${kbd(set.left)} trái · ${kbd(set.down)} giữa · ${kbd(set.right)} phải.</p>`;
   }
-  /** A legend of every skill pictogram, its one-word label and full name. */
-  function renderSkillLegend(panel) {
-    const roles = { FW: "Tiền đạo", MF: "Tiền vệ", DF: "Hậu vệ", GK: "Thủ môn" };
-    // Skills grouped by the situation they are for.
+  const ROLE_GROUPS = { FW: "Tiền đạo", MF: "Tiền vệ", DF: "Hậu vệ", GK: "Thủ môn" };
+  /** Skills grouped by the situation they are for, each with its pictogram, label, name and what it does. */
+  function renderSkillLegend(container) {
     const situations = [
       ["Tấn công", skill => skill.contexts.includes("attack")],
       ["Phòng ngự", skill => skill.contexts.includes("defense") && !skill.auto],
@@ -56,19 +53,50 @@
     ];
     const skillItem = ([kind, skill]) => {
       const context = skill.auto ? "Tự bật khi bị tấn công" : skill.contexts.map(c => gameData.skillContexts[c].label).join(" / ");
-      const badge = skillBadge(kind, skill.icon, `legend-${panel.dataset.mode}-${kind}`);
-      return `<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">${badge}</svg><span><b>${escapeHtml(skill.short)} <em>${escapeHtml(skill.name)}</em></b><small>${escapeHtml(skill.desc ?? "")}</small><small class="skill-when">${escapeHtml(context)}</small></span></div>`;
+      const badge = skillBadge(kind, skill.icon, "legend-" + kind);
+      return '<div class="skill-legend-item"><svg viewBox="0 0 24 24" aria-hidden="true">' + badge + '</svg><span><b>' + escapeHtml(skill.short) + ' <em>' + escapeHtml(skill.name) + '</em></b><small>' + escapeHtml(skill.desc ?? "") + '</small><small class="skill-when">' + escapeHtml(context) + "</small></span></div>";
     };
     const skills = Object.entries(gameData.skills);
-    const legend = document.createElement("details"); legend.className = "advanced skill-legend"; legend.open = true;
-    legend.innerHTML = `<summary>Bảng skill · nhìn icon là hiểu</summary>${situations.map(([title, test]) => `<section class="legend-group"><h3>${title}</h3><div class="skill-legend-grid">${skills.filter(([, skill]) => test(skill)).map(skillItem).join("")}</div></section>`).join("")}`;
-    panel.querySelector(".advanced-grid").after(legend);
-    // Playing styles by zone of the pitch, attacking and defensive side by side.
-    const styleItem = style => `<div class="style-legend-item"><b>${escapeHtml(style.name)} <span>${escapeHtml(style.en)}</span></b><small>${escapeHtml(style.desc)}</small></div>`;
+    container.innerHTML = '<div class="skill-legend"><h2 class="pane-title">Bảng skill</h2><p class="pane-lead">Mỗi cầu thủ một skill trong trận, dùng một lần, tốn 40% thể lực; bấm là luôn kích hoạt. Skill thủ môn tự bật; skill penalty dùng riêng mỗi lượt sút.</p>'
+      + situations.map(([title, test]) => '<section class="legend-group"><h3>' + title + '</h3><div class="skill-legend-grid">' + skills.filter(([, skill]) => test(skill)).map(skillItem).join("") + "</div></section>").join("") + "</div>";
+  }
+  /** Playing styles by zone of the pitch, attacking and defensive side by side. */
+  function renderStyleLegend(container) {
+    const styleItem = style => '<div class="style-legend-item"><b>' + escapeHtml(style.name) + " <span>" + escapeHtml(style.en) + "</span></b><small>" + escapeHtml(style.desc) + "</small></div>";
     const column = (phase, role) => Object.values(gameData.playstyles[phase]).filter(style => style.roles.includes(role)).map(styleItem).join("");
-    const styles = document.createElement("details"); styles.className = "advanced style-legend";
-    styles.innerHTML = `<summary>Bảng lối chơi · mỗi cầu thủ có 1 kiểu tấn công + 1 kiểu phòng ngự</summary>${Object.entries(roles).map(([role, title]) => `<section class="legend-group"><h3>${title}</h3><div class="style-zone"><div><h4>Khi có bóng · tấn công</h4>${column("attack", role)}</div><div><h4>Khi mất bóng · phòng ngự</h4>${column("defense", role)}</div></div></section>`).join("")}`;
-    legend.after(styles);
+    container.innerHTML = '<div class="style-legend"><h2 class="pane-title">Phong cách chơi</h2><p class="pane-lead">Mỗi cầu thủ có 1 kiểu khi đội có bóng và 1 kiểu khi mất bóng. Chúng quyết định cách cầu thủ đứng, chạy và xử lý bóng.</p>'
+      + Object.entries(ROLE_GROUPS).map(([role, title]) => '<section class="legend-group"><h3>' + title + '</h3><div class="style-zone"><div><h4>Khi có bóng · tấn công</h4>' + column("attack", role) + "</div><div><h4>Khi mất bóng · phòng ngự</h4>" + column("defense", role) + "</div></div></section>").join("") + "</div>";
+  }
+  const STAT_EFFECTS = {
+    speed: "Tốc chạy của cầu thủ (AI và khi bạn điều khiển).",
+    dribbling: "Giữ bóng khi bị áp sát; lách qua pha vào bóng; đấu với thủ môn lao ra.",
+    passing: "Đường chuyền sệt ít bị cắt hơn.",
+    longPass: "Ít chuyền dài quá tay ra biên.",
+    finishing: "Khả năng ghi bàn khi sút (chế độ chơi).",
+    heading: "Đánh đầu khi đón bóng tạt; không chiến ở phạt góc.",
+    defending: "Thắng tranh chấp, cướp bóng.",
+    strength: "Tranh chấp vai, không chiến.",
+    stamina: "Tốc độ mất thể lực; quyết định khi nào bị thay.",
+    goalkeeping: "Cứu thua, ôm bóng khi lao ra."
+  };
+  function renderStatsGuide(container) {
+    const rules = gameData.stats;
+    const rows = rules.keys.map(k => "<tr><td><b>" + rules.short[k] + "</b></td><td>" + rules.labels[k] + "</td><td>" + STAT_EFFECTS[k] + "</td></tr>").join("");
+    const weights = Object.entries(rules.weights).map(([role, w]) => "<li><b>" + ROLE_GROUPS[role] + ":</b> " + Object.entries(w).map(([k, v]) => rules.labels[k] + " " + Math.round(v * 100) + "%").join(", ") + "</li>").join("");
+    const body = gameData.body.height;
+    container.innerHTML = '<h2 class="pane-title">Chỉ số &amp; hình thể</h2><p class="pane-lead">10 chỉ số thang 35–95, sinh từ vị trí sở trường, hai lối chơi và một chút ngẫu nhiên. Ô xanh ≥80, vàng 65–79, đỏ dưới 65.</p>'
+      + '<div class="info-table-wrap"><table class="info-table"><thead><tr><th>Mã</th><th>Chỉ số</th><th>Tác động trong game</th></tr></thead><tbody>' + rows + "</tbody></table></div>"
+      + '<h3>OVR theo vị trí đang đá</h3><ul class="info-list">' + weights + "</ul>"
+      + '<h3>Hình thể</h3><ul class="info-list"><li><b>Chiều cao:</b> thủ môn ' + body.GK.join("–") + " cm, hậu vệ " + body.DF.join("–") + ", tiền vệ " + body.MF.join("–") + ", tiền đạo " + body.FW.join("–") + "; lối chơi cộng/trừ thêm.</li>"
+      + "<li><b>Cao, tay dài:</b> thắng không chiến, đánh đầu nhiều hơn; thủ môn ôm bóng và cứu thua rộng hơn.</li><li><b>Thấp (trọng tâm thấp):</b> khó bị cướp bóng hơn.</li><li><b>Nặng:</b> tranh chấp khỏe hơn, chậm hơn một chút.</li><li><b>Chân dài:</b> tầm tranh bóng và xoạc xa hơn.</li></ul>"
+      + '<p class="pane-lead">Đội hình đầy đủ kèm chỉ số từng người hiện dưới sân khi đang đá hoặc đang xem.</p>';
+  }
+  function renderRulesGuide(container) {
+    const rows = Object.values(gameData.difficulty).map(d => "<tr><td><b>" + d.name + "</b></td><td>" + (d.stats > 0 ? "+" : "") + d.stats + "</td><td>×" + d.tackle + "</td><td>×" + d.intercept + "</td><td>×" + d.finishing + "</td><td>" + (d.keeper > 0 ? "+" : "") + Math.round(d.keeper * 100) + "</td><td>×" + d.think + "</td></tr>").join("");
+    container.innerHTML = '<h2 class="pane-title">Độ khó &amp; luật</h2><h3>Độ khó máy</h3><p class="pane-lead">Chỉ áp dụng cho đội máy khi đấu với máy.</p>'
+      + '<div class="info-table-wrap"><table class="info-table"><thead><tr><th>Mức</th><th>Chỉ số</th><th>Tranh bóng</th><th>Đọc chuyền</th><th>Dứt điểm</th><th>Thủ môn (điểm %)</th><th>Thời gian ra quyết định</th></tr></thead><tbody>' + rows + "</tbody></table></div>"
+      + '<h3>Penalty</h3><ul class="info-list"><li>Sút khác hướng thủ môn đoán luôn vào.</li><li>Đoán đúng: thủ môn có <b>Bắt pen</b> bắt 100% (80% nếu người sút bật <b>Sút pen</b>); không có Bắt pen thì bắt 80% (20% nếu người sút bật Sút pen).</li><li>Chỉ khoảng 30% cầu thủ sân có Sút pen, 50% thủ môn có Bắt pen.</li></ul>'
+      + '<h3>Trận đấu</h3><ul class="info-list"><li>Thời lượng 2–10 phút bóng lăn, hai hiệp đổi sân; hiệp phụ và luân lưu tuỳ chọn.</li><li>Phạt góc chỉ khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra.</li><li>Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc.</li><li>Sau bàn thắng, trọng tài chỉ thổi khi hai đội đã về hết nửa sân nhà.</li><li>Chấn thương: xe cấp cứu đưa đi, không vào lại trận đó.</li></ul>';
   }
   /** Both squads with every rating; redrawn only when someone comes on or off. */
   function renderRoster(session) {
@@ -84,6 +112,20 @@
     session.panel.querySelector(".roster").hidden = false;
   }
   /** Redraws every key hint in a panel from the layouts its players use. */
+  function renderControlsGuide() {
+    const pane = document.querySelector('#screen-info .info-pane[data-pane="controls"]');
+    if (!pane) return;
+    refreshControls("cpu"); refreshControls("local");
+    const cpu = bindingsOf("cpu"), local = bindingsOf("local");
+    if (!pane.dataset.built) {
+      pane.dataset.built = "1";
+      pane.innerHTML = '<h2 class="pane-title">Điều khiển</h2><p class="pane-lead"><kbd>Space</kbd> bắt đầu, tạm dừng, tiếp tục · <kbd>Esc</kbd> tạm dừng, thoát toàn màn hình, quay lại màn trước · đổi phím ở mục Layout phím.</p>'
+        + '<div class="guide-block"><h3>Đấu với máy · Bạn</h3><div class="controls"><article><div class="pad-help" data-slot="A" data-mode="cpu"></div></article></div><div class="advanced" data-slot="A" data-mode="cpu" data-title="Bạn"></div></div>'
+        + '<div class="guide-block"><h3>Hai người</h3><div class="controls"><article><div class="pad-help" data-slot="A" data-mode="local"></div></article><article><div class="pad-help" data-slot="B" data-mode="local"></div></article></div><div class="advanced-grid"><div class="advanced" data-slot="A" data-mode="local"></div><div class="advanced" data-slot="B" data-mode="local"></div></div></div>';
+    }
+    for (const guide of pane.querySelectorAll(".pad-help")) renderGuide(guide, (guide.dataset.mode === "cpu" ? cpu : local)[guide.dataset.slot]);
+    for (const notes of pane.querySelectorAll(".advanced")) renderAdvanced(notes, (notes.dataset.mode === "cpu" ? cpu : local)[notes.dataset.slot]);
+  }
   function renderPanelKeys(panel) {
     const mode = panel.dataset.mode;
     refreshControls(mode);
@@ -161,7 +203,8 @@
     if (!paused) session.awaitingStart = false;
     const overlay = session.panel.querySelector(".start-overlay");
     overlay.hidden = !paused;
-    overlay.querySelector("span").innerHTML = session.awaitingStart ? 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu' : 'Nhấn <kbd>Space</kbd> để tiếp tục trận đấu';
+    overlay.querySelector(".pause-text").innerHTML = session.awaitingStart ? 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu' : 'Nhấn <kbd>Space</kbd> để tiếp tục trận đấu';
+    overlay.querySelector('[data-act="resume"]').textContent = session.awaitingStart ? "Bắt đầu" : "Tiếp tục";
     // Kicks and switch repeats stop, but directions still held carry on as soon as play resumes.
     stopSwitchRepeats(); cancelKicks();
     if (paused) session.api.pause(); else session.api.play();
@@ -169,30 +212,74 @@
     session.panel.querySelector(".pause").textContent = session.awaitingStart ? "Bắt đầu" : paused ? "Tiếp tục" : "Tạm dừng";
     updateHud(session);
   }
-  function selectTab(mode) {
-    releaseKeys();
-    watcher?.pause();
-    for (const session of sessions.values()) setPaused(session, true);
-    activeMode = mode;
-    tabs.forEach(tab => {
-      const selected = tab.dataset.tab === mode;
-      tab.setAttribute("aria-selected", String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-    });
-    panels.forEach(panel => { panel.hidden = panel.id !== "panel-" + mode; });
-    if (mode === "watch" && !document.hidden) watcher?.play();
+  /* ------------------------------ screens ------------------------------ */
+  // One game, several screens: the menu (over a live match), watching, match setup and play for each mode, and the
+  // game info screen with its sections. The URL hash holds the screen so the browser's back button works.
+  const SCREENS = { menu: "panel-watch", watch: "panel-watch", cpu: "panel-cpu", local: "panel-local", info: "screen-info" };
+  const TITLES = { menu: "Menu chính", watch: "Chỉ xem", cpu: "Đấu với máy", local: "Hai người", info: "Thông tin game" };
+  const PANES = { skills: "Bảng skill", stats: "Chỉ số & hình thể", styles: "Phong cách chơi", keys: "Layout phím", controls: "Điều khiển", rules: "Độ khó & luật" };
+  let route = { name: "", sub: null }, infoReturn = null;
+  const pathOf = r => r.name + (r.sub ? "/" + r.sub : "");
+  function parseRoute() {
+    const [name, sub] = location.hash.replace(/^#\/?/, "").split("/");
+    return { name: name in SCREENS ? name : "menu", sub: sub || null };
   }
-  tabs.forEach((tab, index) => {
-    tab.addEventListener("click", () => selectTab(tab.dataset.tab));
-    tab.addEventListener("keydown", event => {
-      let next = index;
-      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
-      else if (event.key === "ArrowLeft") next = (index + tabs.length - 1) % tabs.length;
-      else if (event.key === "Home") next = 0;
-      else if (event.key === "End") next = tabs.length - 1;
-      else return;
-      event.preventDefault(); selectTab(tabs[next].dataset.tab); tabs[next].focus();
-    });
+  function go(path) {
+    const next = "#/" + path;
+    if (location.hash === next) showRoute(); else location.hash = next;
+  }
+  function backTarget() {
+    if (route.name === "watch") return "menu";
+    if (route.name === "cpu" || route.name === "local") return route.sub === "match" ? route.name : "menu";
+    if (route.name === "info") return infoReturn ? pathOf(infoReturn) : "menu";
+    return null;
+  }
+  function showRoute() {
+    const next = parseRoute();
+    if (next.name === "info" && !(next.sub in PANES)) next.sub = "skills";
+    if ((next.name === "cpu" || next.name === "local") && next.sub === "match" && !sessions.has(next.name)) next.sub = null;
+    if (next.name === "info" && route.name !== "info") infoReturn = route.name && route.name !== "menu" ? { ...route } : null;
+    const screenChanged = route.name !== next.name || route.sub !== next.sub;
+    route = next;
+    releaseKeys();
+    for (const session of sessions.values()) setPaused(session, true);
+    activeMode = next.name === "menu" || next.name === "watch" ? "watch" : next.name;
+    document.body.dataset.screen = next.name;
+    for (const screen of document.querySelectorAll(".screen")) screen.hidden = screen.id !== SCREENS[next.name];
+    const watchScreen = document.getElementById("panel-watch");
+    watchScreen.classList.toggle("is-attract", next.name === "menu");
+    watchScreen.querySelector(".main-menu").hidden = next.name !== "menu";
+    if (activeMode === "watch" && !document.hidden) watcher?.play(); else watcher?.pause();
+    if (next.name === "cpu" || next.name === "local") {
+      const panel = document.getElementById(SCREENS[next.name]), inMatch = next.sub === "match";
+      panel.querySelector(".setup").hidden = inMatch;
+      panel.querySelector(".match-screen").hidden = !inMatch;
+      setupSummary(panel);
+      if (inMatch) panel.querySelector(".arena").focus({ preventScroll: true });
+    }
+    if (next.name === "info") showPane(next.sub);
+    const back = backTarget(), backButton = document.querySelector(".nav-back");
+    backButton.hidden = !back;
+    backButton.querySelector(".nav-back-label").textContent = back === "menu" ? "Menu chính" : back ? (TITLES[back.split("/")[0]] ?? "Quay lại") : "";
+    const detail = next.name === "info" ? PANES[next.sub] : next.name === "cpu" || next.name === "local" ? (next.sub === "match" ? "Trận đấu" : "Cài đặt trận") : "";
+    document.querySelector(".crumbs").textContent = TITLES[next.name] + (detail ? " · " + detail : "");
+    document.title = (next.name === "menu" ? "" : TITLES[next.name] + " · ") + "PTSC Cup 6v6";
+    if (screenChanged && next.name !== "info") window.scrollTo({ top: 0 });
+  }
+  function showPane(name) {
+    for (const tab of document.querySelectorAll(".info-nav [data-pane]")) { const on = tab.dataset.pane === name; tab.setAttribute("aria-selected", String(on)); tab.classList.toggle("is-current", on); }
+    for (const pane of document.querySelectorAll(".info-pane")) pane.hidden = pane.dataset.pane !== name;
+  }
+  document.querySelector(".nav-back").addEventListener("click", () => { const back = backTarget(); if (back) go(back); });
+  window.addEventListener("hashchange", showRoute);
+  // Esc goes back one screen when no match has the keyboard.
+  window.addEventListener("keydown", event => {
+    if (event.code !== "Escape" || capture || document.fullscreenElement || document.querySelector(".fullscreen-fallback")) return;
+    const session = sessions.get(activeMode);
+    if (session && session.arena.contains(document.activeElement) && route.sub === "match") return;
+    if (event.target.matches?.("input, select, textarea")) return;
+    const back = backTarget();
+    if (back) { event.preventDefault(); go(back); }
   });
   document.getElementById("new-watch").addEventListener("click", () => {
     watcher?.destroy();
@@ -229,14 +316,15 @@
     const teamA = panel.querySelector('input[name$="-team"]:checked').value;
     const teamB = opposite(teamA);
     const sideB = panel.querySelector('input[name="local-side"]:checked')?.value ?? "right";
-    return { mode: panel.dataset.mode, duration: Number(panel.querySelector(".duration").value), extraTime: panel.querySelector(".extra-time").checked, penalties: panel.querySelector(".penalties").checked,
-      support: panel.querySelector(".support").checked, difficulty: panel.querySelector(".difficulty")?.value ?? "normal", teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
+    return { mode: panel.dataset.mode, duration: Number(panel.querySelector(".duration input:checked")?.value ?? 2), extraTime: panel.querySelector(".extra-time").checked, penalties: panel.querySelector(".penalties").checked,
+      support: panel.querySelector(".support").checked, difficulty: panel.querySelector('.level-choices input:checked')?.value ?? "normal", teamA, leftTeam: panel.dataset.mode === "local" ? sideB === "left" ? teamB : teamA : "R" };
   }
   function setupSummary(panel) {
     const options = optionsFor(panel), sideA = options.leftTeam === options.teamA ? "trái" : "phải";
     const description = options.mode === "cpu" ? `Bạn: đội ${names[options.teamA]} · Máy: đội ${names[opposite(options.teamA)]} (${gameData.difficulty[options.difficulty]?.name ?? "Thường"})`
       : `A: đội ${names[options.teamA]}, sân ${sideA} · B: đội ${names[opposite(options.teamA)]}, sân ${sideA === "trái" ? "phải" : "trái"}`;
-    panel.querySelector(".setup-summary").textContent = description + (sessions.has(options.mode) ? " · Áp dụng khi bắt đầu trận mới." : "");
+    panel.querySelector(".setup-summary").textContent = description + " · " + options.duration + " phút" + (sessions.has(options.mode) ? " · Áp dụng khi vào trận mới." : "");
+    panel.querySelector(".start").innerHTML = (sessions.has(options.mode) ? "Trận mới với cài đặt này" : "Vào sân") + ' <span aria-hidden="true">→</span>';
   }
   const ROLE_NAMES = { GK: "Thủ môn", DF: "Hậu vệ", MF: "Tiền vệ", FW: "Tiền đạo" };
   const levelOf = v => v >= 80 ? "high" : v >= 65 ? "mid" : "low";
@@ -429,42 +517,60 @@
     document.addEventListener("fullscreenchange", () => {
       syncFullscreenButton();
       cancelKicks();
-      if (arena.closest('[role="tabpanel"]').id === "panel-" + activeMode) arena.focus({ preventScroll: true });
+      if (arena.closest(".screen")?.id === "panel-" + activeMode) arena.focus({ preventScroll: true });
       applyKeys();
     });
   }
 
   /* ------------------------------ key layouts ------------------------------ */
   let capture = null;
-  function setupKeymap(panel) {
+  const keymapRenders = new Set();
+  const renderKeymaps = () => { for (const render of keymapRenders) render(); };
+  /** The layout pickers in a match setup ("Bố trí phím" card). */
+  function setupKeymapAssign(panel) {
     const mode = panel.dataset.mode, slots = mode === "local" ? ["A", "B"] : ["A"];
-    const form = panel.querySelector("form");
-    const assign = document.createElement("fieldset"); assign.className = "keymap-assign";
-    assign.innerHTML = `<legend>Bố trí phím</legend><div class="keymap-assign-row">${slots.map(slot => `<label>${mode === "cpu" ? "Bạn" : "Người " + slot} <select data-slot="${slot}" aria-label="Bố trí phím người ${slot}"></select></label>`).join("")}<button type="button" class="link-button keymap-open">Tùy chỉnh phím…</button></div>`;
-    form.insertBefore(assign, form.querySelector(".setup-summary"));
-    const editor = document.createElement("details"); editor.className = "keymap";
-    editor.innerHTML = `<summary>Tùy chỉnh phím · lưu trong trình duyệt này</summary>
-      <div class="keymap-head"><label>Layout đang sửa <select class="keymap-edit" aria-label="Chọn layout để sửa"></select></label><label>Tên <input class="keymap-name" maxlength="40" autocomplete="off"></label></div>
-      <p class="keymap-help">Bấm vào ô phím rồi nhấn phím mới. <kbd>Esc</kbd> để hủy. Không dùng được Space, Esc, Tab, Ctrl/Alt và F1–F12. Trùng phím trong layout sẽ được hoán đổi.</p>
-      <div class="keymap-grid">${keymap.ACTIONS.map(action => `<div class="keymap-row"><span>${keymap.LABELS[action]}</span><button type="button" class="keymap-key" data-action="${action}"></button></div>`).join("")}</div>
-      <p class="keymap-status" role="status"></p>
-      <div class="keymap-actions"><button type="button" class="secondary keymap-save">Ghi đè layout</button><button type="button" class="secondary keymap-save-new">Lưu thành layout mới</button>${slots.map(slot => `<button type="button" class="secondary keymap-use" data-slot="${slot}">Dùng cho ${mode === "cpu" ? "bạn" : "người " + slot}</button>`).join("")}<button type="button" class="secondary keymap-restore">Khôi phục gốc</button><button type="button" class="secondary keymap-delete">Xóa layout</button></div>`;
-    panel.querySelector(".controls").after(editor);
+    const card = document.createElement("fieldset"); card.className = "setup-card keymap-assign";
+    card.innerHTML = '<legend>Bố trí phím</legend><div class="keymap-assign-row">' + slots.map(slot => "<label>" + (mode === "cpu" ? "Bạn" : "Người " + slot) + ' <select data-slot="' + slot + '" aria-label="Bố trí phím người ' + slot + '"></select></label>').join("") + '</div><p class="card-note keymap-assign-note" role="status"></p><a class="link-button keymap-open" href="#/info/keys">Tùy chỉnh phím…</a>';
+    panel.querySelector(".setup-grid").append(card);
+    const note = card.querySelector(".keymap-assign-note");
+    const fill = () => {
+      for (const select of card.querySelectorAll("select")) {
+        select.replaceChildren(...keymap.list().map(layout => new Option(layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : ""), layout.id)));
+        select.value = keymap.assigned(mode, select.dataset.slot).id;
+      }
+    };
+    for (const select of card.querySelectorAll("select")) select.addEventListener("change", () => {
+      const result = keymap.assign(mode, select.dataset.slot, select.value);
+      if (!result.ok) {
+        select.value = keymap.assigned(mode, select.dataset.slot).id;
+        note.textContent = "Không dùng được: trùng phím " + result.clash.map(label).join(", ") + " với người còn lại. Sửa một layout ở mục Layout phím.";
+        note.dataset.tone = "error";
+      } else { note.textContent = (mode === "cpu" ? "Bạn" : "Người " + select.dataset.slot) + " dùng “" + keymap.get(select.value).name + "”."; note.dataset.tone = ""; }
+    });
+    keymapRenders.add(fill); fill();
+  }
+  /** The key-layout editor (Game info · Layout phím): pick a layout, rebind, overwrite or save as new, assign. */
+  function setupKeymapEditor(container) {
+    const targets = [["cpu", "A", "Đấu máy · Bạn"], ["local", "A", "Hai người · A"], ["local", "B", "Hai người · B"]];
+    const editor = document.createElement("div"); editor.className = "keymap";
+    editor.innerHTML = '<h2 class="pane-title">Layout phím</h2><p class="pane-lead">Lưu trong trình duyệt này. Chọn layout, bấm vào ô phím rồi nhấn phím mới (<kbd>Esc</kbd> để hủy). Không dùng được Space, Esc, Tab, Ctrl/Alt và F1–F12; phím trùng trong layout sẽ được hoán đổi.</p>'
+      + '<div class="keymap-head"><label>Layout đang sửa <select class="keymap-edit" aria-label="Chọn layout để sửa"></select></label><label>Tên <input class="keymap-name" maxlength="40" autocomplete="off"></label></div>'
+      + '<div class="keymap-grid">' + keymap.ACTIONS.map(action => '<div class="keymap-row"><span>' + keymap.LABELS[action] + '</span><button type="button" class="keymap-key" data-action="' + action + '"></button></div>').join("") + "</div>"
+      + '<p class="keymap-status" role="status"></p>'
+      + '<div class="keymap-actions"><button type="button" class="secondary keymap-save">Ghi đè layout</button><button type="button" class="secondary keymap-save-new">Lưu thành layout mới</button><button type="button" class="secondary keymap-restore">Khôi phục gốc</button><button type="button" class="secondary keymap-delete">Xóa layout</button></div>'
+      + '<h3>Dùng layout đang sửa cho</h3><div class="keymap-actions keymap-targets">' + targets.map(([mode, slot, name]) => '<button type="button" class="secondary keymap-use" data-mode="' + mode + '" data-slot="' + slot + '">' + name + "</button>").join("") + "</div>";
+    container.append(editor);
     const editSelect = editor.querySelector(".keymap-edit"), nameInput = editor.querySelector(".keymap-name"), status = editor.querySelector(".keymap-status");
-    let editingId = keymap.assigned(mode, "A").id, draft = null, dirty = false;
+    let editingId = keymap.assigned("cpu", "A").id, draft = null, dirty = false;
     const say = (message, tone = "") => { status.textContent = message; status.dataset.tone = tone; };
     function loadDraft(id) {
-      const layout = keymap.get(id) ?? keymap.assigned(mode, "A");
+      const layout = keymap.get(id) ?? keymap.assigned("cpu", "A");
       editingId = layout.id; draft = { ...layout.keys }; dirty = false; nameInput.value = layout.name;
     }
-    function fillSelect(select, value) {
-      const options = keymap.list().map(layout => { const option = new Option(layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : ""), layout.id); return option; });
-      select.replaceChildren(...options); select.value = value;
-    }
     function render() {
-      for (const select of assign.querySelectorAll("select")) fillSelect(select, keymap.assigned(mode, select.dataset.slot).id);
-      if (!keymap.get(editingId)) loadDraft(keymap.assigned(mode, "A").id);
-      fillSelect(editSelect, editingId);
+      if (!keymap.get(editingId)) loadDraft(keymap.assigned("cpu", "A").id);
+      editSelect.replaceChildren(...keymap.list().map(layout => new Option(layout.name + (layout.builtIn && !keymap.isOriginal(layout.id) ? " (đã sửa)" : ""), layout.id)));
+      editSelect.value = editingId;
       for (const button of editor.querySelectorAll(".keymap-key")) {
         const listening = capture?.button === button;
         button.classList.toggle("is-listening", listening);
@@ -475,19 +581,10 @@
       editor.querySelector(".keymap-restore").hidden = !layout.builtIn;
       editor.querySelector(".keymap-restore").disabled = keymap.isOriginal(editingId) && !dirty;
       editor.querySelector(".keymap-save").textContent = dirty ? "Ghi đè layout *" : "Ghi đè layout";
-      for (const use of editor.querySelectorAll(".keymap-use")) use.classList.toggle("is-current", keymap.assigned(mode, use.dataset.slot).id === editingId);
+      for (const use of editor.querySelectorAll(".keymap-use")) use.classList.toggle("is-current", keymap.assigned(use.dataset.mode, use.dataset.slot).id === editingId);
     }
     loadDraft(editingId);
-    panel.keymapRender = render;
-    assign.querySelector(".keymap-open").addEventListener("click", () => { editor.open = true; editor.scrollIntoView({ behavior: "smooth", block: "start" }); });
-    for (const select of assign.querySelectorAll("select")) select.addEventListener("change", () => {
-      const result = keymap.assign(mode, select.dataset.slot, select.value);
-      if (!result.ok) {
-        select.value = keymap.assigned(mode, select.dataset.slot).id;
-        say(`Không dùng được: trùng phím ${result.clash.map(label).join(", ")} với người còn lại. Hãy sửa một layout trước.`, "error");
-        editor.open = true;
-      } else say(`Người ${select.dataset.slot} dùng “${keymap.get(select.value).name}”.${result.stored ? "" : " Trình duyệt không cho lưu; chỉ áp dụng trong lần mở này."}`);
-    });
+    keymapRenders.add(render);
     editSelect.addEventListener("change", () => {
       if (dirty && !confirm("Bỏ các thay đổi chưa lưu của layout đang sửa?")) { editSelect.value = editingId; return; }
       loadDraft(editSelect.value); say(""); render();
@@ -500,40 +597,40 @@
         draft[action] = code;
         if (other) draft[other] = previous;
         dirty = true;
-        say(other ? `Đã hoán đổi: ${keymap.LABELS[action]} = ${label(code)}, ${keymap.LABELS[other]} = ${label(previous)}.` : `${keymap.LABELS[action]} = ${label(code)}. Nhớ bấm “Ghi đè layout” để lưu.`);
+        say(other ? "Đã hoán đổi: " + keymap.LABELS[action] + " = " + label(code) + ", " + keymap.LABELS[other] + " = " + label(previous) + "." : keymap.LABELS[action] + " = " + label(code) + ". Nhớ bấm “Ghi đè layout” để lưu.");
       } };
       render();
     });
     function store(id) {
       const result = keymap.save(id, nameInput.value, draft);
       if (!result.ok) {
-        say(result.error === "clash" ? `Chưa lưu: layout này đang dùng cho chế độ hai người và sẽ trùng phím ${result.clash.map(label).join(", ")} với người còn lại.` : "Chưa lưu: layout không hợp lệ.", "error");
+        say(result.error === "clash" ? "Chưa lưu: layout này đang dùng cho chế độ hai người và sẽ trùng phím " + result.clash.map(label).join(", ") + " với người còn lại." : "Chưa lưu: layout không hợp lệ.", "error");
         return;
       }
       editingId = result.id; dirty = false; render();
-      say(`${id ? "Đã ghi đè" : "Đã lưu mới"} “${keymap.get(result.id).name}”.${result.stored ? " Lưu trong trình duyệt này." : " Trình duyệt không cho lưu; chỉ áp dụng trong lần mở này."}`, "ok");
+      say((id ? "Đã ghi đè" : "Đã lưu mới") + " “" + keymap.get(result.id).name + "”." + (result.stored ? " Lưu trong trình duyệt này." : " Trình duyệt không cho lưu; chỉ áp dụng trong lần mở này."), "ok");
     }
     editor.querySelector(".keymap-save").addEventListener("click", () => store(editingId));
     editor.querySelector(".keymap-save-new").addEventListener("click", () => {
       const base = nameInput.value.trim() || "Layout của tôi";
-      if (keymap.list().some(layout => layout.name === base)) nameInput.value = `${base} (${keymap.list().length})`;
+      if (keymap.list().some(layout => layout.name === base)) nameInput.value = base + " (" + keymap.list().length + ")";
       store(null);
     });
     for (const use of editor.querySelectorAll(".keymap-use")) use.addEventListener("click", () => {
       if (dirty) store(editingId);
       if (dirty) return;
-      const result = keymap.assign(mode, use.dataset.slot, editingId);
-      say(result.ok ? `Người ${use.dataset.slot} dùng “${keymap.get(editingId).name}”.` : `Không dùng được: trùng phím ${result.clash.map(label).join(", ")} với người còn lại.`, result.ok ? "ok" : "error");
+      const result = keymap.assign(use.dataset.mode, use.dataset.slot, editingId);
+      say(result.ok ? use.textContent + " dùng “" + keymap.get(editingId).name + "”." : "Không dùng được: trùng phím " + result.clash.map(label).join(", ") + " với người còn lại.", result.ok ? "ok" : "error");
     });
     editor.querySelector(".keymap-restore").addEventListener("click", () => {
       const result = keymap.restore(editingId);
       if (result.ok) { loadDraft(editingId); say("Đã khôi phục phím gốc.", "ok"); render(); }
-      else say(`Chưa khôi phục: trùng phím ${result.clash?.map(label).join(", ")} với người còn lại.`, "error");
+      else say("Chưa khôi phục: trùng phím " + (result.clash?.map(label).join(", ") ?? "") + " với người còn lại.", "error");
     });
     editor.querySelector(".keymap-delete").addEventListener("click", () => {
       const layout = keymap.get(editingId);
-      if (!layout || layout.builtIn || !confirm(`Xóa layout “${layout.name}”?`)) return;
-      keymap.remove(editingId); loadDraft(keymap.assigned(mode, "A").id); say(`Đã xóa “${layout.name}”.`, "ok"); render();
+      if (!layout || layout.builtIn || !confirm("Xóa layout “" + layout.name + "”?")) return;
+      keymap.remove(editingId); loadDraft(keymap.assigned("cpu", "A").id); say("Đã xóa “" + layout.name + "”.", "ok"); render();
     });
     render();
   }
@@ -542,39 +639,53 @@
     if (!capture) return;
     event.preventDefault(); event.stopImmediatePropagation();
     const pending = capture;
-    if (event.code === "Escape") { capture = null; for (const panel of document.querySelectorAll(".game-panel")) panel.keymapRender?.(); return; }
+    if (event.code === "Escape") { capture = null; renderKeymaps(); return; }
     if (keymap.reserved(event.code)) {
       pending.button.closest(".keymap").querySelector(".keymap-status").textContent = `Phím ${event.key === " " ? "Space" : event.code || event.key} được dành cho trình duyệt/tạm dừng, hãy chọn phím khác.`;
       return;
     }
     capture = null; pending.assign(event.code);
-    for (const panel of document.querySelectorAll(".game-panel")) panel.keymapRender?.();
+    renderKeymaps();
     pending.button.focus();
   }, true);
   document.addEventListener("pointerdown", event => {
-    if (capture && !event.target.closest(".keymap-key")) { capture = null; for (const panel of document.querySelectorAll(".game-panel")) panel.keymapRender?.(); }
+    if (capture && !event.target.closest(".keymap-key")) { capture = null; renderKeymaps(); }
   });
   keymap.onChange(() => {
     releaseKeys();
-    for (const panel of document.querySelectorAll(".game-panel")) { renderPanelKeys(panel); panel.keymapRender?.(); }
+    for (const panel of document.querySelectorAll(".game-panel")) renderPanelKeys(panel);
+    renderKeymaps(); renderControlsGuide();
   });
   window.addEventListener("storage", event => { if (event.key === null || event.key?.startsWith("ptsc-football.key-layouts")) keymap.reload(); });
 
   for (const panel of document.querySelectorAll(".game-panel")) {
     const form = panel.querySelector("form");
     const arena = panel.querySelector(".arena");
-    const matchOptions = document.createElement("fieldset"); matchOptions.className = "match-options";
-    const difficulty = panel.dataset.mode === "cpu" ? '<label>Độ khó máy <select class="difficulty" aria-label="Độ khó của máy">' + Object.entries(gameData.difficulty).map(([id, d]) => '<option value="' + id + '"' + (id === "normal" ? " selected" : "") + ">" + d.name + "</option>").join("") + "</select></label>" : "";
-    matchOptions.innerHTML = '<legend>Thời gian &amp; phân thắng thua</legend>' + difficulty + '<label>Thời lượng <select class="duration" aria-label="Thời lượng trận đấu"><option value="2">2 phút</option><option value="4">4 phút</option><option value="6">6 phút</option><option value="10">10 phút</option></select></label><label><input type="checkbox" class="extra-time">Hiệp phụ nếu hòa</label><label><input type="checkbox" class="penalties">Luân lưu nếu vẫn hòa</label>';
-    form.insertBefore(matchOptions, form.querySelector(".setup-summary"));
-    const levelSelect = matchOptions.querySelector(".difficulty");
-    if (levelSelect) {
-      try { const saved = localStorage.getItem("ptsc-football.difficulty"); if (saved && saved in gameData.difficulty) levelSelect.value = saved; } catch {}
-      levelSelect.addEventListener("change", () => { try { localStorage.setItem("ptsc-football.difficulty", levelSelect.value); } catch {} });
+    const mode = panel.dataset.mode;
+    const matchOptions = document.createElement("fieldset"); matchOptions.className = "setup-card match-options";
+    matchOptions.innerHTML = '<legend>Thời gian &amp; luật</legend><div class="choices duration" role="radiogroup" aria-label="Thời lượng trận đấu">' + [2, 4, 6, 10].map(min => '<label class="seg"><input type="radio" name="' + mode + '-duration" value="' + min + '"' + (min === 2 ? " checked" : "") + "><span>" + min + " phút</span></label>").join("") + '</div><label class="check"><input type="checkbox" class="extra-time"><span>Hiệp phụ nếu hòa</span></label><label class="check"><input type="checkbox" class="penalties"><span>Luân lưu nếu vẫn hòa</span></label>';
+    panel.querySelector(".setup-grid").insertBefore(matchOptions, panel.querySelector(".support-card"));
+    const levels = panel.querySelector(".level-choices");
+    if (levels) {
+      let saved = "normal";
+      try { const stored = localStorage.getItem("ptsc-football.difficulty"); if (stored && Object.hasOwn(gameData.difficulty, stored)) saved = stored; } catch {}
+      const levelNote = d => (d.stats > 0 ? "+" : "") + d.stats + " chỉ số đội máy · tranh bóng ×" + d.tackle + " · dứt điểm ×" + d.finishing;
+      levels.innerHTML = Object.entries(gameData.difficulty).map(([id, d]) => '<label class="seg level"><input type="radio" name="cpu-level" value="' + id + '"' + (id === saved ? " checked" : "") + "><span>" + d.name + "</span></label>").join("");
+      const note = panel.querySelector(".level-note"), showNote = () => { const d = gameData.difficulty[levels.querySelector("input:checked").value]; note.textContent = levelNote(d); };
+      levels.addEventListener("change", () => { try { localStorage.setItem("ptsc-football.difficulty", levels.querySelector("input:checked").value); } catch {} showNote(); });
+      showNote();
     }
     const overlay = document.createElement("div"); overlay.className = "start-overlay"; overlay.hidden = true;
-    overlay.innerHTML = '<span>Nhấn <kbd>Space</kbd> để bắt đầu trận đấu</span>';
+    overlay.innerHTML = '<div class="pause-panel"><span class="pause-text">Nhấn <kbd>Space</kbd> để bắt đầu trận đấu</span><div class="pause-actions"><button type="button" class="primary" data-act="resume">Bắt đầu</button><button type="button" class="secondary" data-act="setup">Cài đặt trận</button><button type="button" class="secondary" data-act="info">Thông tin game</button><button type="button" class="secondary" data-act="menu">Menu chính</button></div></div>';
     arena.querySelector(".arena-surface").append(overlay);
+    overlay.addEventListener("click", event => {
+      const act = event.target.closest("[data-act]")?.dataset.act, session = sessions.get(mode);
+      if (!act) return;
+      if (act === "resume" && session && !session.api.status().ended) { setPaused(session, false); arena.focus({ preventScroll: true }); }
+      else if (act === "setup") go(mode);
+      else if (act === "info") go("info/skills");
+      else if (act === "menu") go("menu");
+    });
     const penaltyHost = document.createElement("div"); penaltyHost.className = "penalty-host"; penaltyHost.hidden = true;
     arena.querySelector(".arena-surface").append(penaltyHost);
     const restartChoice = document.createElement("div"); restartChoice.className = "restart-choice"; restartChoice.hidden = true;
@@ -591,19 +702,27 @@
     restart.innerHTML = '<span aria-hidden="true">↻</span> Trận mới';
     arena.querySelector(".arena-surface").append(restart);
     restart.addEventListener("click", () => form.requestSubmit());
-    setupKeymap(panel);
+    setupKeymapAssign(panel);
     renderPanelKeys(panel);
-    renderSkillLegend(panel);
     const roster = document.createElement("details"); roster.className = "advanced roster"; roster.open = true; roster.hidden = true;
     roster.innerHTML = '<summary>Đội hình &amp; chỉ số · OVR tính theo vị trí đang đá</summary><div class="roster-body"></div>';
     panel.querySelector(".player-status").after(roster);
     form.addEventListener("change", event => { if (!event.target.closest(".keymap-assign")) setupSummary(panel); });
     setupSummary(panel);
-    panel.querySelector(".support").addEventListener("change", event => {
+    // Aim assist is chosen in setup and can be switched during the match from the toolbar.
+    const support = panel.querySelector(".support"), supportButton = panel.querySelector(".support-button");
+    const syncSupport = () => { supportButton.textContent = "Hỗ trợ ngắm: " + (support.checked ? "Bật" : "Tắt"); supportButton.setAttribute("aria-pressed", String(support.checked)); };
+    support.addEventListener("change", event => {
       const session = sessions.get(panel.dataset.mode);
       session?.api.setSupport(event.target.checked);
+      syncSupport();
       if (session && !session.paused) arena.focus({ preventScroll: true });
     });
+    supportButton.addEventListener("click", () => {
+      support.checked = !support.checked; support.dispatchEvent(new Event("change", { bubbles: true }));
+      if (sessions.has(mode)) arena.focus({ preventScroll: true });
+    });
+    syncSupport();
     // Guides are redrawn when layouts change, so their buttons are handled by delegation.
     panel.querySelector(".controls").addEventListener("click", event => {
       const button = event.target.closest(".slide-action, .switch-action");
@@ -632,11 +751,12 @@
         penaltyView: new window.PTSCPenaltyView(penaltyHost, api, { keys: penaltyKeys }) };
       sessions.set(mode, session);
       energy.hidden = false;
-      form.querySelector(".start").textContent = "Bắt đầu trận mới";
       panel.querySelector(".pause").textContent = "Bắt đầu";
       overlay.hidden = false;
-      overlay.querySelector("span").innerHTML = 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu';
+      overlay.querySelector(".pause-text").innerHTML = 'Nhấn <kbd>Space</kbd> để bắt đầu trận đấu';
+      overlay.querySelector('[data-act="resume"]').textContent = "Bắt đầu";
       playerCards(session); updateHud(session); setupSummary(panel);
+      go(mode + "/match");
       arena.focus({ preventScroll: true });
     });
     panel.querySelector(".pause").addEventListener("click", () => {
@@ -763,5 +883,12 @@
     else if (activeMode === "watch") watcher?.play();
   });
   initWatchHud();
+  {
+    const pane = name => document.querySelector('#screen-info .info-pane[data-pane="' + name + '"]');
+    renderSkillLegend(pane("skills")); renderStatsGuide(pane("stats")); renderStyleLegend(pane("styles"));
+    setupKeymapEditor(pane("keys")); renderControlsGuide(); renderRulesGuide(pane("rules"));
+  }
+  if (!location.hash) history.replaceState(null, "", "#/menu");
+  showRoute();
   setInterval(() => { const session = sessions.get(activeMode); if (session) updateHud(session); else updateWatchHud(); highlightPads(); }, 250);
 })();

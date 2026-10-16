@@ -7,6 +7,15 @@ Không cần thư viện, không cần build, không cần server riêng.
 
 [Mở PTSC Cup](https://thieuhq2906.github.io/ptsc-football-widget/).
 
+Trang là một game duy nhất, đi qua các màn hình:
+
+- **Menu chính** (`#/menu`) phủ lên một trận đang đá phía sau: **Chỉ xem**, **Đấu với máy**, **Hai người**, **Thông tin game**.
+- **Màn chuẩn bị** (`#/cpu`, `#/local`): các thẻ màu áo, độ khó (đấu với máy) hoặc sân bắt đầu (hai người), thời gian và luật (2/4/6/10 phút, hiệp phụ, luân lưu), hỗ trợ ngắm, bố trí phím. Dòng tóm tắt và nút **Vào sân →** ở cuối.
+- **Màn trận đấu** (`#/cpu/match`, `#/local/match`): sân, thanh trạng thái, thẻ thông tin. Khi tạm dừng (Space) có menu **Tiếp tục · Cài đặt trận · Thông tin game · Menu chính**. Nút **Hỗ trợ ngắm** trên thanh công cụ bật/tắt ngay trong trận. Bấm **Cài đặt trận** rồi **Trận mới với cài đặt này →** để đá lại.
+- **Thông tin game** (`#/info/…`): Bảng skill, Chỉ số & hình thể, Phong cách chơi, Layout phím (bộ sửa phím duy nhất), Điều khiển, Độ khó & luật.
+
+Nút quay lại góc trên trái, phím Esc (khi không đang chơi) và nút Back của trình duyệt đều về màn trước. Rời màn trận đấu sẽ tạm dừng trận; quay lại vẫn đá tiếp. Từ Thông tin game quay lại đúng màn đã mở nó.
+
 - **Chỉ xem:** một trận ngẫu nhiên; kịch bản ưu tiên rượt đuổi, lội ngược dòng và bàn thắng muộn. Cả Đỏ và Xanh đều có thể thắng.
 - **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh và **độ khó** (Dễ, Thường, Khó, Huyền thoại, nhớ trong trình duyệt); máy điều khiển đội còn lại.
 - **Hai người:** A chọn áo, B chọn sân trái/phải lúc bắt đầu và nhận màu áo còn lại. Hai đội đổi sân giữa hiệp.
@@ -35,15 +44,15 @@ Các phím hành động nằm thành cụm hai cột, ba hàng: A **R/T – F/G
 
 ### Tùy chỉnh phím
 
-- Trong form trước trận, mục **Bố trí phím** chọn layout cho bạn (đấu với máy) hoặc cho từng người A/B (hai người). Lựa chọn của mỗi chế độ được nhớ riêng.
-- **Tùy chỉnh phím…** mở bảng sửa: chọn layout cần sửa, bấm vào ô phím rồi nhấn phím mới (Esc để hủy). Phím đã có trong layout sẽ được hoán đổi. Space, Esc, Tab, Ctrl/Alt/Meta và F1–F12 được giữ cho trình duyệt và tạm dừng.
-- **Ghi đè layout** lưu đè lên layout đang chọn, **Lưu thành layout mới** tạo bản riêng; layout tự tạo có thể xóa, layout mặc định đã sửa có **Khôi phục gốc**.
+- Trong màn chuẩn bị, thẻ **Bố trí phím** chọn layout cho bạn (đấu với máy) hoặc cho từng người A/B (hai người). Lựa chọn của mỗi chế độ được nhớ riêng.
+- **Tùy chỉnh phím…** mở **Thông tin game → Layout phím**: chọn layout cần sửa, bấm vào ô phím rồi nhấn phím mới (Esc để hủy). Phím đã có trong layout sẽ được hoán đổi. Space, Esc, Tab, Ctrl/Alt/Meta và F1–F12 được giữ cho trình duyệt và tạm dừng.
+- **Ghi đè layout** lưu đè lên layout đang chọn, **Lưu thành layout mới** tạo bản riêng; layout tự tạo có thể xóa, layout mặc định đã sửa có **Khôi phục gốc**. Các nút **Dùng layout đang sửa cho** gán ngay cho Đấu máy · Bạn, Hai người · A hoặc B.
 - Mọi layout và lựa chọn được lưu trong `localStorage` của trình duyệt này (khóa `ptsc-football.key-layouts.v1`), không gửi đi đâu. Nếu trình duyệt chặn lưu trữ, thay đổi chỉ áp dụng trong lần mở trang đó.
 - Hai người chơi không bao giờ dùng chung một phím: chọn hoặc ghi đè layout gây trùng sẽ bị từ chối kèm danh sách phím trùng.
 - Hướng dẫn trên sân, ngoài sân, phạt góc, đá phạt, skill và penalty đều vẽ theo layout đang dùng. Đổi layout giữa trận có hiệu lực ngay.
 
-Bấm **Bắt đầu trận** hoặc **Bắt đầu trận mới**: sân luôn tạm dừng, phủ nền mờ và hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
-Khi tạm dừng giữa trận, sân phủ xám và hiện **Nhấn Space để tiếp tục trận đấu**.
+Bấm **Vào sân →** hoặc **Trận mới với cài đặt này →**: sân luôn tạm dừng, phủ nền mờ và hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
+Khi tạm dừng giữa trận, sân phủ xám và hiện **Nhấn Space để tiếp tục trận đấu** cùng menu tạm dừng.
 Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn cơ bản nằm riêng góc trái/phải sân, độ mờ 30%.
 Phần trăm và thanh thể lực của người đang điều khiển hiện ngay trong sân: A bên trái, B bên phải, vẫn đọc được khi toàn màn hình; chuyển màu cảnh báo khi dưới 35%.
 Tam giác xanh (A) hoặc xanh lam (B) đánh dấu người đang điều khiển.
@@ -149,7 +158,7 @@ Chỉ áp dụng cho đội máy trong chế độ đấu với máy; đội c�
 
 ### Thẻ thông tin
 
-Mỗi đội có một thẻ lớn: OVR, tên, vị trí, chiều cao/cân nặng, thể lực (số lớn và thanh), skill (icon, tên, trạng thái, mô tả), 10 chỉ số dạng ô số lớn tô màu theo mức (xanh ≥80, vàng 65–79, đỏ dưới 65) và hai chip lối chơi. Đội do người chơi điều khiển hiện người đang chọn; **đội máy** hiện người đang cầm bóng hoặc gần bóng nhất. Tab **Chỉ xem** cũng có thẻ, ô thể lực + skill trong sân và bảng đội hình cho cả hai đội. Ô trong sân của đội máy hiện thể lực và skill, không có phím.
+Mỗi đội có một thẻ lớn: OVR, tên, vị trí, chiều cao/cân nặng, thể lực (số lớn và thanh), skill (icon, tên, trạng thái, mô tả), 10 chỉ số dạng ô số lớn tô màu theo mức (xanh ≥80, vàng 65–79, đỏ dưới 65) và hai chip lối chơi. Đội do người chơi điều khiển hiện người đang chọn; **đội máy** hiện người đang cầm bóng hoặc gần bóng nhất. Màn **Chỉ xem** cũng có thẻ, ô thể lực + skill trong sân và bảng đội hình cho cả hai đội. Ô trong sân của đội máy hiện thể lực và skill, không có phím.
 
 ### Phạt góc
 
@@ -299,7 +308,7 @@ useEffect(() => {
 - `ptsc-football.js`: toàn bộ mô phỏng và hình vẽ (khoảng 200 KB, khoảng 60 KB khi server bật gzip).
 - `ptsc-football.css`: giao diện (màu, bảng tỉ số, nhãn).
 - `demo.html`: trang ví dụ.
-- `index.html`, `game.js`, `game.css`: trang ba chế độ, lựa chọn trước trận và bàn phím.
+- `index.html`, `game.js`, `game.css`: game một trang: menu chính, màn chuẩn bị, màn trận đấu, thông tin game (điều hướng bằng hash), bàn phím.
 - `assets/control-pad.svg`: hình pad minh họa phím di chuyển.
 - `penalties.js`: giao diện penalty/luân lưu và góc nhìn từ sau cầu thủ sút.
 - `keymap.js`: layout phím mặc định và tự tạo, lưu trong `localStorage`.

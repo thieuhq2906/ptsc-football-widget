@@ -37,8 +37,24 @@ const server = http.createServer((req, res) => {
     });
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(() => document.getElementById("watch-match").__ptscFootball);
-    assert.equal(await page.locator('[role="tab"]').count(), 3);
-    assert.equal(await page.locator('[role="tab"][aria-selected="true"]').textContent(), "Chỉ xem");
+    const route = async hash => {
+      await page.evaluate(h => { location.hash = h; }, hash);
+      await page.waitForFunction(h => location.hash === h && document.querySelector('.screen:not([hidden])'), hash);
+    };
+    const startMatch = async mode => {
+      if (!(await page.evaluate(m => location.hash === "#/" + m, mode))) await route("#/" + mode);
+      await page.locator(`#panel-${mode} .start`).click();
+      await page.waitForFunction(m => location.hash === "#/" + m + "/match", mode);
+    };
+    assert.equal(await page.evaluate(() => location.hash), "#/menu", "The game opens on the main menu");
+    assert(await page.locator("#panel-watch .main-menu").isVisible(), "The menu plays over a live match");
+    assert.equal(await page.locator(".main-menu .menu-card").count(), 4);
+    await page.locator('.menu-card[data-go="cpu"]').click();
+    await page.waitForFunction(() => location.hash === "#/cpu" && !document.getElementById("panel-cpu").hidden);
+    assert(await page.locator("#panel-cpu .setup").isVisible(), "Choosing a mode opens its setup screen");
+    await page.locator(".nav-back").click();
+    await page.waitForFunction(() => location.hash === "#/menu");
+    console.log("PASS main menu, mode setup screen and back button");
 
     const narrativeSides = await page.evaluate(() => {
       const sides = [];
@@ -191,12 +207,13 @@ const server = http.createServer((req, res) => {
     assert(aiming.slide.slid.energy < aiming.slide.energy, "Sliding must consume stamina");
     console.log("PASS persistent aim arrows, free passing/shooting in all four directions, accurate support, keeper control, slide and cooldown");
 
-    await page.locator("#tab-local").click();
+    await route("#/local");
     await page.evaluate(() => { document.querySelector("#panel-local .match-host").dataset.seed = "42"; });
     for (const colour of ["R", "B"]) for (const side of ["left", "right"]) {
-      await page.locator(`input[name="local-team"][value="${colour}"]`).check();
-      await page.locator(`input[name="local-side"][value="${side}"]`).check();
-      await page.locator("#panel-local .start").click();
+      await route("#/local");
+      await page.locator(`input[name="local-team"][value="${colour}"]`).locator("..").click();
+      await page.locator(`input[name="local-side"][value="${side}"]`).locator("..").click();
+      await startMatch("local");
       const state = await page.evaluate(() => {
         const api = document.querySelector("#panel-local .match-host").__ptscFootball;
         api.pause(); api.__step(3);
@@ -243,9 +260,11 @@ const server = http.createServer((req, res) => {
     assert.equal(shotsAfter, shotsBefore + 1, "Shoot key must shoot");
     console.log("PASS human shooting key");
 
-    await page.locator("#panel-local .support").uncheck();
+    await page.locator("#panel-local .support-button").click();
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.status().support), false);
-    await page.locator("#panel-local .support").check();
+    assert.equal(await page.locator("#panel-local .support-button").getAttribute("aria-pressed"), "false");
+    await page.locator("#panel-local .support-button").click();
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.status().support), true);
     assert.equal(await page.evaluate(() => document.activeElement.className), "arena", "Support toggle should return keyboard focus to the pitch");
     const slideSlot = await page.evaluate(() => {
       const api = document.querySelector("#panel-local .match-host").__ptscFootball;
@@ -263,6 +282,7 @@ const server = http.createServer((req, res) => {
       for (let i = 0; i < 500 && !api.status().players.some(p => p.slideReady); i++) __stepPlay(api, .05);
       return api.status().players.find(p => p.slideReady)?.slot;
     });
+    await page.locator("#panel-local .controls-box > summary").click();
     const slideButton = page.locator(`#panel-local .slide-action[data-slot="${buttonSlot}"]`);
     await page.waitForFunction(slot => !document.querySelector(`#panel-local .slide-action[data-slot="${slot}"]`).disabled, buttonSlot);
     const beforeButton = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().slides ?? 0);
@@ -361,7 +381,7 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(() => !document.fullscreenElement && !document.querySelector('#panel-local .arena').classList.contains('fullscreen-fallback'));
     console.log("PASS fullscreen, 30% opacity basic guide, advanced instructions outside pitch");
 
-    await page.locator("#panel-local .start").click(); await page.keyboard.press("Space");
+    await startMatch("local"); await page.keyboard.press("Space");
     const readyForSkill = await page.evaluate(() => {
       const api = document.querySelector("#panel-local .match-host").__ptscFootball;
       api.pause();
@@ -373,7 +393,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__stats().specialShots), 1);
     console.log("PASS two quick shoot taps trigger exactly one advanced special shot");
 
-    await page.locator("#panel-local .start").click(); await page.keyboard.press("Space");
+    await startMatch("local"); await page.keyboard.press("Space");
     const pressingSlot = await page.evaluate(() => {
       const api = document.querySelector("#panel-local .match-host").__ptscFootball; api.pause();
       for (let i = 0; i < 500 && !api.status().players.some(p => p.hasBall && p.ready); i++) __stepPlay(api, .05);
@@ -430,10 +450,10 @@ const server = http.createServer((req, res) => {
     await page.locator("#panel-local .pause").click();
     await page.locator("#panel-local").screenshot({ path: path.join(artifacts, "two-player.png") });
 
-    await page.locator("#tab-cpu").click();
+    await route("#/cpu");
     await page.evaluate(() => { document.querySelector("#panel-cpu .match-host").dataset.seed = "42"; });
-    await page.locator('input[name="cpu-team"][value="B"]').check();
-    await page.locator("#panel-cpu .start").click();
+    await page.locator('input[name="cpu-team"][value="B"]').locator("..").click();
+    await startMatch("cpu");
     const cpu = await page.evaluate(() => {
       const api = document.querySelector("#panel-cpu .match-host").__ptscFootball;
       api.pause();
@@ -481,9 +501,11 @@ const server = http.createServer((req, res) => {
     console.log("PASS defenders keep 5 m from a free kick the player is still waiting to take");
 
     // Key layouts: edit, overwrite, save as new, persist across reloads, refuse two-player clashes.
-    await page.locator("#tab-cpu").click();
-    const editor = page.locator("#panel-cpu .keymap");
+    await route("#/cpu");
     await page.locator("#panel-cpu .keymap-open").click();
+    await page.waitForFunction(() => location.hash === "#/info/keys");
+    const editor = page.locator("#screen-info .keymap");
+    assert(await editor.isVisible(), "The setup link opens the key layout editor");
     await editor.locator('.keymap-key[data-action="up"]').click();
     await page.keyboard.press("Space");
     assert.match(await editor.locator(".keymap-status").textContent(), /dành cho/, "Space stays reserved for pause");
@@ -494,6 +516,8 @@ const server = http.createServer((req, res) => {
     await editor.locator(".keymap-save").click();
     await editor.locator(".keymap-name").fill("Bộ phím thử");
     await editor.locator(".keymap-save-new").click();
+    await page.locator(".nav-back").click();
+    await page.waitForFunction(() => location.hash === "#/cpu");
     const savedLayouts = await page.evaluate(() => JSON.parse(localStorage.getItem("ptsc-football.key-layouts.v1")));
     const editedA = savedLayouts.layouts.find(layout => layout.id === "default-a"), custom = savedLayouts.layouts.find(layout => layout.name === "Bộ phím thử");
     assert.deepEqual([editedA.keys.up, editedA.keys.special, editedA.keys.right], ["KeyQ", "KeyD", "KeyE"]);
@@ -503,14 +527,14 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(() => window.PTSCKeymap);
     assert.equal(await page.evaluate(() => PTSCKeymap.assigned("cpu", "A").name), "Bộ phím thử", "Layout choice survives a reload");
     assert.equal(await page.locator("#panel-cpu .controls .pad-up").textContent(), "Q", "Guides draw the chosen layout");
-    await page.locator("#tab-local").click();
+    await route("#/local");
     await page.locator('#panel-local .keymap-assign select[data-slot="B"]').selectOption("default-a");
     assert.equal(await page.locator('#panel-local .keymap-assign select[data-slot="B"]').inputValue(), "default-b", "Two players can never share keys");
     console.log("PASS key layouts: capture, swap, overwrite, save as new, persistence, two-player clash guard");
 
     // Movement: a direction held through Space (start, pause, resume) keeps moving without pressing it again.
-    await page.locator("#tab-cpu").click();
-    await page.locator("#panel-cpu .start").click();
+    await route("#/cpu");
+    await startMatch("cpu");
     await page.keyboard.down("KeyE");
     await page.keyboard.press("Space");
     const heldStart = await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.__selected("A").input);
@@ -525,8 +549,8 @@ const server = http.createServer((req, res) => {
     console.log("PASS held directions survive start/pause/resume with a custom layout");
 
     // Penalty scene: the match's own figures, the taker from behind, choices hidden until the ball arrives.
-    await page.locator("#tab-local").click();
-    await page.locator("#panel-local .start").click(); await page.keyboard.press("Space");
+    await route("#/local");
+    await startMatch("local"); await page.keyboard.press("Space");
     await page.evaluate(() => { const api = document.querySelector("#panel-local .match-host").__ptscFootball; api.pause(); api.__penalties(); });
     await page.waitForFunction(() => !document.querySelector("#panel-local .penalty-host").hidden);
     const penaltyScene = await page.evaluate(() => {
@@ -550,7 +574,7 @@ const server = http.createServer((req, res) => {
     assert.equal(new Set(skillData.map(s => s.icon)).size, skillData.length, "Every skill has its own icon");
     assert(skillData.every(s => s.short && s.short.split(" ").length <= 2), "Every skill has a one- or two-word label");
     assert(skillData.filter(s => s.role === "GK" && s.auto).length === 3, "The three keeper skills are automatic");
-    assert.equal(await page.locator("#panel-local .skill-legend-item").count(), skillData.length);
+    assert.equal(await page.locator("#screen-info .skill-legend-item").count(), skillData.length);
     const keeperAuto = await page.evaluate(() => {
       const runs = [];
       for (let seed = 1; seed <= 6; seed++) {
@@ -643,8 +667,8 @@ const server = http.createServer((req, res) => {
     };
     ordered("attack", "deepLyingForward", "goalPoacher"); ordered("attack", "orchestrator", "holePlayer"); ordered("attack", "buildUp", "extraFrontman");
     ordered("defense", "pressBack", "frontLinePoacher"); ordered("defense", "anchorMan", "destroyer"); ordered("defense", "deepDefender", "highLineMaster"); ordered("defense", "defensiveGK", "sweeperGK");
-    assert(await page.locator("#panel-local .style-legend .legend-group").count() === 4, "Styles are grouped by zone");
-    assert(await page.locator("#panel-local .skill-legend .legend-group").count() === 5, "Skills are grouped by situation");
+    assert(await page.locator("#screen-info .style-legend .legend-group").count() === 4, "Styles are grouped by zone");
+    assert(await page.locator("#screen-info .skill-legend .legend-group").count() === 5, "Skills are grouped by situation");
     console.log("PASS attacking and defensive playing styles fit positions, change where players stand, grouped legends");
 
     // Ratings: every player has ten, in range, shaped by his styles; squads can be supplied as data with fixed ratings.
@@ -797,19 +821,19 @@ const server = http.createServer((req, res) => {
     console.log("PASS switch key on the ball calls a team-mate's run at goal");
 
     // Cards for every side: the computer's side and both sides when watching.
-    await page.locator("#tab-cpu").click();
-    await page.locator("#panel-cpu .start").click(); await page.keyboard.press("Space"); await page.waitForTimeout(600);
+    await route("#/cpu");
+    await startMatch("cpu"); await page.keyboard.press("Space"); await page.waitForTimeout(600);
     const cpuCards = await page.evaluate(() => [...document.querySelectorAll("#panel-cpu .player-card")].map(c => ({ controller: c.dataset.controller, ovr: c.querySelector(".pc-ovr b").textContent, stats: c.querySelectorAll(".pc-stat").length })));
     assert.deepEqual(cpuCards.map(c => c.controller), ["A", "cpu"]);
     assert(cpuCards.every(c => /^\d+$/.test(c.ovr) && c.stats === 10), "Both cards show a rating and ten stats: " + JSON.stringify(cpuCards));
     assert.equal(await page.locator("#panel-cpu .arena-energy .energy-player").count(), 2, "The computer's stamina and skill are on the pitch too");
     await page.keyboard.press("Space");
-    await page.locator("#tab-watch").click(); await page.waitForTimeout(800);
+    await route("#/watch"); await page.waitForTimeout(800);
     const watchCards = await page.evaluate(() => [...document.querySelectorAll("#panel-watch .player-card")].map(c => ({ team: c.dataset.team, name: c.querySelector(".pc-id strong").textContent, ovr: c.querySelector(".pc-ovr b").textContent })));
     assert.deepEqual(watchCards.map(c => c.team), ["R", "B"]);
     assert(watchCards.every(c => c.name !== "Chuẩn bị" && /^\d+$/.test(c.ovr)), "Watching shows both sides' players: " + JSON.stringify(watchCards));
     assert.equal(await page.locator("#panel-watch .roster table").count(), 2);
-    await page.locator("#tab-cpu").click();
+    await route("#/cpu");
     console.log("PASS info cards for the computer's side and for both sides when watching");
 
     // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
@@ -913,12 +937,12 @@ const server = http.createServer((req, res) => {
     const watcherTime = await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().T);
     await page.waitForTimeout(200);
     assert.equal(await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().T), watcherTime);
-    await page.locator("#tab-watch").click();
+    await route("#/watch");
     await page.locator("#new-watch").click();
     assert.equal(await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().score.R), 0);
     await page.screenshot({ path: path.join(artifacts, "watch.png") });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator("#tab-local").click();
+    await route("#/local");
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Mobile layout must not overflow");
     await page.screenshot({ path: path.join(artifacts, "mobile.png"), fullPage: true });
     assert.deepEqual(errors, [], "No browser runtime errors");
