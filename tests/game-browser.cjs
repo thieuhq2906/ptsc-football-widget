@@ -62,9 +62,12 @@ const server = http.createServer((req, res) => {
     await page.keyboard.press("ArrowUp"); await page.keyboard.press("Enter");
     await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu" && !document.getElementById("panel-cpu").hidden);
     assert(await page.locator("#panel-cpu .setup").isVisible(), "Choosing a mode opens its setup screen");
-    assert.equal(await page.evaluate(() => document.activeElement.dataset.opt), "team", "Setup opens with the cursor on the first row");
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.opt), "clubA", "Setup opens with the cursor on the first row");
+    const firstClub = await page.locator('#panel-cpu .opt[data-opt="clubA"]').getAttribute("data-value");
     await page.keyboard.press("ArrowRight");
-    assert.equal(await page.locator('#panel-cpu .opt[data-opt="team"]').getAttribute("data-value"), "B", "Left/right change a setting");
+    const nextClub = await page.locator('#panel-cpu .opt[data-opt="clubA"]').getAttribute("data-value");
+    assert(nextClub !== firstClub && await page.evaluate(id => !!PTSCTeams.get(id), nextClub), "Left/right change a setting: " + firstClub + " -> " + nextClub);
+    assert(await page.evaluate(() => !!document.querySelector("#panel-cpu .matchup .vs-logo[src*='assets/teams/']")), "The matchup card shows the club badges");
     await page.keyboard.press("ArrowLeft");
     await page.keyboard.press("Escape");
     await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/menu");
@@ -237,9 +240,9 @@ const server = http.createServer((req, res) => {
 
     await route("#/local");
     await page.evaluate(() => { document.querySelector("#panel-local .match-host").dataset.seed = "42"; });
-    for (const colour of ["R", "B"]) for (const side of ["left", "right"]) {
+    for (const [idA, idB] of [["liverpool", "man-utd"], ["real-madrid", "juventus"]]) for (const side of ["left", "right"]) {
       await route("#/local");
-      await choose("local", "team", colour);
+      await choose("local", "clubA", idA); await choose("local", "clubB", idB);
       await choose("local", "side", side);
       await startMatch("local");
       const state = await page.evaluate(() => {
@@ -247,16 +250,29 @@ const server = http.createServer((req, res) => {
         api.pause(); api.__step(3);
         for (let i = 0; i < 60 && api.status().phase !== "play"; i++) api.__step(.5);
         api.__step(.7);
-        return { status: api.status(), stats: api.__stats() };
+        const roster = api.roster(), teams = api.teams();
+        return { status: api.status(), stats: api.__stats(), teams, roster, clubs: Object.fromEntries(["R", "B"].map(t => [t, PTSCTeams.get(teams[t].id).players.map(p => p.name)])) };
       });
-      const other = colour === "R" ? "B" : "R";
-      assert.equal(state.status.players[0].team, colour);
-      assert.equal(state.status.players[1].team, other);
-      assert.equal(state.status.leftTeam, side === "left" ? other : colour);
+      assert.equal(state.status.players[0].team, "R"); assert.equal(state.status.players[1].team, "B");
+      assert.equal(state.status.leftTeam, side === "left" ? "B" : "R");
       assert.equal(state.stats.onPitch.R, 6); assert.equal(state.stats.onPitch.B, 6);
       assert.equal(state.stats.storyGoals.length, 0, "Play modes must not script goals");
+      assert.equal(state.teams.R.id, idA); assert.equal(state.teams.B.id, idB);
+      for (const t of ["R", "B"]) {
+        const nine = state.roster[t];
+        assert.equal(nine.length, 9, "Nine players per side");
+        assert(nine.every(p => state.clubs[t].includes(p.name)), "Every player comes from his club: " + JSON.stringify(nine.map(p => p.name)));
+        const lines = { GK: 0, DF: 0, MF: 0, FW: 0 }; for (const p of nine) lines[p.role]++;
+        assert.deepEqual(lines, { GK: 1, DF: 3, MF: 2, FW: 3 }, "One keeper, three defenders, two midfielders, three forwards: " + JSON.stringify(lines));
+        assert.equal(new Set(nine.map(p => p.num)).size, 9, "Shirt numbers are unique");
+        assert(nine.every(p => Object.values(p.stats).every(v => v >= 1 && v <= 99)), "Fixed ratings are used as given");
+      }
+      assert(state.teams.R.colors.kit === "home", "The first club wears its home kit");
+      if (idA === "liverpool") assert.equal(state.teams.B.colors.kit, "away", "A red-on-red clash puts the second club in its away kit");
+      if (idA === "real-madrid") assert.equal(state.teams.B.colors.kit, "away", "White on white-striped puts Juventus in pink");
+      assert.notEqual(state.teams.R.colors.gk, state.teams.R.colors.shirt);
     }
-    console.log("PASS all shirt and starting-side combinations, original 6v6 roster");
+    console.log("PASS club selection for both sides, random nines spread over the lines, kit clashes resolved");
 
     // New matches wait for Space; the engine loop is then frozen so the test steps it by hand.
     await page.locator("#panel-local .arena").focus(); await page.keyboard.press("Space");
@@ -496,7 +512,7 @@ const server = http.createServer((req, res) => {
 
     await route("#/cpu");
     await page.evaluate(() => { document.querySelector("#panel-cpu .match-host").dataset.seed = "42"; });
-    await choose("cpu", "team", "B");
+    await choose("cpu", "clubA", "psg"); await choose("cpu", "clubB", "random");
     await startMatch("cpu");
     const cpu = await page.evaluate(() => {
       const api = document.querySelector("#panel-cpu .match-host").__ptscFootball;
@@ -504,7 +520,8 @@ const server = http.createServer((req, res) => {
       for (let i = 0; i < 800 && !api.status().ended && (api.__stats().shots === 0 || api.__stats().subs === 0); i++) __stepPlay(api, .5);
       return { status: api.status(), stats: api.__stats(), energy: api.__energy() };
     });
-    assert.equal(cpu.status.players.length, 1); assert.equal(cpu.status.players[0].team, "B");
+    assert.equal(cpu.status.players.length, 1); assert.equal(cpu.status.players[0].team, "R");
+    assert.equal(cpu.status.teamInfo.R.id, "psg"); assert.notEqual(cpu.status.teamInfo.B.id, "psg", "A random opponent is never your own club");
     assert(cpu.stats.shots > 0, "CPU must play and shoot: " + JSON.stringify(cpu));
     assert(cpu.stats.subs > 0, "Original automatic substitutions must still happen");
     assert(Object.values(cpu.energy).some(energy => energy < .85), "Original fatigue must still happen");
@@ -749,7 +766,6 @@ const server = http.createServer((req, res) => {
     assert(ratings.all.every(p => ratings.rules.keys.every(k => p.stats[k] >= ratings.rules.range[0] && p.stats[k] <= ratings.rules.range[1]) && p.ovr >= 35 && p.ovr <= 95), "Ratings stay within 35–95");
     const mean = (list, key) => list.reduce((s, p) => s + p.stats[key], 0) / list.length;
     const forwards = ratings.all.filter(p => p.role === "FW");
-    assert(mean(forwards.filter(p => p.attack === "Kẻ đón lõng"), "finishing") > mean(forwards.filter(p => p.attack === "Bức tường"), "finishing"), "Edge-of-the-box strikers finish better than target men");
     assert(mean(ratings.all.filter(p => p.role === "GK"), "goalkeeping") > 70 && mean(ratings.all.filter(p => p.role !== "GK"), "goalkeeping") < 40, "Only keepers can keep goal");
     const striker = ratings.roster.R.find(p => p.name === "Sát Thủ");
     assert(striker && striker.stats.finishing === 95 && striker.stats.speed === 90 && striker.attack === "Mũi khoan" && striker.defense === "Lò xo", "Squads given as data keep fixed ratings and styles: " + JSON.stringify(striker));
@@ -757,7 +773,15 @@ const server = http.createServer((req, res) => {
     assert(ratings.roster.B.some(p => p.name === "Vũ"), "A team without custom data keeps the default squad");
     const localPlan = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.plan());
     assert(["R", "B"].every(t => localPlan[t].players.length === 6 && [...localPlan[t].players, ...localPlan[t].bench].every(p => Object.keys(p.stats).length === 10)), "Both squads are listed with ratings");
-    console.log("PASS player ratings: ten per player in range, shaped by playing styles, squads as data with fixed ratings, roster tables");
+    const styleFree = await page.evaluate(() => {
+      const base = { name: "A", head: "buzz", skin: 1, num: 9, stats: { speed: 80, dribbling: 80, passing: 80, longPass: 80, finishing: 80, heading: 80, defending: 80, strength: 80, stamina: 80, goalkeeping: 20 } };
+      const squad = attack => ({ players: [{ ...base, name: "K", num: 1, stats: { ...base.stats, goalkeeping: 80 } }, { ...base, name: "D1", num: 2 }, { ...base, name: "D2", num: 3 }, { ...base, name: "M", num: 4 }, { ...base, name: "F1", num: 5, attack }, { ...base, name: "F2", num: 6 }] });
+      const read = attack => { const host = document.createElement("div"); document.body.append(host); const api = PTSCFootball.mount(host, { mode: "local", seed: 2, still: 0, fonts: "none", squads: { R: squad(attack) } }); const p = api.roster().R.find(x => x.name === "F1"); api.destroy(); host.remove(); return { stats: p.stats, attack: p.attack, height: p.body.height }; };
+      return [read("pivot"), read("slalom")];
+    });
+    assert.deepEqual(styleFree[0].stats, styleFree[1].stats, "A playing style changes behaviour, never the ratings");
+    assert.notEqual(styleFree[0].attack, styleFree[1].attack);
+    console.log("PASS player ratings: ten per player in range, fixed by data, untouched by playing styles, roster tables");
 
     // Skills: always work, defensive ones last half as long again, and positions sometimes get the other kind.
     const skillMix = await page.evaluate(() => {
@@ -1041,7 +1065,7 @@ const server = http.createServer((req, res) => {
     await choose("cpu", "autoTactics", "true");
     await startMatch("cpu");
     assert.equal(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.plan().R.auto.tactics), true, "The setting starts the match with the automatic coach");
-    await route("#/cpu"); await choose("cpu", "autoTactics", "false"); await choose("cpu", "team", "R");
+    await route("#/cpu"); await choose("cpu", "autoTactics", "false");
     await startMatch("cpu");
     await page.keyboard.press("Escape"); await page.locator('#panel-cpu [data-act="plan"]').click();
     const planSheet = page.locator('#panel-cpu .sheet[data-sheet="plan"]');
@@ -1080,6 +1104,43 @@ const server = http.createServer((req, res) => {
     await page.locator('#panel-cpu [data-act="menu"]').click(); await routeIs("#/menu");
     await route("#/cpu");
     console.log("PASS game plan screen: player info pages, switch player, substitution, view-only opponents, tactics and automatic coach");
+
+    await startMatch("cpu");
+    await page.keyboard.press("Escape"); await page.locator('#panel-cpu [data-act="plan"]').click();
+    await page.keyboard.press("ArrowDown"); await page.keyboard.press("Enter");
+    assert(await page.evaluate(() => { const d = document.querySelector("#panel-cpu .plan-detail"); const r = d.getBoundingClientRect(); const el = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!el?.closest(".plan-detail"); }), "A player's page covers the mini pitch instead of showing its tokens through");
+    assert.match(await page.locator("#panel-cpu .plan-detail .pd-summary").textContent(), /Ăn mừng/, "The page tells the man's style of play and his celebration");
+    assert(await page.evaluate(() => document.querySelector("#panel-cpu .plan-head .plan-logo")?.getAttribute("src").includes("assets/teams/")), "The plan shows the club badge");
+    await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+    console.log("PASS plan sheet: player page on top of the pitch, club badge, summary and celebration");
+
+    await route("#/local"); await startMatch("local"); await page.keyboard.press("Space"); await page.waitForTimeout(300);
+    const timeouts = async () => page.evaluate(() => { const s = document.getElementById("panel-local").__session; return { ...s.timeouts, paused: s.paused, slot: s.timeout?.slot ?? null, kicker: document.querySelector("#panel-local .pause-kicker").textContent }; });
+    await page.keyboard.press("KeyP"); await page.waitForTimeout(100);
+    let t = await timeouts();
+    assert(t.paused && t.slot === "B" && t.B === 2 && /Người B · lượt 1\/3/.test(t.kicker), "P is player B's timeout: " + JSON.stringify(t));
+    assert(await page.locator('#panel-local [data-act="plan"]').isVisible(), "The plan is open to the pausing side");
+    await page.evaluate(() => { document.getElementById("panel-local").__session.timeout.until = performance.now() + 150; });
+    await page.waitForTimeout(700);
+    t = await timeouts(); assert(!t.paused, "A timeout that runs out lets play go on: " + JSON.stringify(t));
+    await page.keyboard.press("Space"); await page.waitForTimeout(100);
+    t = await timeouts(); assert(t.paused && t.slot === "A" && t.A === 2, "Space is player A's timeout: " + JSON.stringify(t));
+    await page.keyboard.press("Space"); await page.waitForTimeout(100);
+    for (let i = 0; i < 2; i++) { await page.keyboard.press("KeyP"); await page.waitForTimeout(80); await page.keyboard.press("Space"); await page.waitForTimeout(80); }
+    await page.keyboard.press("KeyP"); await page.waitForTimeout(100);
+    t = await timeouts(); assert(!t.paused && t.B === 0, "A fourth timeout is refused: " + JSON.stringify(t));
+    assert.match(await page.locator("#panel-local .arena-flash").textContent(), /hết 3 lượt/);
+    await page.evaluate(() => { const s = document.getElementById("panel-local").__session; s.api.pause(); });
+    console.log("PASS two-player timeouts: three per side, a minute each, own key per player, refused when spent");
+
+    await route("#/info/teams");
+    assert.equal(await page.locator("#screen-info .teams-browser .club-row").count(), 10, "Ten clubs are listed");
+    await page.locator("#screen-info .teams-browser .club-row").nth(1).focus();
+    assert.equal(await page.locator("#screen-info .teams-browser .club-player").count(), 30, "A club's card lists its thirty players");
+    assert.equal(await page.evaluate(() => PTSC_TEAMS.teams.reduce((n, t) => n + t.players.length, 0)), 300);
+    assert(await page.evaluate(() => PTSC_TEAMS.teams.every(t => t.players.every(p => p.face && p.face.hair && p.celebration && p.num && p.short && p.attack && p.defense && Object.keys(p.stats).length === 10))), "Every one of the 300 has a face, a celebration, a number, a short name, two styles and ten ratings");
+    await route("#/cpu");
+    console.log("PASS clubs pane and the 300-player data set");
 
     // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
     const skillShots = await page.evaluate(() => {

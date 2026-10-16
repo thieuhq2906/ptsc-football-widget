@@ -4,7 +4,31 @@
   // Physical keys held down. Tracked while paused too, so a direction held through Space keeps working.
   const keys = new Set();
   const switchRepeats = new Map();
-  const names = { R: "Đỏ", B: "Xanh" };
+  const DEFAULT_NAMES = { R: "Đỏ", B: "Xanh" };
+  const clubs = window.PTSCTeams;
+  /** The club a side of a match (or the watched one) is: name, short name, logo and kit; the plain red/blue without one. */
+  const teamOf = (view, t) => view?.api?.teams?.()?.[t] ?? null;
+  const nameOf = (view, t) => teamOf(view, t)?.name ?? DEFAULT_NAMES[t];
+  const shortOf = (view, t) => teamOf(view, t)?.short ?? DEFAULT_NAMES[t];
+  const inkFor = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? "").trim()); if (!m) return "#fff"; const n = parseInt(m[1], 16); return ((n >> 16) * .299 + ((n >> 8) & 255) * .587 + (n & 255) * .114) > 150 ? "#1d2340" : "#fff"; };
+  /** The HUD around a pitch takes the two shirts' colours. */
+  function paintTeams(node, api) {
+    const teams = api?.teams?.();
+    for (const t of ["R", "B"]) {
+      const shirt = teams?.[t]?.colors?.shirt ?? (t === "R" ? "#e45248" : "#397eca");
+      node.style.setProperty("--team-" + t, shirt); node.style.setProperty("--team-" + t + "-ink", inkFor(shirt));
+    }
+  }
+  const TEAM_STORE = "ptsc-football.clubs.v1";
+  const savedClubs = (() => { try { return JSON.parse(localStorage.getItem(TEAM_STORE) || "{}") || {}; } catch { return {}; } })();
+  const rememberClub = (key, id) => { savedClubs[key] = id; try { localStorage.setItem(TEAM_STORE, JSON.stringify(savedClubs)); } catch {} };
+  /** A seeded random source for squad picks, so a data-seed on the host gives the same squads every time. */
+  function rngFrom(seed) {
+    let a = (Number(seed) || Math.floor(Math.random() * 2 ** 31)) >>> 0;
+    return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+  const clubIds = () => clubs.list().map(t => t.id);
+  const resolveClub = (id, avoid) => id === "random" || !clubs.get(id) ? clubIds().filter(x => x !== avoid)[Math.floor(Math.random() * (clubIds().length - (avoid ? 1 : 0)))] : id;
   const opposite = team => team === "R" ? "B" : "R";
   const keymap = window.PTSCKeymap, label = keymap.label;
   const MOVE_ACTIONS = new Set(["up", "down", "left", "right", "sprint", "press"]);
@@ -141,6 +165,24 @@
   const bars = rows => '<div class="bd-bars">' + rows.map(([labelText, value, max, shown, tone]) => `<div class="bd-bar"><span>${labelText}</span><i><i style="width:${Math.round(clamp01(value / max) * 100)}%"${tone ? ` data-tone="${tone}"` : ""}></i></i><b>${shown}</b></div>`).join("") + "</div>";
   const facts = rows => '<dl class="bd-facts">' + rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") + "</dl>";
 
+  /* Clubs */
+  function renderTeamsGuide(container) {
+    const ovrTone = v => v >= 95 ? "top" : v >= 90 ? "good" : v >= 85 ? "fair" : "low";
+    makeBrowser(container, {
+      cls: "teams-browser", title: "Đội bóng",
+      lead: "10 câu lạc bộ, mỗi đội 30 ngôi sao và huyền thoại với chỉ số, chiều cao, cân nặng và lối chơi riêng. Mỗi trận bốc ngẫu nhiên 9 người: 1 thủ môn, 3 hậu vệ, 2 tiền vệ, 3 tiền đạo (6 đá chính, 3 dự bị).",
+      tabs: () => [{ label: "Câu lạc bộ", items: clubs.list().map(t => ({ key: t.id, html: `<button type="button" class="br-item club-row" data-br data-nav data-key="${t.id}"><img class="club-logo" src="${escapeHtml(t.logo)}" alt="" width="40" height="40" loading="lazy"><span><b>${escapeHtml(t.name)}</b><small>${escapeHtml(t.country)} · OVR ${clubs.strength(t)} · ${t.players.length} cầu thủ</small></span></button>` })) }],
+      detail: id => {
+        const t = clubs.get(id);
+        if (!t) return "";
+        const lines = ["GK", "DF", "MF", "FW"].map(r => [ROLE_GROUPS[r], t.players.filter(p => p.role === r).length]);
+        const rows = [...t.players].sort((a, b) => b.ovr - a.ovr).map(p => `<div class="club-player">${posBadge(p.role)}<span><b>${escapeHtml(p.short)}</b><small>${escapeHtml(p.pos)} · ${escapeHtml(p.roleName)}</small></span><b class="club-ovr" data-tone="${ovrTone(p.ovr)}">${p.ovr}</b></div>`).join("");
+        return `<div class="bd-hero bd-hero-club"><img class="bd-logo" src="${escapeHtml(t.logo)}" alt="" width="96" height="96"><div><span class="bd-kicker">${escapeHtml(t.country)}</span><h3>${escapeHtml(t.name)}</h3><p class="bd-sub">OVR đội hình mạnh nhất ${clubs.strength(t)} · ${lines.map(([n, c]) => c + " " + n.toLowerCase()).join(" · ")}</p></div></div>`
+          + `<div class="bd-kits"><figure><img src="${escapeHtml(t.kits.home.image)}" alt="" width="80" height="125" loading="lazy"><figcaption>Sân nhà</figcaption></figure><figure><img src="${escapeHtml(t.kits.away.image)}" alt="" width="80" height="125" loading="lazy"><figcaption>Sân khách</figcaption></figure><p class="bd-text">Đội thứ hai mặc áo sân khách khi hai màu áo giống nhau; thủ môn luôn mặc màu khác cả hai đội.</p></div>`
+          + `<h4 class="bd-h">Danh sách 30 cầu thủ</h4><div class="club-players">${rows}</div>`;
+      }
+    });
+  }
   /* Skills */
   const SKILL_GROUPS = [
     ["Tấn công", skill => skill.contexts.includes("attack")],
@@ -196,11 +238,11 @@
     sweep: ["Tầm quét chân", "m", "Chân dài với bóng xa hơn khi tranh bóng và khi xoạc."]
   };
   function renderStatsGuide(container) {
-    const rules = gameData.stats, styles = [...Object.values(gameData.playstyles.attack), ...Object.values(gameData.playstyles.defense)];
+    const rules = gameData.stats;
     const tone = v => levelOf(v);
     makeBrowser(container, {
       cls: "stats-browser", title: "Chỉ số &amp; hình thể",
-      lead: "10 chỉ số thang 35–95, sinh từ vị trí sở trường, hai lối chơi và một chút ngẫu nhiên. Xanh ≥80, vàng 65–79, đỏ dưới 65.",
+      lead: "10 chỉ số thang 1–99 của 300 cầu thủ là dữ liệu cố định theo phong độ đỉnh cao; lối chơi chỉ quyết định hành vi. Xanh ≥80, vàng 65–79, đỏ dưới 65.",
       tabs: () => [
         { label: "Chỉ số", items: rules.keys.map(k => ({ key: "stat:" + k, html: `<button type="button" class="br-item stat-row" data-br data-nav data-key="stat:${k}"><b class="code-cap">${rules.short[k]}</b><span><b>${rules.labels[k]}</b><small>${STAT_EFFECTS[k]}</small></span></button>` })) },
         { label: "Hình thể", items: Object.entries(BODY_ITEMS).map(([k, [name, unit]]) => ({ key: "body:" + k, html: `<button type="button" class="br-item stat-row" data-br data-nav data-key="body:${k}"><b class="code-cap">${unit}</b><span><b>${name}</b><small>${BODY_ITEMS[k][2].split(";")[0]}</small></span></button>` })) },
@@ -209,22 +251,19 @@
       detail: key => {
         const [kind, id] = key.split(":");
         if (kind === "stat") {
-          const boosts = styles.filter(s => s.stats[id]).sort((a, b) => b.stats[id] - a.stats[id]);
           return `<div class="bd-hero"><b class="bd-code">${rules.short[id]}</b><div><span class="bd-kicker">Chỉ số</span><h3>${rules.labels[id]}</h3></div></div><p class="bd-text">${STAT_EFFECTS[id]}</p>`
             + '<h4 class="bd-h">Mức nền theo vị trí</h4>' + bars(Object.keys(rules.base).map(r => { const v = Math.max(rules.range[0], rules.base[r][id]); return [ROLE_GROUPS[r], v - 20, 75, v, tone(v)]; }))
             + '<h4 class="bd-h">Trọng số trong OVR</h4>' + bars(Object.keys(rules.weights).map(r => [ROLE_GROUPS[r], rules.weights[r][id] ?? 0, .7, rules.weights[r][id] ? Math.round(rules.weights[r][id] * 100) + "%" : "—"]))
-            + (boosts.length ? '<h4 class="bd-h">Lối chơi thay đổi chỉ số này</h4><div class="bd-chips">' + boosts.map(s => chip(escapeHtml(s.name) + (s.stats[id] > 0 ? " +" : " ") + s.stats[id])).join("") + "</div>" : "");
+            + '<h4 class="bd-h">Lối chơi</h4><p class="bd-text">Lối chơi không đổi chỉ số: nó quyết định cầu thủ tự làm gì khi không được điều khiển.</p>';
         }
         if (kind === "body") {
           const [name, unit, text] = BODY_ITEMS[id], body = gameData.body;
           const ranges = id === "height" ? bars(Object.entries(body.height).map(([r, [lo, hi]]) => [ROLE_GROUPS[r], hi - 150, 55, lo + "–" + hi + " cm"])) : "";
-          const extra = id === "height" ? Object.entries(body.styleHeight) : id === "weight" ? Object.entries(body.styleWeight) : [];
-          const styleName = sid => gameData.playstyles.attack[sid]?.name ?? gameData.playstyles.defense[sid]?.name ?? sid;
           return `<div class="bd-hero"><b class="bd-code">${unit}</b><div><span class="bd-kicker">Hình thể</span><h3>${name}</h3></div></div><p class="bd-text">${text}</p>`
             + (ranges ? '<h4 class="bd-h">Theo vị trí</h4>' + ranges : "")
             + (id === "weight" ? facts([["Chỉ số khối cơ thể", body.bmi.join("–").replace(/\./g, ",")], ["Giới hạn", "45–110 kg"]]) : "")
             + (id === "reach" || id === "sweep" ? facts([["Tỉ lệ tay/chân", body.limbs.map(v => v.toFixed(2).replace(".", ",")).join("–")], ["Tính từ", id === "reach" ? "Chiều cao × tay" : "Chiều cao × chân"]]) : "")
-            + (extra.length ? '<h4 class="bd-h">Lối chơi thay đổi</h4><div class="bd-chips">' + extra.map(([sid, v]) => chip(escapeHtml(styleName(sid)) + (v > 0 ? " +" : " ") + v + (id === "height" ? " cm" : ""))).join("") + "</div>" : "");
+            + "";
         }
         const weights = Object.entries(rules.weights[id]).sort((a, b) => b[1] - a[1]);
         return `<div class="bd-hero"><b class="bd-code" style="background:${ROLE_COLORS[id]}">${LINE_LABEL[id]}</b><div><span class="bd-kicker">OVR</span><h3>${ROLE_GROUPS[id]}</h3></div></div><p class="bd-text">OVR là trung bình có trọng số; cầu thủ đá trái vị trí bị tính theo vị trí đang đá.</p>`
@@ -277,16 +316,15 @@
   function renderStyleLegend(container) {
     makeBrowser(container, {
       cls: "style-browser", title: "Phong cách chơi",
-      lead: "Mỗi cầu thủ có 1 kiểu khi đội có bóng và 1 kiểu khi mất bóng; chúng quyết định cách đứng, chạy và xử lý bóng.",
+      lead: "Mỗi cầu thủ có 1 kiểu khi đội có bóng và 1 kiểu khi mất bóng; chúng quyết định cách anh ta tự đứng, chạy và xử lý bóng khi không được điều khiển.",
       tabs: () => Object.entries(ROLE_GROUPS).map(([role, labelText]) => ({ label: labelText, items: [["attack", "Khi có bóng"], ["defense", "Khi mất bóng"]].flatMap(([phase, group]) =>
         Object.entries(gameData.playstyles[phase]).filter(([, s]) => s.roles.includes(role)).map(([id, s]) => ({ key: phase + ":" + id + ":" + role, group,
           html: `<button type="button" class="br-item style-row" data-br data-nav data-key="${phase}:${id}:${role}"><i class="phase-dot" data-phase="${phase}"></i><span><b>${escapeHtml(s.name)}</b><small>${escapeHtml(s.tag)}</small></span></button>` }))) })),
       detail: key => {
         const [phase, id, role] = key.split(":"), s = gameData.playstyles[phase][id];
-        const statRows = Object.entries(s.stats).map(([k, v]) => [gameData.stats.labels[k], Math.abs(v), 10, (v > 0 ? "+" : "") + v, v > 0 ? "high" : "low"]);
         return `<div class="bd-hero bd-hero-style">${styleDiagram(s, role)}<div><span class="bd-kicker">${phase === "attack" ? "Khi có bóng · tấn công" : "Khi mất bóng · phòng ngự"}</span><h3>${escapeHtml(s.name)}</h3><p class="bd-sub">${escapeHtml(s.tag)}</p>${chip(ROLE_GROUPS[role], ROLE_COLORS[role])}</div></div>`
           + `<p class="bd-text">${escapeHtml(s.desc)}</p><h4 class="bd-h">Cách chơi</h4><div class="bd-chips">${styleTraits(s).map(x => chip(x)).join("")}</div>`
-          + (statRows.length ? '<h4 class="bd-h">Ảnh hưởng chỉ số</h4>' + bars(statRows) : "");
+          + '<p class="bd-text bd-note">Lối chơi chỉ điều khiển hành vi tự động; chỉ số của cầu thủ là của riêng anh ta.</p>';
       }
     });
   }
@@ -310,7 +348,7 @@
       + `<div class="kb-row kb-bottom"><span class="kb-gap"></span>${key("Space")}<span class="kb-arrows">${key("ArrowUp")}${key("ArrowLeft")}${key("ArrowDown")}${key("ArrowRight")}</span></div></div>`
       + (missing.length ? `<p class="kb-more">Phím khác: ${missing.map(code => kbd(code) + " " + escapeHtml(marks.get(code).text)).join(" · ")}</p>` : "") + (caption ? `<p class="kb-caption">${caption}</p>` : "");
   }
-  const SHORT_ACTION = { up: "Lên", down: "Xuống", left: "Trái", right: "Phải", switch: "Đổi", sprint: "Chạy", pass: "Chuyền", shoot: "Sút", press: "Bám", challenge: "Tranh", special: "Skill" };
+  const SHORT_ACTION = { up: "Lên", down: "Xuống", left: "Trái", right: "Phải", switch: "Đổi", sprint: "Chạy", pass: "Chuyền", shoot: "Sút", press: "Bám", challenge: "Tranh", special: "Skill", pause: "Dừng" };
   function marksFor(sets, hot = []) {
     const marks = new Map();
     for (const [slot, set] of sets) for (const action of keymap.ACTIONS) if (set?.[action]) marks.set(set[action], { text: SHORT_ACTION[action], slot, hot: hot.includes(action) && sets.length === 1 });
@@ -327,7 +365,8 @@
     shoot: "Có bóng: giữ nạp lực, thả để sút; bấm hai lần nhanh để sút thần sầu (cần 23% thể lực, tốn 18%). Không có bóng: xoạc, tự bám đối thủ trong 5,5 m; trúng thì 50% cướp bóng, 50% thẻ đỏ. Phạt góc: " + gameData.corners[1].name.toLowerCase() + ".",
     press: "Giữ để bám người cầm bóng, người sắp nhận bóng hoặc bóng tự do; thả là dừng. Phạt góc: " + gameData.corners[2].name.toLowerCase() + ".",
     challenge: "Bấm khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng. Phạt góc: " + gameData.corners[3].name.toLowerCase() + ".",
-    special: "Dùng skill theo tình huống, tốn 40% thể lực, một lần mỗi trận; penalty dùng trước khi chốt hướng."
+    special: "Dùng skill theo tình huống, tốn 40% thể lực, một lần mỗi trận; penalty dùng trước khi chốt hướng.",
+    pause: "Mở menu trận. Đấu với máy: dừng bao nhiêu lần cũng được (Space và Esc cũng dừng). Hai người: mỗi bên có 3 lượt tạm dừng, mỗi lượt tối đa 60 giây để thay người hay đổi chiến thuật; hết giờ trận tự chạy tiếp. Space và Esc là lượt của người A."
   };
   const MENU_KEYS = [
     ["nav", "Chọn trong menu", ["ArrowUp", "ArrowDown", "KeyW", "KeyS"], "↑ ↓ (hoặc W S) di chuyển con trỏ trong mọi menu."],
@@ -342,7 +381,7 @@
   function controlsItems(set) {
     if (!set) return MENU_KEYS.map(([id, title, codes]) => ({ key: "menu:" + id, html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="menu:${id}"><span class="km-cap">${codes.slice(0, 2).map(c => `<kbd>${escapeHtml(KB_NAMES[c] ?? label(c))}</kbd>`).join("")}</span><span><b>${title}</b></span></button>` }));
     return [{ key: "move", html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="move"><span class="km-cap">${MOVE_GROUP.map(a => kbd(set[a])).join("")}</span><span><b>Di chuyển</b><small>Theo hướng màn hình</small></span></button>` },
-      ...[...GUIDE_ACTIONS, "special"].map(a => ({ key: a, html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="${a}"><span class="km-cap">${kbd(set[a])}</span><span><b>${a === "special" ? "Skill" : GUIDE_LABELS[GUIDE_ACTIONS.indexOf(a)]}</b><small>${a === "special" ? "Bấm" : GUIDE_GESTURES[GUIDE_ACTIONS.indexOf(a)]}</small></span></button>` }))];
+      ...[...GUIDE_ACTIONS, "special", "pause"].map(a => ({ key: a, html: `<button type="button" class="br-item ctl-row" data-br data-nav data-key="${a}"><span class="km-cap">${kbd(set[a])}</span><span><b>${a === "special" ? "Skill" : a === "pause" ? "Tạm dừng · menu trận" : GUIDE_LABELS[GUIDE_ACTIONS.indexOf(a)]}</b><small>${a === "special" || a === "pause" ? "Bấm" : GUIDE_GESTURES[GUIDE_ACTIONS.indexOf(a)]}</small></span></button>` }))];
   }
   function controlsDetail(key, tab) {
     const set = tab.set;
@@ -350,7 +389,7 @@
       const [, id] = key.split(":"), [, title, codes, text] = MENU_KEYS.find(m => m[0] === id);
       return `<h3 class="bd-title">${title}</h3><p class="bd-text">${text}</p>` + keyboardHtml(new Map(codes.map(c => [c, { text: title.split(" ")[0], slot: "M", hot: true }])));
     }
-    const actions = key === "move" ? MOVE_GROUP : [key], title = key === "move" ? "Di chuyển" : key === "special" ? "Skill" : GUIDE_LABELS[GUIDE_ACTIONS.indexOf(key)];
+    const actions = key === "move" ? MOVE_GROUP : [key], title = key === "move" ? "Di chuyển" : key === "special" ? "Skill" : key === "pause" ? "Tạm dừng · menu trận" : GUIDE_LABELS[GUIDE_ACTIONS.indexOf(key)];
     return `<h3 class="bd-title">${title} ${actions.map(a => kbd(set[a])).join("")}</h3><p class="bd-text">${ACTION_NOTES[key === "move" ? "move" : key]}</p>` + keyboardHtml(marksFor([[tab.slot, set]], actions), tab.caption ?? "");
   }
   function makeControlsBrowser(container, sources, { title = "Điều khiển", lead = "", onLeave } = {}) {
@@ -436,7 +475,7 @@
   const writeText = (node, value) => { const text = String(value); if (node.textContent !== text) node.textContent = text; };
   const pendingShots = new Map(), chargeStarts = new Map();
   let activeMode = "watch";
-  let watcher = document.getElementById("watch-match").__ptscFootball;
+  let watcher = null;
 
   function acceptsKeys(session) {
     const focused = document.activeElement;
@@ -554,12 +593,13 @@
     const state = view.api?.status?.();
     if (state?.ended && view !== watchView) kind = "end";
     overlay.hidden = false; overlay.dataset.kind = kind;
-    const score = state ? `Đỏ ${state.score.R} – ${state.score.B} Xanh` : "";
+    const score = state ? `${shortOf(view, "R")} ${state.score.R} – ${state.score.B} ${shortOf(view, "B")}` : "";
     const minute = state && !state.ended && !view.awaitingStart ? ` · ${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}'` : "";
-    const kicker = view === watchView ? "Chỉ xem · tạm dừng" : { start: "Sẵn sàng", pause: "Tạm dừng", end: "Hết trận" }[kind];
-    const title = kind === "end" ? (state.winner ? `Đội ${names[state.winner]} chiến thắng!` : "Hai đội hòa!") : view.awaitingStart ? `${names[view.options.teamA]} vs ${names[opposite(view.options.teamA)]}` : score + minute;
+    const timeout = view.timeout, who = timeout ? (view.options?.mode === "cpu" ? "Bạn" : "Người " + timeout.slot) : "";
+    const kicker = view === watchView ? "Chỉ xem · tạm dừng" : kind === "pause" && timeout ? `Tạm dừng của ${who} · lượt ${timeout.used}/${TIMEOUTS}` : { start: "Sẵn sàng", pause: "Tạm dừng", end: "Hết trận" }[kind];
+    const title = kind === "end" ? (state.winner ? `${nameOf(view, state.winner)} chiến thắng!` : "Hai đội hòa!") : view.awaitingStart ? `${nameOf(view, "R")} vs ${nameOf(view, "B")}` : score + minute;
     const text = kind === "end" ? score + (state.penalty ? ` · Luân lưu ${state.penalty.score.R}–${state.penalty.score.B}` : "")
-      : kind === "start" ? "Nhấn Space để bắt đầu trận đấu" : view === watchView ? "Nhấn Space để xem tiếp" : "Nhấn Space để tiếp tục trận đấu";
+      : kind === "start" ? "Nhấn Space để bắt đầu trận đấu" : view === watchView ? "Nhấn Space để xem tiếp" : kind === "pause" && timeout ? `Còn ${timeoutLeft(view)} giây · Space để đá tiếp` : "Nhấn Space để tiếp tục trận đấu";
     writeText(overlay.querySelector(".pause-kicker"), kicker);
     writeText(overlay.querySelector(".pause-title"), title);
     overlay.querySelector(".pause-text").innerHTML = escapeHtml(text).replace("Space", "<kbd>Space</kbd>");
@@ -569,6 +609,9 @@
     overlay.querySelector(".pause-prompt-space").hidden = kind === "end";
     writeText(overlay.querySelector(".pause-prompt-space i"), kind === "start" ? "Bắt đầu" : "Tiếp tục");
     overlay.querySelector('[data-act="restart"]')?.classList.toggle("is-featured", kind === "end");
+    // In a two-player match the squads and tactics can only be touched during a side's own timeout.
+    const plan = overlay.querySelector('[data-act="plan"]');
+    if (plan && view !== watchView) plan.hidden = view.options?.mode === "local" && kind === "pause" && !view.timeout;
     if (focusMenu) focusOn((kind === "end" && overlay.querySelector('[data-act="restart"]')) || [...overlay.querySelectorAll(".menu-item")].find(item => !item.hidden));
     syncPauseTools(view);
   }
@@ -579,9 +622,22 @@
     button.classList.toggle("is-paused", resume);
     button.setAttribute("aria-label", text); button.title = text;
   }
+  // Two-player matches: each side may stop the clock three times for a minute to change players or tactics.
+  const TIMEOUTS = 3, TIMEOUT_SECONDS = 60;
+  const timeoutLeft = view => view.timeout ? Math.max(0, Math.ceil((view.timeout.until - performance.now()) / 1000)) : 0;
+  /** A pause asked for by a player: free against the computer, one of his timeouts in a two-player match. */
+  function requestPause(session, slot) {
+    if (session.paused || session.api.status().ended) return;
+    if (session.options.mode !== "local" || session.awaitingStart) { setPaused(session, true, true); return; }
+    const left = session.timeouts[slot] ?? 0;
+    if (left <= 0) { session.flash = { text: `Người ${slot} đã hết ${TIMEOUTS} lượt tạm dừng`, until: performance.now() + 2500 }; updateHud(session); return; }
+    session.timeouts[slot] = left - 1;
+    session.timeout = { slot, used: TIMEOUTS - left + 1, until: performance.now() + TIMEOUT_SECONDS * 1000 };
+    setPaused(session, true, true);
+  }
   function setPaused(session, paused, focusMenu = false) {
     session.paused = paused;
-    if (!paused) { session.awaitingStart = false; closeSheets(session.arena); }
+    if (!paused) { session.awaitingStart = false; session.timeout = null; closeSheets(session.arena); }
     // Kicks and switch repeats stop, but directions still held carry on as soon as play resumes.
     stopSwitchRepeats(); cancelKicks();
     if (paused) session.api.pause(); else session.api.play();
@@ -678,7 +734,7 @@
   // game info screen with its sections. The URL hash holds the screen so the browser's back button works.
   const SCREENS = { menu: "panel-watch", watch: "panel-watch", cpu: "panel-cpu", local: "panel-local", info: "screen-info" };
   const TITLES = { menu: "Menu chính", watch: "Chỉ xem", cpu: "Đấu với máy", local: "Hai người", info: "Thông tin game" };
-  const PANES = { skills: "Bảng skill", stats: "Chỉ số & hình thể", styles: "Phong cách chơi", keys: "Layout phím", controls: "Điều khiển", rules: "Độ khó & luật" };
+  const PANES = { teams: "Đội bóng", skills: "Bảng skill", stats: "Chỉ số & hình thể", styles: "Phong cách chơi", keys: "Layout phím", controls: "Điều khiển", rules: "Độ khó & luật" };
   let route = { name: "", sub: null }, infoReturn = null;
   const pathOf = r => r.name + (r.sub ? "/" + r.sub : "");
   function parseRoute() {
@@ -790,8 +846,11 @@
   showPreview(mainMenu.querySelector(".menu-item"));
   function newWatch() {
     watcher?.destroy();
-    watcher = window.PTSCFootball.mount(document.getElementById("watch-match"));
+    const host = document.getElementById("watch-match"), rng = rngFrom(host.dataset.seed), [a, b] = clubs.randomPair(rng);
+    watcher = window.PTSCFootball.mount(host, { squads: { R: clubs.pickSquad(a, rng), B: clubs.pickSquad(b, rng) }, teams: clubs.teamOption(a, b) });
+    paintTeams(watchPanel, watcher);
     if (activeMode !== "watch" || watchView.paused || document.hidden) watcher.pause();
+    watchView.cardsFor = null;
   }
   function setWatchPaused(paused, focusMenu = false) {
     watchView.paused = paused;
@@ -816,12 +875,14 @@
     watchArena.addEventListener("pointerdown", event => { if (route.name === "watch" && !event.target.closest("button, .start-overlay, .sheet")) focusOn(watchArena); });
     const energy = document.createElement("div"); energy.className = "arena-energy";
     watchArena.querySelector(".arena-surface").append(energy);
-    buildTeamCards(watchArena.querySelector(".player-status"), cardOrder("watch"));
-    buildEnergyBoxes(energy, cardOrder("watch"));
+    buildTeamCards(watchArena.querySelector(".player-status"), cardOrder("watch", "R", watchView));
+    buildEnergyBoxes(energy, cardOrder("watch", "R", watchView));
   }
   function updateWatchHud() {
     if (activeMode !== "watch" || !watcher?.status) return;
-    const state = watcher.status(), ctx = { id: "watch", leftTeam: state.leftTeam, paused: false, ended: state.ended };
+    // The cards carry the clubs' names; a new match means new clubs.
+    if (watchView.cardsFor !== watcher) { watchView.cardsFor = watcher; buildTeamCards(watchArena.querySelector(".player-status"), cardOrder("watch", "R", watchView)); buildEnergyBoxes(watchArena.querySelector(".arena-energy"), cardOrder("watch", "R", watchView)); }
+    const state = watcher.status(), ctx = { id: "watch", leftTeam: state.leftTeam, paused: false, ended: state.ended, shorts: { R: shortOf(watchView, "R"), B: shortOf(watchView, "B") } };
     for (const card of watchArena.querySelector(".player-status").cards ?? []) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
     for (const box of watchArena.querySelector(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
   }
@@ -830,6 +891,13 @@
   // Like a console's game plan: both sides with a pitch and a list; any player opens his info and ratings; the side
   // you control can make substitutions, pick a shape and switch the automatic coach on or off.
   const PLAN_TABS = [["lineup", "Đội hình"], ["tactics", "Chiến thuật"], ["support", "Hỗ trợ"]];
+  const CELEBRATION_NAMES = { fist: "Vung nắm đấm", mate: "Ôm đồng đội", arms: "Dang tay", airplane: "Máy bay", pointMate: "Chỉ tay cảm ơn", badge: "Hôn huy hiệu", dance: "Nhảy múa", kneeSlide: "Trượt gối", shush: "Suỵt", siu: "SIUU", sky: "Chỉ lên trời", heart: "Trái tim", flip: "Lộn nhào", armsFolded: "Khoanh tay", salute: "Chào kiểu nhà binh", earCup: "Khum tai", pray: "Quỳ cầu nguyện" };
+  /** In a two-player match only the side whose timeout it is may change its squad or tactics. */
+  function mayCoach(view, t) {
+    const session = view.panel ? sessions.get(view.panel.dataset.mode) : null;
+    if (!session || session.options.mode !== "local" || session.awaitingStart || !session.timeout) return true;
+    return (session.timeout.slot === "A" ? "R" : "B") === t;
+  }
   const LINE_LABEL = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" };
   const RADAR = [["SÚT", s => s.finishing], ["CHUYỀN", s => (s.passing + s.longPass) / 2], ["RÊ", s => s.dribbling], ["TỐC", s => s.speed], ["SỨC", s => (s.strength + s.heading) / 2], ["THỦ", s => s.defending]];
   const statTone = v => v >= 85 ? "top" : v >= 75 ? "good" : v >= 65 ? "fair" : "low";
@@ -865,14 +933,15 @@
     const flags = (queued ? queued.off === p.id ? '<i class="flag off" title="Sẽ ra sân">▼</i>' : '<i class="flag on" title="Sẽ vào sân">▲</i>' : "")
       + (p.yellows ? '<i class="flag card" title="Thẻ vàng"></i>' : "") + (p.injured ? '<i class="flag hurt" title="Chấn thương">+</i>' : "");
     const state = picking ? "pick" : choosable ? "choose" : queued ? (queued.off === p.id ? "off" : "on") : "";
-    const sub = `#${p.num} · ${p.attack.name} / ${p.defense.name}`;
+    const sub = `#${p.num} · ${p.posName ? p.posName + " · " : ""}${p.attack.name} / ${p.defense.name}`;
     return `<button type="button" class="plan-row" data-nav data-col="${col}" data-key="${t}:${p.id}" data-team="${t}" data-id="${p.id}"${state ? ` data-state="${state}"` : ""}${p.injured ? " data-hurt" : ""}>`
       + posBadge(p.onPitch ? p.line ?? p.role : p.role) + `<span class="plan-name"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(sub)}</small></span>`
       + `<span class="plan-energy" title="Thể lực ${Math.round(p.energy * 100)}%"><i style="width:${Math.round(p.energy * 100)}%"></i></span><span class="plan-flags">${flags}</span><b class="plan-ovr" data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b></button>`;
   }
   function planColumn(view, t, col) {
     const ui = view.planUI, data = ui.data, d = data[t], api = view.api;
-    const head = `<header class="plan-head" data-team="${t}"><span class="kit-shirt ${t === "R" ? "red" : "blue"}" aria-hidden="true"></span><div class="plan-title"><b>Đội ${names[t]}</b><small>${escapeHtml(planWho(view, d.controller))}${d.coached ? "" : " · chỉ xem"}</small></div><div class="plan-formation"><b>${d.shape}</b><small>${escapeHtml(d.shapeName)}</small></div></header>`;
+    const club = d.team, badge = club?.logo ? `<img class="plan-logo" src="${escapeHtml(club.logo)}" alt="" width="40" height="40" loading="lazy">` : `<span class="kit-shirt" style="background:var(--team-${t})" aria-hidden="true"></span>`;
+    const head = `<header class="plan-head" data-team="${t}">${badge}<div class="plan-title"><b>${escapeHtml(club?.name ?? DEFAULT_NAMES[t])}</b><small>${escapeHtml(planWho(view, d.controller))}${d.coached ? "" : " · chỉ xem"}</small></div><div class="plan-formation"><b>${d.shape}</b><small>${escapeHtml(d.shapeName)}</small></div></header>`;
     const tokens = d.players.map(p => {
       const [dd, w] = p.spot ?? [0.3, 0.5], queued = d.queue.some(q => q.off === p.id), top = dd <= .05 ? 91 : 79 - (dd - .1) / .6 * 70;
       return `<button type="button" class="pp-token" tabindex="-1" data-team="${t}" data-id="${p.id}" style="left:${(10 + w * 80).toFixed(1)}%;top:${top.toFixed(1)}%;z-index:${Math.round(100 - top)}"${queued ? ' data-state="off"' : ""}>`
@@ -902,9 +971,10 @@
     const ui = view.planUI, { team: t, id, page } = ui.detail, p = findPlanPlayer(ui.data, t, id), d = ui.data[t];
     if (!p) return "";
     const b = p.body, queued = d.queue.find(q => q.off === id || q.on === id);
-    const top = `<div class="pd-top">${figureSvg(view.api, id, "-26 -98 56 66", "pd-face")}<div class="pd-id"><span class="pd-num">#${p.num}</span><strong>${escapeHtml(p.name)}</strong><span class="pd-pos">${posBadge(p.onPitch ? p.line ?? p.role : p.role)}<small>Sở trường: ${LINE_LABEL[p.natural] ?? p.natural}${p.onPitch ? "" : " · dự bị"}</small></span></div><div class="pd-ovr"><b data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b><small>OVR</small></div>${radarSvg(p.stats)}</div>`;
+    const top = `<div class="pd-top">${figureSvg(view.api, id, "-26 -98 56 66", "pd-face")}<div class="pd-id"><span class="pd-num">#${p.num}</span><strong>${escapeHtml(p.name)}</strong><span class="pd-pos">${posBadge(p.onPitch ? p.line ?? p.role : p.role)}<small>${p.posName ? escapeHtml(p.posName) + " · " : ""}${p.roleName ? escapeHtml(p.roleName) : "Sở trường: " + (LINE_LABEL[p.natural] ?? p.natural)}${p.onPitch ? "" : " · dự bị"}</small></span></div><div class="pd-ovr"><b data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b><small>OVR</small></div>${radarSvg(p.stats)}</div>`;
     const info = page === 0
       ? `<dl class="pd-info"><div><dt>Chiều cao</dt><dd>${b.height} cm</dd></div><div><dt>Cân nặng</dt><dd>${b.weight} kg</dd></div><div><dt>Tầm với</dt><dd>${b.reach.toFixed(2).replace(".", ",")} m</dd></div><div><dt>Thể lực</dt><dd>${Math.round(p.energy * 100)}%</dd></div><div><dt>Thẻ</dt><dd>${p.yellows ? p.yellows + " vàng" : "Chưa có"}</dd></div><div><dt>Tình trạng</dt><dd>${p.injured ? "Chấn thương" : p.subbing ? "Đang thay người" : queued ? (queued.off === id ? "Sẽ ra sân" : "Sẽ vào sân") : p.onPitch ? "Trên sân" : "Dự bị"}</dd></div></dl>`
+        + (p.summary ? `<p class="pd-summary">${escapeHtml(p.summary)}${p.celebration ? ` · Ăn mừng: <b>${escapeHtml(CELEBRATION_NAMES[p.celebration] ?? p.celebration)}</b>` : ""}</p>` : "")
         + `<div class="pd-styles"><div class="pd-style atk"><small>Có bóng</small><b>${escapeHtml(p.attack.name)}</b><em>${escapeHtml(p.attack.tag)}</em><p>${escapeHtml(p.attack.desc)}</p></div><div class="pd-style def"><small>Mất bóng</small><b>${escapeHtml(p.defense.name)}</b><em>${escapeHtml(p.defense.tag)}</em><p>${escapeHtml(p.defense.desc)}</p></div></div>`
         + (p.skill ? `<div class="pd-skill"><svg viewBox="0 0 24 24" aria-hidden="true">${skillBadge(p.skill.id, p.skill.icon, "pd-" + p.id)}</svg><span><b>${escapeHtml(p.skill.name)}${p.skill.used ? " · đã dùng" : ""}</b><small>${escapeHtml(p.skill.desc)}</small>${p.penaltySkill ? `<small class="pd-pen">Penalty: ${escapeHtml(p.penaltySkill.name)}</small>` : ""}</span></div>` : "")
       : '<ol class="pd-stats">' + gameData.stats.keys.map(k => `<li><b data-tone="${statTone(p.stats[k])}">${p.stats[k]}</b><span>${gameData.stats.labels[k]}</span><i><i style="width:${Math.round(clamp01((p.stats[k] - 35) / 60) * 100)}%"></i></i></li>`).join("") + "</ol>";
@@ -944,7 +1014,8 @@
   const firstPlanItem = (sheet, col) => planItems(sheet, col)[0] ?? planItems(sheet, 1 - col)[0] ?? sheet.querySelector(".sheet-back");
   function openPlan(view, opener) {
     view.planUI ??= { tab: "lineup" };
-    Object.assign(view.planUI, { detail: null, pick: null, note: "" });
+    // The plan always opens on the line-up; a tab chosen last time is not kept.
+    Object.assign(view.planUI, { tab: "lineup", detail: null, pick: null, note: "" });
     const sheet = view.arena.querySelector('.sheet[data-sheet="plan"]');
     openSheet(view, "plan", opener);
     renderPlan(view, null);
@@ -973,6 +1044,7 @@
     const ui = view.planUI, d = ui.data[t], p = findPlanPlayer(ui.data, t, id);
     if (!p) return;
     if (!d.coached) { ui.note = "Chỉ thay người được cho đội bạn điều khiển."; renderPlan(view); return; }
+    if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được thay người."; renderPlan(view); return; }
     if (view.api.status().ended) { ui.note = "Trận đấu đã kết thúc."; renderPlan(view); return; }
     if (d.queue.some(q => q.off === id || q.on === id)) { view.api.cancelSub(t, id); ui.note = `Đã hủy lượt thay của ${p.name}.`; ui.detail = null; renderPlan(view, `${t}:${id}`); return; }
     if (p.onPitch ? !p.canOff : !p.canOn) {
@@ -1006,10 +1078,12 @@
     const ui = view.planUI, t = el.dataset.team;
     if (el.matches(".plan-row, .pp-token")) { if (ui.pick) completePick(view, t, el.dataset.id); else openDetail(view, t, el.dataset.id); }
     else if (el.matches(".plan-shape[data-shape]") && ui.data[t]?.coached) {
+      if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được đổi chiến thuật."; renderPlan(view, el.dataset.key); return; }
       const result = view.api.setShape(t, el.dataset.shape);
-      ui.note = result.ok ? `Đội ${names[t]} đá ${el.dataset.shape}.` : "Sơ đồ này không dùng được lúc này.";
+      ui.note = result.ok ? `${ui.data[t].team?.name ?? DEFAULT_NAMES[t]} đá ${el.dataset.shape}.` : "Sơ đồ này không dùng được lúc này.";
       renderPlan(view, el.dataset.key);
     } else if (el.matches("[data-auto]")) {
+      if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được đổi tùy chọn này."; renderPlan(view, el.dataset.key); return; }
       const key = el.dataset.auto, on = !ui.data[t].auto[key];
       view.api.setAuto(t, { [key]: on });
       ui.note = (key === "tactics" ? "Tự động đổi chiến thuật " : "Tự động thay người ") + (on ? "bật." : "tắt.");
@@ -1074,6 +1148,14 @@
     const k = layout.keys;
     return "Di chuyển " + ["up", "left", "down", "right"].map(a => label(k[a])).join(" ") + " · " + ["pass", "shoot", "switch", "sprint", "press", "challenge", "special"].map(a => keymap.LABELS[a] + " " + label(k[a])).join(" · ");
   }
+  const LINE_NAMES = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" };
+  function clubDesc(id, who) {
+    const t = clubs.get(id);
+    if (!t) return "";
+    const lines = ["GK", "DF", "MF", "FW"].map(r => t.players.filter(p => p.role === r).length + " " + LINE_NAMES[r]).join(" · ");
+    const best = [...t.players].sort((a, b) => b.ovr - a.ovr).slice(0, 3).map(p => p.short).join(", ");
+    return `${who} dẫn dắt ${t.name} (${t.country}) · OVR ${clubs.strength(t)} · ${t.players.length} cầu thủ: ${lines}. Mỗi trận bốc ngẫu nhiên 9 người (1 TM, 3 HV, 2 TV, 3 TĐ). Ngôi sao: ${best}.`;
+  }
   function setupSpecs(panel) {
     const mode = panel.dataset.mode, cpu = mode === "cpu";
     let savedLevel = "normal";
@@ -1084,8 +1166,10 @@
       get: () => keymap.assigned(mode, slot)?.id, set: id => keymap.assign(mode, slot, id),
       desc: id => layoutSummary(keymap.get(id)) });
     return [
-      { key: "team", label: cpu ? "Màu áo của bạn" : "Màu áo người A", swatch: true, initial: "R", values: () => [["R", "Đội Đỏ"], ["B", "Đội Xanh"]],
-        desc: v => cpu ? `Bạn đá cho đội ${names[v]}, máy nhận đội ${names[opposite(v)]}.` : `Người A đá cho đội ${names[v]}, người B nhận đội ${names[opposite(v)]}.` },
+      { key: "clubA", label: cpu ? "Đội của bạn" : "Đội người A", initial: clubs.get(savedClubs[mode + "A"]) ? savedClubs[mode + "A"] : clubIds()[0], values: () => clubs.list().map(t => [t.id, t.name]),
+        desc: id => clubDesc(id, cpu ? "Bạn" : "Người A"), changed: id => rememberClub(mode + "A", id) },
+      { key: "clubB", label: cpu ? "Đội máy" : "Đội người B", initial: clubs.get(savedClubs[mode + "B"]) || savedClubs[mode + "B"] === "random" ? savedClubs[mode + "B"] : clubIds()[1], values: () => [...(cpu ? [["random", "Ngẫu nhiên"]] : []), ...clubs.list().map(t => [t.id, t.name])],
+        desc: id => id === "random" ? "Máy bốc một đội bất kỳ khác đội của bạn khi vào sân." : clubDesc(id, cpu ? "Máy" : "Người B"), changed: id => rememberClub(mode + "B", id) },
       cpu && { key: "level", label: "Độ khó máy", initial: savedLevel, values: () => Object.entries(gameData.difficulty).map(([id, d]) => [id, d.name]),
         desc: v => gameData.difficulty[v].name + ": " + levelNote(gameData.difficulty[v]) + ". Đội của bạn không đổi.",
         changed: v => { try { localStorage.setItem("ptsc-football.difficulty", v); } catch {} } },
@@ -1157,15 +1241,21 @@
     if (panel.contains(document.activeElement)) describe(panel, document.activeElement.closest(".opt"));
   }
   function optionsFor(panel) {
-    const v = panel.setup.values, mode = panel.dataset.mode, teamA = v.team, teamB = opposite(teamA);
+    const v = panel.setup.values, mode = panel.dataset.mode, teamA = "R", teamB = "B";
     return { mode, duration: v.duration, extraTime: v.extraTime, penalties: v.penalties, support: v.support, difficulty: v.level ?? "normal", autoTactics: v.autoTactics, autoSubs: v.autoSubs,
-      teamA, leftTeam: mode === "local" ? (v.side === "left" ? teamB : teamA) : "R" };
+      clubA: v.clubA, clubB: v.clubB, teamA, leftTeam: mode === "local" ? (v.side === "left" ? teamB : teamA) : "R" };
   }
   function renderMatchup(panel) {
     const o = optionsFor(panel), cpu = o.mode === "cpu", teamB = opposite(o.teamA);
     const side = team => o.leftTeam === team ? "sân trái" : "sân phải";
     const who = cpu ? ["Bạn", "Máy"] : ["Người A", "Người B"];
-    const team = (t, name) => `<div class="vs-team" data-team="${t}"><span class="kit-shirt ${t === "R" ? "red" : "blue"}" aria-hidden="true"></span><b>${name}</b><small>Đội ${names[t]} · ${side(t)}</small></div>`;
+    const clubA = clubs.get(o.clubA), clubB = o.clubB === "random" ? null : clubs.get(o.clubB);
+    const kits = clubA && clubB ? clubs.kitsFor(clubA.id, clubB.id) : null;
+    const team = (t, name) => {
+      const club = t === "R" ? clubA : clubB, kit = kits?.[t];
+      const art = club ? `<img class="vs-logo" src="${escapeHtml(club.logo)}" alt="" width="64" height="64" loading="lazy"><img class="vs-kit" src="${escapeHtml(kit?.image ?? club.kits.home.image)}" alt="" width="60" height="94" loading="lazy">` : '<span class="vs-logo vs-unknown" aria-hidden="true">?</span>';
+      return `<div class="vs-team" data-team="${t}">${art}<b>${escapeHtml(club?.name ?? "Ngẫu nhiên")}</b><small>${name} · ${side(t)}${club ? " · OVR " + clubs.strength(club) : ""}${kit ? " · áo " + (kit.kit === "home" ? "sân nhà" : "sân khách") : ""}</small></div>`;
+    };
     const facts = [["Thời gian", o.duration + " phút"], cpu && ["Độ khó", gameData.difficulty[o.difficulty]?.name ?? "Thường"], ["Hiệp phụ", o.extraTime ? "Có" : "Không"], ["Luân lưu", o.penalties ? "Có" : "Không"], ["Hỗ trợ ngắm", o.support ? "Bật" : "Tắt"], ["Tự động", [o.autoTactics && "chiến thuật", o.autoSubs && "thay người"].filter(Boolean).join(", ") || "Tắt"]].filter(Boolean);
     const html = `<div class="vs">${team(o.teamA, who[0])}<span class="vs-mark">VS</span>${team(teamB, who[1])}</div><dl class="vs-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`
       + (sessions.has(o.mode) ? '<p class="vs-note">Trận đang dở sẽ được thay bằng trận mới.</p>' : "");
@@ -1179,22 +1269,28 @@
     button.setAttribute("aria-pressed", String(on));
     button.querySelector(".menu-item-text").innerHTML = 'Hỗ trợ ngắm <b class="toggle-state">' + (on ? "Bật" : "Tắt") + "</b>";
   }
-  function startMatch(panel) {
+  function startMatch(panel, { rematch = false } = {}) {
     releaseKeys();
     const mode = panel.dataset.mode;
     const previous = sessions.get(mode);
     previous?.penaltyView.clearTimers(); previous?.api.destroy();
     const options = optionsFor(panel), arena = panel.querySelector(".arena");
     const host = panel.querySelector(".match-host"); host.replaceChildren();
+    // The two clubs and a fresh nine from each; a rematch keeps the clubs but draws again.
+    const idA = resolveClub(options.clubA), idB = resolveClub(options.clubB, idA), rng = rngFrom(host.dataset.seed);
+    options.clubA = idA; options.clubB = idB;
+    options.squads = { R: clubs.pickSquad(idA, rng), B: clubs.pickSquad(idB, rng) };
+    options.teams = clubs.teamOption(idA, idB);
     const api = window.PTSCFootball.mount(host, options);
+    paintTeams(panel, api);
     api.pause();
     const penaltyKeys = slot => {
       const set = bindingsOf(mode)[slot] ?? {};
       return { left: label(set.left), center: label(set.down), right: label(set.right), special: label(set.special) };
     };
-    const session = { panel, arena, api, options, paused: true, awaitingStart: true, overlay: panel.overlay,
+    const session = { panel, arena, api, options, paused: true, awaitingStart: true, overlay: panel.overlay, timeouts: { A: TIMEOUTS, B: TIMEOUTS }, timeout: null, flash: null,
       penaltyView: new window.PTSCPenaltyView(panel.querySelector(".penalty-host"), api, { keys: penaltyKeys }) };
-    sessions.set(mode, session);
+    sessions.set(mode, session); panel.__session = session;
     closeSheets(arena);
     panel.querySelector(".arena-energy").hidden = false;
     playerCards(session); updateHud(session); renderSetup(panel); syncSupport(panel);
@@ -1207,22 +1303,23 @@
   const clamp01 = v => Math.max(0, Math.min(1, v));
   const isHuman = controller => controller === "A" || controller === "B";
   /** Who is on each card: the controlled sides first, then the computer's (or Đỏ then Xanh when watching). */
-  function cardOrder(mode, teamA) {
-    if (mode === "local") return [{ team: teamA, controller: "A" }, { team: opposite(teamA), controller: "B" }];
-    if (mode === "cpu") return [{ team: teamA, controller: "A" }, { team: opposite(teamA), controller: "cpu" }];
-    return [{ team: "R", controller: "auto" }, { team: "B", controller: "auto" }];
+  function cardOrder(mode, teamA, view) {
+    const item = (team, controller) => ({ team, controller, name: nameOf(view, team) });
+    if (mode === "local") return [item(teamA, "A"), item(opposite(teamA), "B")];
+    if (mode === "cpu") return [item(teamA, "A"), item(opposite(teamA), "cpu")];
+    return [item("R", "auto"), item("B", "auto")];
   }
-  const controllerLabel = (controller, team) => controller === "cpu" ? "Máy · " + names[team] : controller === "auto" ? "Đội " + names[team] : "Người " + controller + " · " + names[team];
+  const controllerLabel = (controller, name) => controller === "cpu" ? "Máy · " + name : controller === "auto" ? name : "Người " + controller + " · " + name;
   /** Big, readable cards: overall rating, name, build, stamina, skill, ten ratings and both playing styles. */
   function buildTeamCards(container, order) {
     container.replaceChildren();
-    container.cards = order.map(({ team, controller }) => {
+    container.cards = order.map(({ team, controller, name }) => {
       const card = document.createElement("article");
       card.className = "player-card"; card.dataset.team = team; card.dataset.controller = controller;
       if (isHuman(controller)) card.dataset.slot = controller;
       const stats = gameData.stats.keys.map(k => '<div class="pc-stat" data-stat="' + k + '" title="' + gameData.stats.labels[k] + '"><b>–</b><span>' + gameData.stats.short[k] + '</span><i><i></i></i></div>').join("");
       card.innerHTML = '<div class="pc-head"><div class="pc-ovr"><b data-f="ovr">–</b><small>OVR</small></div>'
-        + '<div class="pc-id"><span class="pc-tag" data-f="tag">' + escapeHtml(controllerLabel(controller, team)) + '</span><strong data-f="name">Chuẩn bị</strong><span class="pc-meta" data-f="meta"></span></div>'
+        + '<div class="pc-id"><span class="pc-tag" data-f="tag">' + escapeHtml(controllerLabel(controller, name)) + '</span><strong data-f="name">Chuẩn bị</strong><span class="pc-meta" data-f="meta"></span></div>'
         + '<div class="pc-skill" data-f="skillBox"><svg viewBox="0 0 24 24" aria-hidden="true"></svg><span><b data-f="skillShort"></b><small data-f="skillState"></small></span></div></div>'
         + '<div class="pc-energy"><span>Thể lực</span><b data-f="energy">100%</b><div class="pc-bar"><i data-f="energyBar"></i></div></div>'
         + '<div class="pc-stats">' + stats + '</div>'
@@ -1269,8 +1366,8 @@
   }
   function updateEnergyBox(box, info, ctx) {
     if (!box || !info?.name) return;
-    const controller = box.dataset.controller, prefix = controller === "cpu" ? "Máy" : controller === "auto" ? names[info.team] : controller;
-    writeText(box.querySelector(".energy-name"), prefix + " · " + info.name + (info.ovr ? " · " + info.ovr : ""));
+    const controller = box.dataset.controller, prefix = controller === "cpu" ? "Máy" : controller === "auto" ? (ctx.shorts?.[info.team] ?? info.team) : controller;
+    writeText(box.querySelector(".energy-name"), prefix + " · " + (info.short || info.name) + (info.ovr ? " · " + info.ovr : ""));
     writeText(box.querySelector("strong"), Math.round(info.energy * 100) + "%");
     box.querySelector("progress").value = info.energy; box.classList.toggle("is-low", info.energy < .35);
     const button = box.querySelector(".special-button"), skill = info.special;
@@ -1287,7 +1384,7 @@
     button.setAttribute("aria-label", prefix + ": " + button.title);
   }
   function playerCards(session) {
-    const order = cardOrder(session.options.mode, session.options.teamA);
+    const order = cardOrder(session.options.mode, session.options.teamA, session);
     buildTeamCards(session.arena.querySelector(".player-status"), order);
     buildEnergyBoxes(session.panel.querySelector(".arena-energy"), order);
     renderPanelKeys(session.panel);
@@ -1330,14 +1427,14 @@
     const result = q(".arena-result");
     result.hidden = !state.ended;
     if (state.ended) {
-      result.querySelector("strong").textContent = state.winner ? `Đội ${names[state.winner]} chiến thắng!` : "Hai đội hòa!";
-      result.querySelector("span").textContent = `Đỏ ${state.score.R}–${state.score.B} Xanh${state.penalty ? ` · PEN ${state.penalty.score.R}–${state.penalty.score.B}` : ""}`;
+      result.querySelector("strong").textContent = state.winner ? `${nameOf(session, state.winner)} chiến thắng!` : "Hai đội hòa!";
+      result.querySelector("span").textContent = `${shortOf(session, "R")} ${state.score.R}–${state.score.B} ${shortOf(session, "B")}${state.penalty ? ` · PEN ${state.penalty.score.R}–${state.penalty.score.B}` : ""}`;
     }
     const status = q(".match-status");
     q(".pause").disabled = state.ended;
     if (state.ended) {
-      const outcome = state.winner ? `Đội ${names[state.winner]} thắng` : "Hai đội hòa";
-      writeText(status, state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${outcome} · Đỏ ${state.score.R}–${state.score.B} Xanh`);
+      const outcome = state.winner ? `${nameOf(session, state.winner)} thắng` : "Hai đội hòa";
+      writeText(status, state.penalty || state.note?.includes("thiếu người") ? state.note : `Hết giờ · ${outcome} · ${shortOf(session, "R")} ${state.score.R}–${state.score.B} ${shortOf(session, "B")}`);
       session.api.setInput("A"); session.api.setInput("B");
       // After the final whistle has had its moment, the full-time menu comes up.
       session.endedAt ??= performance.now();
@@ -1348,9 +1445,16 @@
       }
     } else {
       const phase = { reset: "Chuẩn bị giao bóng", celebrate: "Bàn thắng!", halftime: "Nghỉ giữa hiệp · đổi sân" }[state.phase];
-      writeText(status, session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · Đỏ ${state.score.R}–${state.score.B} Xanh`));
+      writeText(status, session.awaitingStart ? "Nhấn Space để bắt đầu trận đấu" : session.paused ? "Đang tạm dừng" : phase ?? (state.stoppage ? state.note || "Chuẩn bị đưa bóng trở lại" : `${state.extraTime ? "Hiệp phụ · " : ""}${state.minute}' · ${shortOf(session, "R")} ${state.score.R}–${state.score.B} ${shortOf(session, "B")}`));
     }
-    const ctx = { id: session.options.mode, leftTeam: state.leftTeam, paused: session.paused && !session.awaitingStart, ended: state.ended, keyFor: c => bindings[c] ? label(bindings[c].special) : "" };
+    // A timeout counts down on the menu card and lets play go on when it runs out; a refused pause flashes a note.
+    if (session.timeout && session.paused) {
+      if (performance.now() >= session.timeout.until) setPaused(session, false);
+      else { const left = timeoutLeft(session); if (session.shownLeft !== left) { session.shownLeft = left; showOverlay(session, "pause"); } }
+    }
+    const flash = q(".arena-flash");
+    if (flash) { const show = session.flash && performance.now() < session.flash.until; flash.hidden = !show; if (show) writeText(flash, session.flash.text); }
+    const ctx = { id: session.options.mode, leftTeam: state.leftTeam, paused: session.paused && !session.awaitingStart, ended: state.ended, keyFor: c => bindings[c] ? label(bindings[c].special) : "", shorts: { R: shortOf(session, "R"), B: shortOf(session, "B") } };
     const cards = session.arena.querySelector(".player-status").cards ?? [];
     for (const card of cards) updateTeamCard(card, state.teams?.[card.dataset.team], ctx);
     for (const box of q(".arena-energy").children) updateEnergyBox(box, state.teams?.[box.dataset.team], ctx);
@@ -1532,7 +1636,7 @@
         syncSupport(panel); renderSetup(panel);
       } else if (act === "plan") openPlan(panel.planView, button);
       else if (act === "controls") { openSheet(session, act, button); panel.controlsBrowser.render(false); focusOn(arena.querySelector('.sheet[data-sheet="controls"] .br-item')); }
-      else if (act === "restart") startMatch(panel);
+      else if (act === "restart") startMatch(panel, { rematch: true });
       else if (act === "setup") go(mode);
       else if (act === "info") go("info/skills");
       else if (act === "menu") go("menu");
@@ -1561,8 +1665,10 @@
     panel.querySelector(".pause").addEventListener("click", () => {
       const session = sessions.get(mode);
       if (!session || session.api.status().ended) return;
-      if (session.paused) resumeView(session); else setPaused(session, true, true);
+      if (session.paused) resumeView(session); else requestPause(session, "A");
     });
+    const flash = document.createElement("p"); flash.className = "arena-flash"; flash.hidden = true; flash.setAttribute("role", "status");
+    surface.append(flash);
     arena.addEventListener("pointerdown", event => { if (sessions.has(mode) && !event.target.closest("button, .start-overlay, .sheet")) focusOn(arena); });
     // Leaving the pitch for another control stops movement; keys are still tracked until they are released.
     arena.addEventListener("focusout", event => { if (!arena.contains(event.relatedTarget)) { stopSwitchRepeats(); cancelKicks(); applyKeys(); } });
@@ -1618,7 +1724,7 @@
         else if ((event.code === "Escape" || event.code === "Space") && !event.repeat && overlay.dataset.kind !== "end") { handled(); resumeView(view, event.code); }
         return;
       }
-      if (!overlay.hidden && active === view.arena && overlay.dataset.kind !== "start" && (vertical || event.code === "Enter")) { handled(); focusCursor(); return; }
+      if (!overlay.hidden && active === view.arena && (vertical || event.code === "Enter")) { handled(); focusCursor(); return; }
       if (view === watchView && active === watchArena) {
         if ((event.code === "Escape" || event.code === "Space") && !event.repeat) { handled(); setWatchPaused(!watchView.paused, true); }
         else if (event.code === "Tab" && !watchView.paused) { handled(); if (!event.repeat) peek(watchView, true); }
@@ -1679,11 +1785,12 @@
     if (event.code === "Escape" && fsElement() && !escLocked) { releaseKeys(); return; }
     if (event.code !== "Escape" && document.activeElement.matches("button, input, select, textarea")) return;
     event.preventDefault();
-    if (event.code === "Space" || event.code === "Escape") {
+    if (event.code === "Space" || event.code === "Escape" || bound?.action === "pause") {
       if (event.repeat) return;
       if (session.api.status().ended) { session.endShown = true; showOverlay(session, "end", true); return; }
-      if (event.code === "Escape" || !session.paused) setPaused(session, true, true);
-      else setPaused(session, false);
+      // Paused with the pitch focused: Esc (or a pause key) puts the cursor on the menu, Space plays on.
+      if (session.paused) { if (event.code === "Space") setPaused(session, false); else showOverlay(session, session.awaitingStart ? "start" : "pause", true); return; }
+      requestPause(session, bound?.action === "pause" ? bound.slot : "A");
       return;
     }
     const { slot, action } = bound, state = session.api.status();
@@ -1784,10 +1891,10 @@
     if (document.hidden) suspend();
     else if (activeMode === "watch" && !watchView.paused) watcher?.play();
   });
-  initWatch();
+  initWatch(); newWatch();
   {
     const pane = name => infoScreen.querySelector('.info-pane[data-pane="' + name + '"]');
-    renderSkillLegend(pane("skills")); renderStatsGuide(pane("stats")); renderStyleLegend(pane("styles"));
+    renderTeamsGuide(pane("teams")); renderSkillLegend(pane("skills")); renderStatsGuide(pane("stats")); renderStyleLegend(pane("styles"));
     setupKeymapEditor(pane("keys")); renderControlsGuide(); renderRulesGuide(pane("rules"));
   }
   syncFullscreen();

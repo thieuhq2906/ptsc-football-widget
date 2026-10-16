@@ -18,10 +18,15 @@
   --color-mint-ink: oklch(44% 0.1 155);
   --art-skin: oklch(90% 0.05 60);
   --art-skin-2: oklch(76% 0.07 55);
+  --art-skin-3: oklch(58% 0.09 50);
+  --art-skin-4: oklch(40% 0.07 45);
   --art-red: oklch(60% 0.2 27);
   --art-blue: oklch(57% 0.15 255);
   --art-gk-r: oklch(60% 0.14 300);
   --art-gk-b: oklch(78% 0.15 62);
+  /* The two sides' shirts: red and blue unless the page names two clubs. */
+  --team-R: var(--art-red);
+  --team-B: var(--art-blue);
   --art-ref: oklch(88% 0.17 100);
   --art-hair: oklch(22% 0.01 260);
   --art-hair-brown: oklch(36% 0.05 55);
@@ -61,8 +66,8 @@
 .ptsc-football .sb-team { display: flex; align-items: center; gap: .8cqw; padding: .7cqw 1.2cqw; font-weight: 800; }
 .ptsc-football .sb-team.has-ball { background: var(--color-pear-soft); }
 .ptsc-football .sb-dot { width: 1.1em; height: 1.1em; flex: none; border: 2px solid var(--color-ink); border-radius: 50%; }
-.ptsc-football .sb-dot.R { background: var(--art-red); }
-.ptsc-football .sb-dot.B { background: var(--art-blue); }
+.ptsc-football .sb-dot.R { background: var(--team-R); }
+.ptsc-football .sb-dot.B { background: var(--team-B); }
 .ptsc-football .sb-cards { display: flex; gap: 2px; }
 .ptsc-football .sb-cards i { width: .55em; height: .8em; border: 1.2px solid var(--color-ink); border-radius: 2px; background: var(--art-card-yellow); }
 .ptsc-football .sb-cards i.red { background: var(--art-card-red); }
@@ -77,8 +82,8 @@
   font-family: var(--font-mono); font-size: .7em; font-weight: 700; box-shadow: 2px 3px 0 var(--color-ink); }
 .ptsc-football .sb-shape b { display: inline-flex; align-items: center; gap: .5cqw; font-weight: 700; }
 .ptsc-football .sb-shape b::before { content: ""; width: .8em; height: .8em; border: 1.5px solid var(--color-ink); border-radius: 50%; }
-.ptsc-football .sb-shape b.R::before { background: var(--art-red); }
-.ptsc-football .sb-shape b.B::before { background: var(--art-blue); }
+.ptsc-football .sb-shape b.R::before { background: var(--team-R); }
+.ptsc-football .sb-shape b.B::before { background: var(--team-B); }
 @keyframes pf-sb-pop { 0% { transform: scale(1.8); color: var(--color-mint-ink); } 100% { transform: none; } }
 @keyframes pf-note-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .ptsc-football .caption { max-width: 760px; margin: -6px 0 0; color: var(--color-muted); font-size: 13px; font-weight: 600; text-align: center; text-wrap: balance; }

@@ -61,7 +61,8 @@
     corners: [{ id: "cross", name: "Tạt bổng" }, { id: "short", name: "Chuyền ngắn" }, { id: "oneTwo", name: "Đập nhả" }, { id: "edge", name: "Trả tuyến hai" }],
     /**
      * Playing styles, made for a six-a-side pitch: every player has one for when his side has the ball (attack) and
-     * one for when it does not (defence). Attack styles move him with the ball (push up, width, roam, how far a
+     * one for when it does not (defence). They decide what a man does when nobody is steering him; ratings are his own.
+     * Attack styles move him with the ball (push up, width, roam, how far a
      * defender may go, which side of the ball he drifts to, whether he waits at the edge of the box) and shape what
      * he does on it (shot range, dribbles, crosses, combinations, long balls) and which passes are looked for to him.
      * Defence styles decide where he drops to, how eagerly he presses, whether he marks a man, reads passes, screens
@@ -70,35 +71,36 @@
      */
     playstyles: {
       attack: {
-        drill: { name: "Mũi khoan", tag: "chạy khe phía xa bóng", roles: ["FW"], stats: { speed: 8, finishing: 6 }, desc: "Rình ở phía xa bóng rồi xé khe sau lưng hậu vệ, nhận bóng là dứt điểm.", push: .12, width: .7, swing: -.25, shoot: .05, target: { through: 1.1 } },
-        magnet: { name: "Nam châm", tag: "đứng giữa vòng cấm", roles: ["FW"], stats: { heading: 8, finishing: 6, speed: -2 }, desc: "Đứng ngay chấm phạt đền hút bóng tạt và bóng bật ra, đánh đầu mạnh.", push: .11, width: .3, header: .3, target: { box: 1.3 } },
-        pivot: { name: "Bức tường", tag: "lùi nhận, nhả bóng", roles: ["FW"], stats: { strength: 10, passing: 6, speed: -4 }, desc: "Lùi về phía bóng làm điểm tựa, che bóng rồi nhả cho đồng đội băng lên.", push: -.07, width: .5, swing: .3, combo: 1.9, dribble: -.1, header: .15, target: { short: .8, long: .6 } },
-        slalom: { name: "Vũ công biên", tag: "ôm biên, bó vào", roles: ["FW"], stats: { dribbling: 10, speed: 4 }, desc: "Dạt sát biên, nhận bóng là đi bóng lắt léo bó vào trong để sút.", push: .03, width: 1.3, dribble: .35, shoot: .03 },
-        rebound: { name: "Kẻ đón lõng", tag: "chờ ở rìa vòng cấm", roles: ["FW"], stats: { finishing: 8, longPass: 2 }, desc: "Không lao vào trong mà đứng rìa vòng cấm đón bóng bật ra, sút xa ngay một chạm.", lurk: .6, width: .5, shoot: .07 },
-        metronome: { name: "Máy đếm nhịp", tag: "chuyền ngắn giữ nhịp", roles: ["MF"], stats: { passing: 10, stamina: 2 }, desc: "Đứng giữa sân, chạm ít, chuyền ngắn liên tục để giữ nhịp cho cả đội.", push: -.04, width: .35, combo: 2, chain: 1.3, target: { short: .6 } },
-        lateArrival: { name: "Cơn gió muộn", tag: "băng muộn vào vòng cấm", roles: ["MF"], stats: { finishing: 6, stamina: 6 }, desc: "Đợi tiền đạo kéo hậu vệ đi rồi mới băng từ tuyến hai vào vòng cấm dứt điểm.", push: .16, roam: 1.4, shoot: .05, target: { through: .6 } },
-        spray: { name: "Người rải bóng", tag: "đổi cánh bằng chuyền dài", roles: ["MF"], stats: { longPass: 10, passing: 4 }, desc: "Đứng phía ít người, phất dài đổi hướng tấn công sang cánh trống.", push: -.05, swing: -.2, long: .6, target: { short: .4 } },
-        freeSpirit: { name: "Tự do", tag: "đi khắp mặt sân", roles: ["MF"], stats: { dribbling: 8, speed: 4, stamina: -2 }, desc: "Không giữ vị trí, đi theo bóng khắp sân, thích rê và thử sút.", roam: 2.2, swing: .2, width: 1.1, dribble: .25, shoot: .03 },
-        launcher: { name: "Bệ phóng", tag: "đứng lại, phất dài", roles: ["DF"], stats: { longPass: 8, strength: 4 }, desc: "Đứng lại phía sau, có bóng là phất dài thẳng lên cho tiền đạo.", push: -.05, cap: -.04, long: .55 },
-        stepUp: { name: "Trung vệ cầm bóng", tag: "dẫn bóng vượt tuyến", roles: ["DF"], stats: { dribbling: 6, passing: 6 }, desc: "Tự dẫn bóng lên giữa sân để kéo người, rồi chuyền ngắn phối hợp.", push: .08, cap: .12, dribble: .3, combo: 1.3 },
-        overlap: { name: "Đường chồng biên", tag: "chạy chồng và tạt", roles: ["DF"], stats: { speed: 6, stamina: 6 }, desc: "Chạy chồng dọc biên phía có bóng rồi tạt vào vòng cấm.", width: 1.35, swing: .1, push: .12, cap: .14, cross: .55 },
-        distributor: { name: "Thủ môn chia bài", tag: "triển khai ngắn", roles: ["GK"], stats: { passing: 10 }, desc: "Lăn bóng ngắn cho hậu vệ, kiên nhẫn triển khai từ sân nhà.", short: true },
-        catapult: { name: "Máy bắn đá", tag: "phát bóng thật xa", roles: ["GK"], stats: { longPass: 10, strength: 2 }, desc: "Đứng cao khi đội tấn công, có bóng là phát dài vượt tuyến.", line: .04, long: .6 }
+        drill: { name: "Mũi khoan", tag: "chạy khe phía xa bóng", roles: ["FW"], desc: "Rình ở phía xa bóng rồi xé khe sau lưng hậu vệ, nhận bóng là dứt điểm.", push: .12, width: .7, swing: -.25, shoot: .05, target: { through: 1.1 } },
+        magnet: { name: "Nam châm", tag: "đứng giữa vòng cấm", roles: ["FW"], desc: "Đứng ngay chấm phạt đền hút bóng tạt và bóng bật ra, đánh đầu mạnh.", push: .11, width: .3, header: .3, target: { box: 1.3 } },
+        pivot: { name: "Bức tường", tag: "lùi nhận, nhả bóng", roles: ["FW"], desc: "Lùi về phía bóng làm điểm tựa, che bóng rồi nhả cho đồng đội băng lên.", push: -.07, width: .5, swing: .3, combo: 1.9, dribble: -.1, header: .15, target: { short: .8, long: .6 } },
+        slalom: { name: "Vũ công biên", tag: "ôm biên, bó vào", roles: ["FW"], desc: "Dạt sát biên, nhận bóng là đi bóng lắt léo bó vào trong để sút.", push: .03, width: 1.3, dribble: .35, shoot: .03 },
+        falseNine: { name: "Số 9 ảo", tag: "lùi về kiến tạo", roles: ["FW"], desc: "Lùi khỏi hàng thủ đối phương để nhận bóng, rê và phối hợp rồi mới dứt điểm.", push: -.08, width: .5, combo: 1.8, dribble: .25, shoot: .03, target: { short: .7 } },
+        rebound: { name: "Kẻ đón lõng", tag: "chờ ở rìa vòng cấm", roles: ["FW"], desc: "Không lao vào trong mà đứng rìa vòng cấm đón bóng bật ra, sút xa ngay một chạm.", lurk: .6, width: .5, shoot: .07 },
+        metronome: { name: "Máy đếm nhịp", tag: "chuyền ngắn giữ nhịp", roles: ["MF"], desc: "Đứng giữa sân, chạm ít, chuyền ngắn liên tục để giữ nhịp cho cả đội.", push: -.04, width: .35, combo: 2, chain: 1.3, target: { short: .6 } },
+        lateArrival: { name: "Cơn gió muộn", tag: "băng muộn vào vòng cấm", roles: ["MF"], desc: "Đợi tiền đạo kéo hậu vệ đi rồi mới băng từ tuyến hai vào vòng cấm dứt điểm.", push: .16, roam: 1.4, shoot: .05, target: { through: .6 } },
+        spray: { name: "Người rải bóng", tag: "đổi cánh bằng chuyền dài", roles: ["MF"], desc: "Đứng phía ít người, phất dài đổi hướng tấn công sang cánh trống.", push: -.05, swing: -.2, long: .6, target: { short: .4 } },
+        freeSpirit: { name: "Tự do", tag: "đi khắp mặt sân", roles: ["MF"], desc: "Không giữ vị trí, đi theo bóng khắp sân, thích rê và thử sút.", roam: 2.2, swing: .2, width: 1.1, dribble: .25, shoot: .03 },
+        launcher: { name: "Bệ phóng", tag: "đứng lại, phất dài", roles: ["DF"], desc: "Đứng lại phía sau, có bóng là phất dài thẳng lên cho tiền đạo.", push: -.05, cap: -.04, long: .55 },
+        stepUp: { name: "Trung vệ cầm bóng", tag: "dẫn bóng vượt tuyến", roles: ["DF"], desc: "Tự dẫn bóng lên giữa sân để kéo người, rồi chuyền ngắn phối hợp.", push: .08, cap: .12, dribble: .3, combo: 1.3 },
+        overlap: { name: "Đường chồng biên", tag: "chạy chồng và tạt", roles: ["DF"], desc: "Chạy chồng dọc biên phía có bóng rồi tạt vào vòng cấm.", width: 1.35, swing: .1, push: .12, cap: .14, cross: .55 },
+        distributor: { name: "Thủ môn chia bài", tag: "triển khai ngắn", roles: ["GK"], desc: "Lăn bóng ngắn cho hậu vệ, kiên nhẫn triển khai từ sân nhà.", short: true },
+        catapult: { name: "Máy bắn đá", tag: "phát bóng thật xa", roles: ["GK"], desc: "Đứng cao khi đội tấn công, có bóng là phát dài vượt tuyến.", line: .04, long: .6 }
       },
       defense: {
-        hunter: { name: "Thợ săn", tag: "đuổi bóng tuyến đầu", roles: ["FW"], stats: { stamina: 8, speed: 4 }, desc: "Mất bóng là lao vào thủ môn và hậu vệ đối phương, không cho thở.", drop: .06, press: .55, pressHigh: true },
-        coiled: { name: "Lò xo", tag: "đứng trên chờ phản công", roles: ["FW"], stats: { speed: 6, finishing: 2 }, desc: "Không về thủ, đứng cao làm điểm nhận bóng, có bóng là bật lên ngay.", drop: .14, press: -.4, outlet: 1.3 },
-        shadow: { name: "Cái bóng", tag: "lùi che trục giữa", roles: ["FW"], stats: { defending: 6, stamina: 6 }, desc: "Lùi về đứng chắn giữa bóng và khung thành, cắt đường chuyền vào trung lộ.", drop: -.08, press: .1, screen: .4 },
-        shield: { name: "Lá chắn", tag: "chắn trước hàng thủ", roles: ["MF"], stats: { defending: 8, strength: 6 }, desc: "Đứng chắn trên đường bóng tới khung thành, không bị kéo ra xa.", drop: -.1, width: .35, press: -.4, screen: .5 },
-        piston: { name: "Pít-tông", tag: "lên xuống không ngừng", roles: ["MF"], stats: { stamina: 10, defending: 4 }, desc: "Mất bóng là chạy về, thấy cơ hội là áp sát; chạy suốt trận.", drop: -.05, press: .45, roam: 1.3 },
-        breaker: { name: "Máy cắt cỏ", tag: "lao vào tranh chấp", roles: ["MF"], stats: { defending: 8, strength: 8 }, desc: "Xông vào tranh chấp, xoạc bóng quyết liệt dù dễ dính thẻ.", press: .55, tackle: .5 },
-        reader: { name: "Người đọc trận", tag: "đón lõng cắt bóng", roles: ["MF"], stats: { defending: 6, passing: 2 }, desc: "Đoán hướng chuyền, đứng vào khe và cắt bóng thay vì lao vào người.", drop: -.02, intercept: .16, screen: .2 },
-        leech: { name: "Con đỉa", tag: "bám người", roles: ["DF"], stats: { defending: 6, strength: 8 }, desc: "Bám sát tiền đạo gần nhất, không cho quay người.", mark: .65, tackle: .2 },
-        lastStand: { name: "Chốt chặn cuối", tag: "đứng thấp nhất, bọc lót", roles: ["DF"], stats: { defending: 6, speed: 4 }, desc: "Luôn là người đứng sau cùng, thu vào giữa bọc lót cho đồng đội.", drop: -.07, width: .55, line: -.02 },
-        trap: { name: "Bẫy việt vị", tag: "dâng hàng thủ", roles: ["DF"], stats: { speed: 8, defending: 2 }, desc: "Dâng cao đẩy đối phương ra xa khung thành, ép không gian giữa sân.", drop: .08, line: .09 },
-        bulwark: { name: "Tường thành", tag: "chắn trước khung thành", roles: ["DF"], stats: { heading: 6, strength: 6 }, desc: "Lùi sát vòng cấm, đứng chắn đường sút và đường chuyền vào trong.", drop: -.09, screen: .3, tackle: .15 },
-        lineGuard: { name: "Gác đền", tag: "bám vạch vôi", roles: ["GK"], stats: { goalkeeping: 8 }, desc: "Bám vạch vôi, chọn vị trí chuẩn và tập trung cứu thua.", line: -.01, rush: -2.5, save: .04 },
-        libero: { name: "Thủ môn quét", tag: "lao ra rất sớm", roles: ["GK"], stats: { speed: 8, goalkeeping: 3 }, desc: "Đứng cao, lao ra rất sớm dọn bóng sau lưng hàng thủ.", line: .025, rush: 3.2, confidence: .18 }
+        hunter: { name: "Thợ săn", tag: "đuổi bóng tuyến đầu", roles: ["FW"], desc: "Mất bóng là lao vào thủ môn và hậu vệ đối phương, không cho thở.", drop: .06, press: .55, pressHigh: true },
+        coiled: { name: "Lò xo", tag: "đứng trên chờ phản công", roles: ["FW"], desc: "Không về thủ, đứng cao làm điểm nhận bóng, có bóng là bật lên ngay.", drop: .14, press: -.4, outlet: 1.3 },
+        shadow: { name: "Cái bóng", tag: "lùi che trục giữa", roles: ["FW"], desc: "Lùi về đứng chắn giữa bóng và khung thành, cắt đường chuyền vào trung lộ.", drop: -.08, press: .1, screen: .4 },
+        shield: { name: "Lá chắn", tag: "chắn trước hàng thủ", roles: ["MF"], desc: "Đứng chắn trên đường bóng tới khung thành, không bị kéo ra xa.", drop: -.1, width: .35, press: -.4, screen: .5 },
+        piston: { name: "Pít-tông", tag: "lên xuống không ngừng", roles: ["MF"], desc: "Mất bóng là chạy về, thấy cơ hội là áp sát; chạy suốt trận.", drop: -.05, press: .45, roam: 1.3 },
+        breaker: { name: "Máy cắt cỏ", tag: "lao vào tranh chấp", roles: ["MF"], desc: "Xông vào tranh chấp, xoạc bóng quyết liệt dù dễ dính thẻ.", press: .55, tackle: .5 },
+        reader: { name: "Người đọc trận", tag: "đón lõng cắt bóng", roles: ["MF"], desc: "Đoán hướng chuyền, đứng vào khe và cắt bóng thay vì lao vào người.", drop: -.02, intercept: .16, screen: .2 },
+        leech: { name: "Con đỉa", tag: "bám người", roles: ["DF"], desc: "Bám sát tiền đạo gần nhất, không cho quay người.", mark: .65, tackle: .2 },
+        lastStand: { name: "Chốt chặn cuối", tag: "đứng thấp nhất, bọc lót", roles: ["DF"], desc: "Luôn là người đứng sau cùng, thu vào giữa bọc lót cho đồng đội.", drop: -.07, width: .55, line: -.02 },
+        trap: { name: "Bẫy việt vị", tag: "dâng hàng thủ", roles: ["DF"], desc: "Dâng cao đẩy đối phương ra xa khung thành, ép không gian giữa sân.", drop: .08, line: .09 },
+        bulwark: { name: "Tường thành", tag: "chắn trước khung thành", roles: ["DF"], desc: "Lùi sát vòng cấm, đứng chắn đường sút và đường chuyền vào trong.", drop: -.09, screen: .3, tackle: .15 },
+        lineGuard: { name: "Gác đền", tag: "bám vạch vôi", roles: ["GK"], desc: "Bám vạch vôi, chọn vị trí chuẩn và tập trung cứu thua.", line: -.01, rush: -2.5, save: .04 },
+        libero: { name: "Thủ môn quét", tag: "lao ra rất sớm", roles: ["GK"], desc: "Đứng cao, lao ra rất sớm dọn bóng sau lưng hàng thủ.", line: .025, rush: 3.2, confidence: .18 }
       }
     },
     /** Player ratings, 35–95. Each man's come from his natural position, his two playing styles and a little chance. */
@@ -146,8 +148,6 @@
      */
     body: {
       height: { GK: [182, 196], DF: [174, 192], MF: [164, 184], FW: [165, 191] },
-      styleHeight: { pivot: 8, magnet: 4, slalom: -4, freeSpirit: -3, bulwark: 4, leech: 3, shield: 3, breaker: 2, catapult: 2 },
-      styleWeight: { pivot: 6, breaker: 5, leech: 4, shield: 3, bulwark: 3, slalom: -3, freeSpirit: -2 },
       bmi: [20.5, 25], limbs: [0.94, 1.06]
     },
     // Keepers come off their line often: loose balls and through balls within 9 m, and a man running at goal within 5 m.
@@ -181,7 +181,7 @@
       const own = custom?.[t], base = GAME_DATA.squads[t];
       const players = Array.isArray(own?.players) && own.players.length === 6 && own.players.every(valid) ? own.players : base.players;
       const benchPool = Array.isArray(own?.bench) && own.bench.every(valid) ? own.bench.slice(0, 6) : base.bench;
-      return [t, { players, bench: benchPool }];
+      return [t, { players, bench: benchPool, fixedBench: !!own?.fixedBench && players === own.players }];
     }));
   }
   for (const skill of Object.values(GAME_DATA.skills)) {
@@ -227,9 +227,9 @@
   <div class="sb" aria-hidden="true">
     <div class="sb-bug">
       <span class="sb-cup">PTSC</span>
-      <span class="sb-team" data-id="sb-R"><i class="sb-dot R"></i>ĐỎ<span class="sb-cards" data-id="cards-R"></span></span>
+      <span class="sb-team" data-id="sb-R"><i class="sb-dot R"></i><span data-id="name-R">ĐỎ</span><span class="sb-cards" data-id="cards-R"></span></span>
       <span class="sb-score"><b data-id="score-R">0</b>–<b data-id="score-B">0</b></span>
-      <span class="sb-team" data-id="sb-B"><span class="sb-cards" data-id="cards-B"></span>XANH<i class="sb-dot B"></i></span>
+      <span class="sb-team" data-id="sb-B"><span class="sb-cards" data-id="cards-B"></span><span data-id="name-B">XANH</span><i class="sb-dot B"></i></span>
       <span class="sb-clock" data-id="clock">1'</span>
     </div>
     <div class="sb-shape" aria-label="Sơ đồ"><b class="R" data-id="shape-R">2-1-2</b><b class="B" data-id="shape-B">2-1-2</b></div>
@@ -293,7 +293,20 @@
     const mdist = (a, b) => Math.hypot((a[0] - b[0]) * LEN, (a[1] - b[1]) * WID);
     const TEAMS = ["R", "B"];
     const otherTeam = t => t === "R" ? "B" : "R";
-    const TEAM_NAME = { R: "Đỏ", B: "Xanh" };
+    // The two sides: a club from the page (name, short name, kit colours, logo) or the plain red and blue of old.
+    const teamOption = (() => { let v = settings.teams; if (typeof v === "string") { try { v = JSON.parse(v); } catch { v = null; } } return v && typeof v === "object" ? v : null; })();
+    const DEFAULT_TEAM = { R: { id: "R", name: "Đỏ", short: "ĐỎ", logo: null, colors: null }, B: { id: "B", name: "Xanh", short: "XANH", logo: null, colors: null } };
+    const TEAM_INFO = Object.fromEntries(TEAMS.map(t => {
+      const own = teamOption?.[t];
+      if (!own || typeof own.name !== "string" || !own.name.trim()) return [t, DEFAULT_TEAM[t]];
+      const colors = own.colors && typeof own.colors.shirt === "string" ? { shirt: own.colors.shirt, shorts: own.colors.shorts ?? own.colors.shirt, socks: own.colors.socks ?? own.colors.shirt, gk: own.colors.gk ?? null, stripe: own.colors.stripe ?? null, kit: own.colors.kit ?? "home" } : null;
+      return [t, { id: String(own.id ?? t), name: own.name.trim(), short: String(own.short ?? own.name).trim().slice(0, 5).toUpperCase() || DEFAULT_TEAM[t].short, logo: typeof own.logo === "string" ? own.logo : null, colors }];
+    }));
+    const TEAM_NAME = { R: TEAM_INFO.R.name, B: TEAM_INFO.B.name };
+    /** Ink for a shirt number: dark on light shirts, light on dark ones. */
+    const inkFor = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim()); if (!m) return "var(--color-card)"; const n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r * .299 + g * .587 + b * .114) > 150 ? "var(--color-ink)" : "var(--color-card)"; };
+    /** How a man is named in notes and on the HUD. */
+    const tag = p => p?.short || p?.name || "";
     /** Screen-x direction of the goal each team attacks. */
     /** True in the second half, when the teams have changed ends. */
     let SWAP = initialSwap;
@@ -417,6 +430,16 @@
       danceB: P({ hF: -10, kF: 30, hB: 22, kB: 45, aF: 160, eF: 40, aB: -60, eB: -60, L: 8, j: 1 }),
       shush: P({ aF: -45, eF: -118, aB: 110, eB: -20, L: -6 }),
       badge: P({ aF: -10, eF: -150, aB: -100, eB: -10, L: -4 }),
+      // Signature goal celebrations: a heart with both hands, arms folded, a salute, a hand to the ear, kneeling
+      // in prayer, and a front flip in three frames.
+      heart: P({ aF: -28, eF: -112, aB: -28, eB: -112, L: -3, j: 0 }),
+      armsFolded: P({ aF: -12, eF: -140, aB: -12, eB: -140, L: -5 }),
+      salute: P({ aF: -24, eF: -150, aB: 12, eB: 0, L: -3 }),
+      earCup: P({ aF: -14, eF: -158, aB: 18, eB: -8, L: 5 }),
+      pray: P({ hF: -4, kF: 105, hB: -4, kB: 105, aF: -30, eF: -110, aB: -30, eB: -110, L: -6 }),
+      flipUp: P({ hF: 38, kF: 62, hB: 30, kB: 60, aF: -125, eF: 0, aB: -125, eB: 0, L: -14, j: 16 }),
+      flipOver: P({ hF: 100, kF: 125, hB: 100, kB: 125, aF: 30, eF: -60, aB: 30, eB: -60, L: 0, rot: 180, j: 24 }),
+      flipLand: P({ hF: 30, kF: 52, hB: -20, kB: 42, aF: -62, eF: -20, aB: -62, eB: -20, L: 12, j: 0 }),
       rally: P({ hF: 12, kF: 10, hB: -12, kB: 10, aF: -30, eF: -60, aB: 110, eB: -30, L: 2 }),
       // Tempers: pointing the finger, arms wide ("what was that?"), waving him off, a shove, squaring up.
       blamePoint: P({ hF: 10, kF: 10, hB: -12, kB: 12, aF: -5, eF: 0, aB: 100, eB: -30, L: 8 }),
@@ -453,7 +476,7 @@
       slump: "M1 10 Q5 6 9 10", hipsHands: "M1 10 Q5 6 9 10", kneelSad: "M1 10 Q5 6 9 10", sitSad: "M1 10 Q5 6 9 10", walkSad: "M1 10 Q5 7 9 10", headHands: "M2 8 Q5 12 8 8 Q5 6 2 8 Z", shrug: "M1 10 Q5 7 9 10", fall: "M2 8 Q5 12 8 8 Q5 6 2 8 Z", lunge: "M2 8 Q5 12 8 8 Q5 6 2 8 Z",
       dive: "M2 9 H8", diveLand: "M2 9 H8", whistle: "M3 8 Q5 10 7 8", slide: "M2 9 H8", stance: "M2 9 H8", wall: "M2 9 H8",
       kneeSlide: "M2 6 Q5 14 9 6 Z", kneelSky: "M2 6 Q5 14 9 6 Z", danceA: HAPPY, danceB: HAPPY, cheerHop: HAPPY, hug: HAPPY, highFive: HAPPY,
-      shush: "M3 8 Q5 10 7 8", badge: HAPPY,
+      shush: "M3 8 Q5 10 7 8", badge: HAPPY, heart: HAPPY, armsFolded: "M2 8 Q5 9.5 8 8", salute: HAPPY, earCup: "M2 7 Q5 11 9 7 Z", pray: "M2 9 H8", flipUp: HAPPY, flipOver: "M2 6 Q5 14 9 6 Z", flipLand: HAPPY,
       rally: HAPPY, gkChest: "M2 9 H8", gkLow: "M2 9 H8", gkHigh: "M2 9 H8",
       blamePoint: ANGRY, armsWide: ANGRY, waveOff: "M1 10 Q5 7 9 10", shove: ANGRY, stumble: ANGRY, chestOut: ANGRY, separate: "M2 9 H8",
     };
@@ -535,10 +558,18 @@
     // The squads: starters by slot (keeper, two defenders, midfielder, two forwards) and a bench pool.
     const SQUADS = squadsFrom(settings.squads);
     const ROSTER = { R: SQUADS.R.players, B: SQUADS.B.players };
-    const KIT = {
-      R: { shirt: "var(--art-red)", shorts: "var(--color-card)", socks: "var(--art-red)", gk: "var(--art-gk-r)" },
-      B: { shirt: "var(--art-blue)", shorts: "var(--art-shorts)", socks: "var(--art-blue)", gk: "var(--art-gk-b)" },
+    const LEGACY_KIT = {
+      R: { shirt: "var(--art-red)", shorts: "var(--color-card)", socks: "var(--art-red)", gk: "var(--art-gk-r)", stripe: null, numberInk: "var(--color-card)", gkNumberInk: "var(--color-ink)" },
+      B: { shirt: "var(--art-blue)", shorts: "var(--art-shorts)", socks: "var(--art-blue)", gk: "var(--art-gk-b)", stripe: null, numberInk: "var(--color-card)", gkNumberInk: "var(--color-ink)" },
     };
+    const KIT = Object.fromEntries(TEAMS.map(t => {
+      const c = TEAM_INFO[t].colors;
+      if (!c) return [t, LEGACY_KIT[t]];
+      const gk = c.gk ?? LEGACY_KIT[t].gk;
+      return [t, { shirt: c.shirt, shorts: c.shorts, socks: c.socks, gk, stripe: c.stripe, numberInk: inkFor(c.shirt), gkNumberInk: inkFor(gk) }];
+    }));
+    // The scoreboard, the shape dots and the crowd follow the two shirts.
+    for (const t of TEAMS) if (TEAM_INFO[t].colors) root.style.setProperty("--team-" + t, KIT[t].shirt);
     const players = [];
     const team = { R: [], B: [] };
     for (const t of TEAMS) ROSTER[t].forEach(({ name, head, skin, num, star }, i) => {
@@ -576,14 +607,14 @@
     /** Two medics with a stretcher, waiting by the tunnel. */
     const MEDIC_POST = [[0.255, -0.058], [0.275, -0.058]];
     const medics = MEDIC_POST.map((post, k) => {
-      const m = { id: `med${k}`, team: null, i: -1, n: 30 + k, medic: true, post, role: "MEDIC", name: "Y tế", head: k ? "sidepart" : "buzz", skin: k ? 2 : 1, num: "+", star: 0,
+      const m = { id: `med${k}`, team: null, i: -1, n: 30 + k, medic: true, post, role: "MEDIC", name: "Y tế", head: k ? "sidepart" : "buzz", skin: k ? 2 : 1, look: k ? { hair: "sidepart", hairColor: "brown" } : { hair: "buzz" }, num: "+", star: 0,
         pos: [...post], vel: [0, 0], face: 1, faceDir: 1, turnSince: null, faceLock: null, script: null, keys: [], pose: { ...POSES.ready }, poseName: "ready",
         stride: 0, busyUntil: 0, g: ground(...post) };
       people.push(m);
       return m;
     });
     let personCount = 0;
-    const IDENT = ["pid", "name", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural", "body"];
+    const IDENT = ["pid", "name", "short", "look", "celebration", "roleName", "summary", "posName", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural", "body"];
     /** Open-play skills a man in this position may have: keeper skills for keepers only, no shooting skill for a keeper. */
     function skillFits(id, role) {
       const skill = GAME_DATA.skills[id];
@@ -628,19 +659,22 @@
     const newStint = () => 17 + rng() * 6;
     /** Ratings from his natural position and his two styles, a star's extra quality and a little chance; fixed ones win. */
     function makeStats(p, fixed = {}) {
-      const rules = GAME_DATA.stats, base = rules.base[p.natural] ?? rules.base.MF, atk = atkOf(p).stats, def = defOf(p).stats;
+      const rules = GAME_DATA.stats, base = rules.base[p.natural] ?? rules.base.MF;
       return Object.fromEntries(rules.keys.map(k => {
-        const rolled = base[k] + (atk[k] ?? 0) + (def[k] ?? 0) + (p.star ? rules.star[k] ?? 0 : 0) + Math.round((statRng() * 2 - 1) * rules.spread) - (p.role === "SUB" ? 2 : 0);
-        const value = Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : rolled + (k === "goalkeeping" && p.natural !== "GK" ? 0 : level(p.team).stats);
+        const rolled = base[k] + (p.star ? rules.star[k] ?? 0 : 0) + Math.round((statRng() * 2 - 1) * rules.spread) - (p.role === "SUB" ? 2 : 0);
+        // The computer's level shifts its whole squad, fixed ratings included (never an outfielder's goalkeeping).
+        const value = (Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : rolled) + (k === "goalkeeping" && p.natural !== "GK" ? 0 : level(p.team).stats);
         return [k, clamp(Math.round(value), rules.range[0], rules.range[1])];
       }));
     }
     function setIdent(p, entry) {
-      const { name, head, skin, num, star } = entry;
+      const { name, head, num, star } = entry, face = entry.face && typeof entry.face === "object" ? entry.face : null;
+      const skin = Number(entry.skin ?? face?.skin) >= 1 && Number(entry.skin ?? face?.skin) <= 4 ? Number(entry.skin ?? face?.skin) : 1;
       p.pid = ++personCount;
       // Stamina comes from his rating with a little day-to-day variation; key men are the fittest and expected to last.
       const natural = p.role === "SUB" ? (["DF", "MF", "FW"].includes(entry.natural) ? entry.natural : ["DF", "MF", "FW"][Math.floor(statRng() * 3)]) : p.role, jitter = rng();
-      Object.assign(p, { name, head, skin, num, star: star ?? 0, pillar: PILLARS.has(name), yellows: 0, energy: 1, natural,
+      Object.assign(p, { name, short: typeof entry.short === "string" && entry.short.trim() ? entry.short.trim() : name, look: face, celebration: typeof entry.celebration === "string" ? entry.celebration : null,
+        roleName: entry.roleName ?? "", summary: entry.summary ?? "", posName: entry.pos ?? "", head: head ?? "buzz", skin, num, star: star ?? 0, pillar: !!entry.pillar || PILLARS.has(name), yellows: 0, energy: 1, natural,
         injured: false, bandage: null, tiredSaid: false, lastSkill: null, specialUsed: false, specialPrimed: false, specialPrimedId: null, specialActiveId: null, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
       assignSpecial(p); p.abilityCheckAt = 0; p.attackStyleId = entry.attack ?? null; p.defenseStyleId = entry.defense ?? null; ensureStyle(p);
       p.stats = makeStats(p, entry.stats);
@@ -651,10 +685,8 @@
     /** Height, weight and limb proportions; fixed `height`/`weight` in the squad data win. */
     function makeBody(p, entry = {}) {
       const rules = GAME_DATA.body, [lo, hi] = rules.height[p.natural] ?? rules.height.MF;
-      const dh = (rules.styleHeight[p.attackStyleId] ?? 0) + (rules.styleHeight[p.defenseStyleId] ?? 0);
-      const dw = (rules.styleWeight[p.attackStyleId] ?? 0) + (rules.styleWeight[p.defenseStyleId] ?? 0);
-      const height = clamp(Math.round(Number(entry.height) || lo + statRng() * (hi - lo) + dh), 150, 205);
-      const bmi = rules.bmi[0] + statRng() * (rules.bmi[1] - rules.bmi[0]) + dw / 4;
+      const height = clamp(Math.round(Number(entry.height) || lo + statRng() * (hi - lo)), 150, 205);
+      const bmi = rules.bmi[0] + statRng() * (rules.bmi[1] - rules.bmi[0]);
       const weight = clamp(Math.round(Number(entry.weight) || bmi * (height / 100) ** 2), 45, 110);
       const limb = () => rules.limbs[0] + statRng() * (rules.limbs[1] - rules.limbs[0]);
       const leg = limb(), arm = limb();
@@ -684,7 +716,8 @@
     function pickSquads() {
       for (const t of TEAMS) {
         team[t].forEach((p, i) => setIdent(p, ROSTER[t][i]));
-        const pool = [...BENCH_POOL[t]].sort(() => rng() - 0.5), nb = Math.min(pool.length, 1 + Math.floor(rng() * 3));
+        // A squad picked by the page brings exactly its bench; the built-in squads bring one to three of theirs.
+        const pool = SQUADS[t].fixedBench ? [...BENCH_POOL[t]] : [...BENCH_POOL[t]].sort(() => rng() - 0.5), nb = SQUADS[t].fixedBench ? pool.length : Math.min(pool.length, 1 + Math.floor(rng() * 3));
         bench[t].forEach((b, k) => {
           b.off = k >= nb; b.script = null; b.exitTo = null; b.subbing = false; b.keys = [];
           if (!b.off) setIdent(b, pool[k]);
@@ -1218,7 +1251,7 @@
     function playerInfo(p) {
       if (!p) return null;
       const skill = specialData(p), remaining = Math.max(0, (p.specialUntil ?? 0) - game.clock);
-      return { name: p.name, number: p.num ?? null, role: p.role, team: p.team, energy: p.energy ?? 1, hasBall: ball.owner === p, ovr: overall(p), stats: { ...p.stats }, body: { ...bodyOf(p) },
+      return { name: p.name, short: tag(p), number: p.num ?? null, role: p.role, roleName: p.roleName ?? "", summary: p.summary ?? "", posName: p.posName ?? "", celebration: p.celebration ?? null, team: p.team, energy: p.energy ?? 1, hasBall: ball.owner === p, ovr: overall(p), stats: { ...p.stats }, body: { ...bodyOf(p) },
         style: { attack: { name: atkOf(p).name ?? "", tag: atkOf(p).tag ?? "", desc: atkOf(p).desc ?? "" }, defense: { name: defOf(p).name ?? "", tag: defOf(p).tag ?? "", desc: defOf(p).desc ?? "" } },
         special: { kind: specialKind(p), icon: skill?.icon ?? "", name: specialName(p), short: skill?.short ?? "", desc: skill?.desc ?? "", contexts: skill?.contexts ?? [], used: !!p.specialUsed,
           active: specialActive(p), remaining, auto: !!skill?.auto, minutesLeft: Math.ceil(remaining * PACE), ...specialAvailability(p) } };
@@ -1237,7 +1270,8 @@
         players: humans.map(h => ({ slot: h.slot, team: h.team, role: h.team === game.penalty.attack ? "attack" : "defend", locked: !!game.penalty.choices[h.team] })) } : null,
       ended: ["fulltime", "ceremony", "draw"].includes(game.mode), leftTeam: SWAP ? "B" : "R", possession: game.poss,
       teams: Object.fromEntries(TEAMS.map(t => { const h = humans.find(h => h.team === t); return [t, { ...playerInfo(focusOf(t)), controller: h ? h.slot : interactive ? "cpu" : "auto" }]; })),
-      players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", number: h.selected?.num ?? null,
+      teamInfo: { R: TEAM_INFO.R, B: TEAM_INFO.B },
+      players: humans.map(h => ({ slot: h.slot, team: h.team, name: h.selected?.name ?? "", short: h.selected ? tag(h.selected) : "", number: h.selected?.num ?? null,
         energy: h.selected?.energy ?? 1, hasBall: ball.owner === h.selected,
         special: { kind: specialKind(h.selected), icon: specialData(h.selected)?.icon ?? "", name: specialName(h.selected), contexts: specialData(h.selected)?.contexts ?? [], context: skillContext(h.selected), used: !!h.selected?.specialUsed, primed: !!h.selected?.specialPrimed, opening: openingSkills(), defenseOnly: defensiveSkill(h.selected), defending: defendingTeam(h.team), ...specialAvailability(h.selected), active: specialActive(h.selected), remaining: Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock), auto: !!specialData(h.selected)?.auto, minutesLeft: Math.ceil(Math.max(0, (h.selected?.specialUntil ?? 0) - game.clock) * PACE), short: specialData(h.selected)?.short ?? "" },
         ready: game.mode === "play" && !game.stoppage && !!h.selected && manual(h.selected) && !h.selected.script && T >= h.selected.busyUntil,
@@ -2395,7 +2429,7 @@
       if (game.stoppage || protectedBall(c) || !on(c) || !on(d)) return;
       game.stoppage = true; game.carrier = null;
       game.deadBallReason = "foul";
-      setNote(`Phạm lỗi · ${d.name} (${TEAM_NAME[d.team]})`);
+      setNote(`Phạm lỗi · ${tag(d)} (${TEAM_NAME[d.team]})`);
       game.refFocus = { uv: [...c.pos], until: Tt + 2.8 };
       holdStill(c, Tt, Tt + 2.5);
       c.keys.push([Tt, Tt + 1.2, "fall"], [Tt + 1.2, Tt + 1.8, "sitUp"]);
@@ -2477,7 +2511,7 @@
       }
       p.yellows = (p.yellows ?? 0) + 1; game.cards[p.team]++; game.stats.yellows++; game.dirty = true;
       ref.keys.push([T, T + 1.2, "card"]); say(ref, "Thẻ vàng!", "var(--art-card-yellow)", 1.2);
-      setNote(`Thẻ vàng · ${p.name} (${TEAM_NAME[p.team]})`);
+      setNote(`Thẻ vàng · ${tag(p)} (${TEAM_NAME[p.team]})`);
       p.keys.push([T + 0.1, T + 1.2, "shrug"]);
       if (p.yellows >= 2 && p.role !== "GK") {
         plan.issued = true;
@@ -2488,7 +2522,7 @@
     function showRed(p, text) {
       ref.keys.push([T, T + 1.4, "cardRed"]); say(ref, text, "var(--art-card-red)", 1.6);
       game.reds[p.team]++; game.stats.reds++; game.dirty = true;
-      setNote(`Thẻ đỏ · ${p.name} (${TEAM_NAME[p.team]})`);
+      setNote(`Thẻ đỏ · ${tag(p)} (${TEAM_NAME[p.team]})`);
       // A moment with his head in his hands, then off at a jog by the nearest touchline; his side plays on a man short.
       const exit = [clamp(p.pos[0], 0.1, 0.9), p.pos[1] < 0.5 ? -0.06 : 1.09], dur = Math.max(1.5, mdist(p.pos, exit) / 3.5);
       p.sentOff = true;
@@ -2924,10 +2958,11 @@
       }
     }
     
-    /** Goal: the scorer's own celebration (a leap and spin for the striker, pointing at the sky for the dribbler). */
+    const SIGNATURES = new Set(["fist", "mate", "arms", "airplane", "pointMate", "badge", "dance", "kneeSlide", "shush", "siu", "sky", "heart", "flip", "armsFolded", "salute", "earCup", "pray"]);
+    /** Goal: the scorer's own celebration (his signature when he has one, else the mood of the moment). */
     function scored(c, w) {
       game.score[c.team]++;
-      setNote(`⚽ ${c.name} #${c.num} (${TEAM_NAME[c.team]}) ${game.golden ? "· bàn thắng vàng!" : Math.min(FULL, minute()) + "'"}`);
+      setNote(`⚽ ${tag(c)} #${c.num} (${TEAM_NAME[c.team]}) ${game.golden ? "· bàn thắng vàng!" : Math.min(FULL, minute()) + "'"}`);
       game.mode = "celebrate"; game.modeT = T; game.scorer = c; game.carrier = null; game.stoppage = true;
       game.net = { t: T, end: toW(c.team, [1, 0.5])[0] > 0.5 ? 1 : 0 };
       game.crowdCheer = T; game.cheerTeam = c.team;
@@ -2944,11 +2979,13 @@
       if (lead > 0) game.trailed[otherTeam(c.team)] = 1;
       const weights = lead >= 3 ? { fist: 4, mate: 4, arms: 2 }
         : { fist: 25, mate: 22, arms: 14, airplane: 10, pointMate: 8, badge: 5, dance: 5, kneeSlide: 4, shush: 3 };
-      if (c.star === 7) weights.siu = 18;
-      if (c.star === 10) weights.sky = 22;
+      if (!c.celebration && c.star === 7) weights.siu = 18;
+      if (!c.celebration && c.star === 10) weights.sky = 22;
+      // A man with a signature celebration does it most of the time, unless the moment calls for something else.
+      const signature = c.celebration && SIGNATURES.has(c.celebration) && c.celebration !== game.lastCeleb[c.team] ? c.celebration : null;
       delete weights[game.lastCeleb[c.team]];
       const pickW = w => { let r = rng() * Object.values(w).reduce((a, b) => a + b, 0); for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; } return "fist"; };
-      const style = lead < 0 ? "hurry" : big ? (rng() < 0.75 ? "groupHug" : "kneelBrief") : pickW(weights);
+      const style = lead < 0 ? "hurry" : big ? (rng() < 0.75 ? "groupHug" : "kneelBrief") : signature && (lead < 3 || rng() < 0.4) && rng() < 0.78 ? signature : pickW(weights);
       game.lastCeleb[c.team] = style; game.celebrate = style;
       game.stats.celebrations = game.stats.celebrations ?? {}; game.stats.celebrations[style] = (game.stats.celebrations[style] ?? 0) + 1;
       // Wherever he is heading, he runs at most about 6 m, at an amateur's 5 m/s.
@@ -3023,8 +3060,11 @@
         endAt = tArr + 3.0;
       } else {
         const { tArr } = runTo(style === "shush" ? [c.pos[0], c.pos[1] < 0.5 ? 0.02 : 0.98] : cornerSpot);
-        const hold = { siu: null, sky: "pointSky", badge: "badge", shush: "shush", airplane: "cheer", arms: "cheer", fist: "fistPump", dance: null }[style];
-        if (style === "siu") {
+        const hold = { siu: null, sky: "pointSky", badge: "badge", shush: "shush", airplane: "cheer", arms: "cheer", fist: "fistPump", dance: null, heart: "heart", armsFolded: "armsFolded", salute: "salute", earCup: "earCup", pray: "pray", flip: null }[style];
+        if (style === "flip") {
+          c.keys.push([tArr, tArr + 0.28, "flipUp"], [tArr + 0.28, tArr + 0.62, "flipOver"], [tArr + 0.62, tArr + 1.05, "flipLand"], [tArr + 1.05, tArr + 1.7, "cheer"]);
+          at(tArr + 0.3, () => say(c, "Hú!", "var(--color-pear)", 1.0));
+        } else if (style === "siu") {
           c.keys.push([tArr, tArr + 0.45, "siuJump"], [tArr + 0.45, tArr + 1.65, "siuLand"]);
           at(tArr + 0.15, () => lockFace(c, tArr + 1.8, -c.faceDir));
           at(tArr + 0.42, () => say(c, "SIUUU!", "var(--art-gold)", 1.3));
@@ -3032,9 +3072,9 @@
           for (let k = 0; k < 3; k++) c.keys.push([tArr + k * 0.4, tArr + k * 0.4 + 0.4, k % 2 ? "danceB" : "danceA"]);
           at(tArr, () => say(c, line("scorer"), "var(--color-pear)", 1.1));
         } else {
-          c.keys.push([tArr, tArr + 1.1, hold]);
+          c.keys.push([tArr, tArr + (style === "pray" ? 1.5 : 1.1), hold]);
           if (style === "fist") c.keys.push([tArr + 0.5, tArr + 0.8, "cheerHop"]);
-          at(tArr, () => say(c, style === "shush" ? "Suỵt!" : style === "badge" ? "Vì đội bóng!" : line("scorer"), "var(--color-pear)", 1.1));
+          at(tArr, () => say(c, style === "shush" ? "Suỵt!" : style === "badge" ? "Vì đội bóng!" : style === "heart" ? "Gửi mọi người!" : style === "earCup" ? "Nghe gì không?" : style === "armsFolded" ? "Quá dễ." : style === "salute" ? "Xin chào!" : style === "pray" ? "Cảm ơn…" : line("scorer"), "var(--color-pear)", 1.1));
         }
         c.keys.push([tArr + 1.3, tArr + 2.2, "cheerLow"]);
         endAt = tArr + 2.2;
@@ -3547,7 +3587,7 @@
       at(tm, () => finishSub(pair));
       game.subsUntil = Math.max(game.subsUntil ?? 0, tm + .45);
       game.stats.subs++;
-      setNote(`Thay người · ${TEAM_NAME[t]}: ${b.name} #${b.num} vào, ${p.name} #${p.num} ra`);
+      setNote(`Thay người · ${TEAM_NAME[t]}: ${tag(b)} #${b.num} vào, ${tag(p)} #${p.num} ra`);
       at(T + 0.3, () => say(b, pick(["Đến lượt tôi!", "Vào thay đây!", "Nghỉ chút đi, để tôi!"]), "var(--color-card)", 1.0));
     }
     /** Completes a substitution (on time, or at once when the half ends in the middle of it). */
@@ -3643,7 +3683,7 @@
           });
         });
         at(tArr + 0.2, () => say(medics[0], pick(["Để chúng tôi xem!", "Nằm yên nhé!"]), "var(--color-card)", 1.1));
-        setNote(`Chấn thương · ${c.name} (${TEAM_NAME[c.team]}) · cáng ra xe cấp cứu`);
+        setNote(`Chấn thương · ${tag(c)} (${TEAM_NAME[c.team]}) · cáng ra xe cấp cứu`);
       } else {
         // A knock: two team-mates go over, get him up and help him off with his arms over their shoulders.
         game.stats.helpedOff = (game.stats.helpedOff ?? 0) + 1;
@@ -3661,7 +3701,7 @@
         });
         at(tArr + 0.1, () => say(helpers[0], pick(["Cố đứng lên nào!", "Từ từ thôi!", "Bám vào tôi!"]), "var(--color-card)", 1.1));
         at(tUp, () => lockFace(c, tOut, Math.sign(ground(...exit)[0] - ground(...X)[0]) || 1));
-        setNote(`Chấn thương · ${c.name} (${TEAM_NAME[c.team]})`);
+        setNote(`Chấn thương · ${tag(c)} (${TEAM_NAME[c.team]})`);
       }
       // The referee waves them on from a few metres away, then gets out of their path.
       game.refFocus = { uv: inPitch([X[0] + 0.12, X[1] + (far ? 0.15 : -0.15)]), until: Tt + 4 };
@@ -3687,7 +3727,7 @@
             at(T + 2.5, () => { if (!sub.off) say(sub, pick(["Tôi ổn rồi, cố lên anh em!", "Đá thay phần tôi nhé!", "Cố lên! Tôi cổ vũ đây!"]), "var(--color-card)", 1.6); });
           });
           game.stats.subs++;
-          setNote(`Thay người · ${TEAM_NAME[c.team]}: ${c.name} #${c.num} vào thay ${hurt.name} #${hurt.num}`);
+          setNote(`Thay người · ${TEAM_NAME[c.team]}: ${tag(c)} #${c.num} vào thay ${tag(hurt)} #${hurt.num}`);
         });
       } else {
         // Nobody left on the bench: a man short.
@@ -4284,7 +4324,7 @@
       const up = (p, h) => [p[0], p[1] - h];
       el("polygon", { points: poly([up(G(-0.12, vOf(ROWS)), rise(ROWS) + 40), up(G(1.12, vOf(ROWS)), rise(ROWS) + 40), up(G(1.12, vOf(ROWS)), rise(ROWS - 1)), up(G(-0.12, vOf(ROWS)), rise(ROWS - 1))]),
         fill: "var(--art-stand-deep)", "stroke-width": 2.5 }, g);
-      const SHIRTS = ["var(--art-red)", "var(--art-blue)", "var(--art-red)", "var(--color-sun)", "var(--art-blue)", "var(--art-red)", "var(--color-card)"];
+      const SHIRTS = ["var(--team-R)", "var(--team-B)", "var(--team-R)", "var(--color-sun)", "var(--team-B)", "var(--team-R)", "var(--color-card)"];
       for (let r = ROWS - 1; r >= 0; r--) {
         const v0 = vOf(r), v1 = vOf(r + 1), hTop = rise(r), hLow = r ? rise(r - 1) : 0;
         el("polygon", { points: poly([up(G(-0.12, v0), hTop), up(G(1.12, v0), hTop), up(G(1.12, v1), hTop), up(G(-0.12, v1), hTop)]), fill: "var(--art-stand)", "stroke-width": 2 }, layer.crowd);
@@ -4295,7 +4335,7 @@
           const fan = el("g", { transform: `translate(${pt(base)})` }, fans);
           el("path", { d: "M-6 0 Q-6 -9 0 -9 Q6 -9 6 0 Z", fill: shirt, "stroke-width": 1.6 }, fan);
           el("circle", { cy: -13, r: 4.6, fill: (i + r) % 3 ? "var(--art-skin)" : "var(--art-skin-2)", "stroke-width": 1.6 }, fan);
-          crowd.push({ node: fan, base, team: shirt.includes("red") ? "R" : shirt.includes("blue") ? "B" : null, k: i * 0.37 + r * 1.3 });
+          crowd.push({ node: fan, base, team: shirt.includes("team-R") ? "R" : shirt.includes("team-B") ? "B" : null, k: i * 0.37 + r * 1.3 });
         }
         el("polygon", { points: poly([up(G(-0.12, v0), hLow), up(G(1.12, v0), hLow), up(G(1.12, v0), hTop), up(G(-0.12, v0), hTop)]), fill: "var(--art-stand-deep)", "stroke-width": 2 }, layer.crowd);
       }
@@ -4422,11 +4462,98 @@
         <path data-mouth="" stroke-width="1.6" transform="translate(1 2)" />
         <g data-whistle="" opacity="0"><rect x="9" y="6" width="8" height="5" rx="2" fill="var(--art-gold)" stroke-width="1.5" /></g>`,
     };
+    /*
+     * Faces are built from a few parts in the same sticker style: the head shape, hair (front and back), brows,
+     * eyes, beard, mouth and an extra (headband, glasses). A squad from data gives each man his own; the built-in
+     * squads keep their old head names, which map onto the same parts.
+     */
+    const HAIR_COLORS = { black: "var(--art-hair)", darkBrown: "#3a2418", brown: "var(--art-hair-brown)", blond: "#d9b24a", ginger: "#c45a2a", grey: "#9c9a98", white: "#ebe6dd", platinum: "#efe4bf" };
+    const SKIN_TONES = { 1: "var(--art-skin)", 2: "var(--art-skin-2)", 3: "var(--art-skin-3)", 4: "var(--art-skin-4)" };
+    const LEGACY_FACES = {
+      buzz: { hair: "buzz" }, spiky: { hair: "spiky" }, curly: { hair: "curly" }, quiff: { hair: "quiff" }, sidepart: { hair: "sidepart", hairColor: "brown" },
+      beard: { hair: "buzz", hairColor: "brown", beard: "short" }, glasses: { hair: "crop", extras: "glasses" }
+    };
+    const HAIR_FRONT = {
+      bald: () => "",
+      buzz: c => `<path d="M-15 -2 Q-15 -16 0 -16 Q15 -16 15 -6 Q4 -10 -15 -2 Z" fill="${c}" stroke-width="2" />`,
+      crop: c => `<path d="M-15 -3 Q-16 -18 0 -18 Q15 -18 15 -7 Q6 -12 -4 -10 Q-11 -9 -15 -3 Z" fill="${c}" stroke-width="2" />`,
+      spiky: c => `<path d="M-15 -1 L-17 -10 L-10 -11 L-10 -19 L-3 -14 L1 -21 L5 -14 L11 -18 L11 -10 L16 -8 Q8 -9 -4 -7 Q-11 -6 -15 -1 Z" fill="${c}" stroke-width="2" />`,
+      quiff: c => `<path d="M-15 -1 Q-17 -14 -6 -17 Q2 -25 14 -19 Q18 -15 15 -7 Q8 -11 -3 -9 Q-10 -8 -15 -1 Z" fill="${c}" stroke-width="2" />`,
+      slick: c => `<path d="M-15 -2 Q-17 -17 0 -18 Q16 -18 16 -8 Q10 -13 2 -12 Q-8 -11 -15 -2 Z" fill="${c}" stroke-width="2" /><path d="M-9 -13 Q0 -15 9 -13 M-6 -9 Q0 -11 8 -10" stroke-width="1" opacity=".45" />`,
+      sidepart: c => `<path d="M-15 0 Q-17 -17 2 -17 Q16 -16 15 -4 Q10 -11 -2 -11 Q-9 -10 -15 0 Z" fill="${c}" stroke-width="2" /><path d="M-3 -16 Q2 -12 10 -12" stroke-width="1.4" opacity=".6" />`,
+      curly: c => `<g fill="${c}" stroke-width="1.8"><circle cx="-12" cy="-6" r="6" /><circle cx="-7" cy="-13" r="6" /><circle cx="1" cy="-15" r="6" /><circle cx="9" cy="-12" r="5.5" /><circle cx="-14" cy="2" r="4.5" /></g>`,
+      afro: c => `<g fill="${c}" stroke-width="1.8"><circle cx="-15" cy="-4" r="8" /><circle cx="-9" cy="-14" r="8" /><circle cx="2" cy="-18" r="8" /><circle cx="12" cy="-13" r="7.5" /><circle cx="16" cy="-3" r="6.5" /><circle cx="-16" cy="6" r="6" /></g>`,
+      wavy: c => `<path d="M-15 -1 Q-18 -16 -4 -19 Q8 -22 15 -14 Q17 -8 15 -3 Q12 -10 6 -10 Q0 -10 -5 -8 Q-10 -6 -15 -1 Z" fill="${c}" stroke-width="2" /><path d="M-11 -11 Q-6 -15 -1 -12 Q4 -16 10 -12" stroke-width="1.2" opacity=".55" />`,
+      long: c => `<path d="M-17 8 Q-19 -16 0 -18 Q17 -17 16 -4 Q15 3 14 8 Q13 2 11 -8 Q4 -11 -4 -9 Q-11 -6 -13 6 Z" fill="${c}" stroke-width="2" /><path d="M-15 4 Q-14 -6 -8 -10" stroke-width="1.1" opacity=".5" />`,
+      bun: c => `<path d="M-15 -2 Q-17 -17 0 -18 Q16 -18 16 -8 Q10 -13 2 -12 Q-8 -11 -15 -2 Z" fill="${c}" stroke-width="2" /><circle cx="-5" cy="-19" r="5" fill="${c}" stroke-width="1.8" />`,
+      mohawk: c => `<path d="M-15 -2 Q-15 -14 -2 -15 Q12 -15 15 -6 Q4 -9 -15 -2 Z" fill="${c}" stroke-width="2" opacity=".35" /><path d="M-9 -5 Q-7 -24 1 -27 Q9 -25 9 -7 Q3 -11 -9 -5 Z" fill="${c}" stroke-width="2" />`,
+      braids: c => `<path d="M-15 -2 Q-16 -17 0 -18 Q16 -17 15 -6 Q5 -10 -4 -9 Q-11 -8 -15 -2 Z" fill="${c}" stroke-width="2" /><path d="M-11 -5 Q-6 -15 4 -16 M-5 -6 Q0 -14 9 -14 M1 -8 Q6 -12 13 -11" stroke="var(--color-card)" stroke-width="1" opacity=".55" />`,
+      bowl: c => `<path d="M-15 1 Q-16 -18 0 -18 Q16 -18 15 1 L15 -2 Q6 -3 -4 -2 Q-10 -2 -15 1 Z" fill="${c}" stroke-width="2" />`,
+      receding: c => `<path d="M-15 -1 Q-15 -11 -9 -13 L-8 -5 Q-11 -3 -15 -1 Z" fill="${c}" stroke-width="1.8" /><path d="M9 -11 Q15 -9 15 -3 Q12 -6 9 -6 Z" fill="${c}" stroke-width="1.8" /><path d="M-5 -13 Q1 -15 7 -12" stroke-width="1.6" opacity=".5" />`,
+      undercut: c => `<path d="M-14 -3 Q-14 -13 -2 -14 Q11 -14 14 -6 Q5 -9 -14 -3 Z" fill="${c}" stroke-width="1.6" opacity=".4" /><path d="M-10 -8 Q-10 -21 2 -22 Q14 -21 13 -9 Q6 -13 -2 -12 Q-7 -11 -10 -8 Z" fill="${c}" stroke-width="2" />`,
+      ponytail: c => `<path d="M-15 -2 Q-17 -17 0 -18 Q16 -18 16 -8 Q10 -13 2 -12 Q-8 -11 -15 -2 Z" fill="${c}" stroke-width="2" /><path d="M-14 -4 Q-22 2 -20 13" stroke="${c}" stroke-width="6" /><path d="M-14 -4 Q-22 2 -20 13" stroke-width="1.6" opacity=".6" fill="none" />`
+    };
+    const HAIR_BACK = {
+      bald: () => "",
+      curly: c => `<g fill="${c}" stroke-width="1.8"><circle cx="-9" cy="-8" r="7" /><circle cx="0" cy="-12" r="7" /><circle cx="8" cy="-8" r="6" /><circle cx="-12" cy="2" r="6" /><circle cx="-4" cy="5" r="6" /></g>`,
+      afro: c => `<g fill="${c}" stroke-width="1.8"><circle cx="-12" cy="-8" r="9" /><circle cx="0" cy="-14" r="9" /><circle cx="11" cy="-8" r="8" /><circle cx="-13" cy="4" r="7" /><circle cx="-2" cy="4" r="8" /><circle cx="9" cy="3" r="7" /></g>`,
+      long: c => `<path d="M-16 4 Q-18 -16 -1 -17 Q15 -16 15 -4 Q15 8 10 16 Q-8 18 -16 4 Z" fill="${c}" stroke-width="2" />`,
+      mohawk: c => `<path d="M-15 2 Q-17 -16 -1 -16 Q14 -16 14 -4 Q12 7 4 11 Q-9 13 -15 2 Z" fill="${c}" stroke-width="2" opacity=".35" /><path d="M-5 10 Q-6 -20 0 -26 Q6 -20 5 10 Z" fill="${c}" stroke-width="2" />`,
+      receding: c => `<path d="M-15 2 Q-16 -8 -8 -11 L-9 10 Q-14 8 -15 2 Z M14 -3 Q15 -9 8 -11 L8 10 Q13 7 14 -3 Z" fill="${c}" stroke-width="1.8" />`,
+      bun: c => `<path d="M-15 2 Q-17 -16 -1 -16 Q14 -16 14 -4 Q12 7 4 11 Q-9 13 -15 2 Z" fill="${c}" stroke-width="2" /><circle cx="0" cy="-17" r="6" fill="${c}" stroke-width="1.8" />`,
+      ponytail: c => `<path d="M-15 2 Q-17 -16 -1 -16 Q14 -16 14 -4 Q12 7 4 11 Q-9 13 -15 2 Z" fill="${c}" stroke-width="2" /><path d="M0 6 Q2 14 -1 22" stroke="${c}" stroke-width="6" /><path d="M0 6 Q2 14 -1 22" stroke-width="1.6" fill="none" opacity=".6" />`,
+      default: c => `<path d="M-15 2 Q-17 -16 -1 -16 Q14 -16 14 -4 Q12 7 4 11 Q-9 13 -15 2 Z" fill="${c}" stroke-width="2" />`
+    };
+    const BEARDS = {
+      none: () => "",
+      stubble: c => `<path d="M-12 4 Q-10 14 1 15 Q10 14 13 6 Q10 10 6 9 Q2 8 -2 9 Q-7 9 -12 4 Z" fill="${c}" stroke="none" opacity=".32" />`,
+      goatee: c => `<path d="M0 10 Q1 15 6 15 Q10 14 10 10 Q7 12 5 11 Q2 12 0 10 Z" fill="${c}" stroke-width="1.4" />`,
+      short: c => `<path d="M-12 4 Q-11 15 1 16 Q11 15 13 6 Q8 11 5 10 Q1 8 -2 10 Q-7 10 -12 4 Z" fill="${c}" stroke-width="1.8" />`,
+      full: c => `<path d="M-13 2 Q-13 18 2 19 Q13 18 15 4 Q9 11 5 11 Q1 10 -2 11 Q-8 11 -13 2 Z" fill="${c}" stroke-width="1.8" />`,
+      moustache: c => `<path d="M0 5.5 Q5 2.5 10 5.5 Q7 7 5 5.5 Q3 7 0 5.5 Z" fill="${c}" stroke-width="1.2" />`
+    };
+    const BROW_STYLES = { normal: BROWS, thick: `<path d="M-1.5 -3.5 H4.5 M6.5 -3.5 H11.5" stroke-width="2.6" />`, thin: `<path d="M-1 -3 H4 M7 -3 H11" stroke-width="1" opacity=".75" />` };
+    const EXTRAS = {
+      none: "",
+      glasses: `<circle cx="1" cy="2" r="4.6" fill="var(--color-card)" fill-opacity=".55" stroke-width="1.6" /><circle cx="9.5" cy="2" r="4.6" fill="var(--color-card)" fill-opacity=".55" stroke-width="1.6" /><path d="M5.6 2 H4.9" stroke-width="1.6" />`,
+      headband: `<path d="M-15.5 -4 Q0 -11 15.5 -4 L15.5 -0.5 Q0 -7.5 -15.5 -0.5 Z" fill="var(--color-card)" stroke-width="1.6" />`
+    };
+    const HEAD_SHAPES = {
+      round: skin => `<circle r="14.5" fill="${skin}" stroke-width="2.5" />`,
+      long: skin => `<ellipse rx="13.6" ry="15.8" cy=".6" fill="${skin}" stroke-width="2.5" />`,
+      square: skin => `<path d="M-14 -10 Q-14 -14.5 -9 -14.5 L9 -14.5 Q14 -14.5 14 -10 L14 8 Q14 15 7 15 L-7 15 Q-14 15 -14 8 Z" fill="${skin}" stroke-width="2.5" />`
+    };
+    const FACE_CACHE = new Map();
+    /** The parts a man's face is drawn from: his own description, or the one his legacy head name stands for. */
+    function faceOf(p) {
+      const f = p.look ?? LEGACY_FACES[p.head] ?? LEGACY_FACES.buzz;
+      return { hair: HAIR_FRONT[f.hair] ? f.hair : "buzz", hairColor: HAIR_COLORS[f.hairColor] ? f.hairColor : "black", skin: SKIN_TONES[p.skin] ? p.skin : 1,
+        beard: BEARDS[f.beard] ? f.beard : "none", brows: BROW_STYLES[f.brows] ? f.brows : "normal", extras: EXTRAS[f.extras] != null ? f.extras : "none", build: HEAD_SHAPES[f.build] ? f.build : "round" };
+    }
+    const skinOf = p => SKIN_TONES[p.skin] ?? SKIN_TONES[1];
+    /** The front of a head, facing right; the mouth is left for the pose to draw. */
+    function headMarkup(p) {
+      if (p.head === "ref" || p.head === "medic") return HEADS[p.head === "ref" ? "ref" : "buzz"].replaceAll("SKIN", skinOf(p)).replace("BROWS", BROWS).replace("EYES", EYES);
+      const f = faceOf(p), key = JSON.stringify(f);
+      let markup = FACE_CACHE.get(key);
+      if (markup == null) {
+        const hair = HAIR_COLORS[f.hairColor], skin = SKIN_TONES[f.skin], bearded = f.beard === "short" || f.beard === "full";
+        markup = HEAD_SHAPES[f.build](skin) + HAIR_FRONT[f.hair](hair) + BROW_STYLES[f.brows] + EYES + BEARDS[f.beard](hair)
+          + `<path data-mouth="" stroke-width="1.7"${bearded ? ' stroke="var(--color-card)"' : ""} />` + EXTRAS[f.extras];
+        FACE_CACHE.set(key, markup);
+      }
+      return markup;
+    }
+    /** The back of a head for camera angles behind a player: hair over the crown, one ear, no face. */
+    function backHeadMarkup(p) {
+      const f = faceOf(p), hair = HAIR_COLORS[f.hairColor], skin = SKIN_TONES[f.skin];
+      return HEAD_SHAPES[f.build](skin) + (HAIR_BACK[f.hair] ?? HAIR_BACK.default)(hair) + `<ellipse cx="12" cy="3" rx="2.6" ry="3.8" fill="${skin}" stroke-width="1.6" />` + (f.extras === "headband" ? EXTRAS.headband : "");
+    }
     function makeSprite(p) {
       const kit = p === ref ? { shirt: "var(--art-ref)", shorts: "var(--art-shorts)", socks: "var(--art-shorts)" }
         : p.medic ? { shirt: "var(--color-card)", shorts: "var(--art-shorts)", socks: "var(--color-card)" }
-        : { shirt: p.role === "GK" ? KIT[p.team].gk : KIT[p.team].shirt, shorts: KIT[p.team].shorts, socks: KIT[p.team].socks };
-      const skin = p.skin === 2 ? "var(--art-skin-2)" : "var(--art-skin)";
+        : { ...KIT[p.team], shirt: p.role === "GK" ? KIT[p.team].gk : KIT[p.team].shirt };
+      const skin = skinOf(p);
       const root = el("g", {}), shadow = el("ellipse", { rx: 15, ry: 4.5, fill: "var(--art-shadow)", stroke: "none", opacity: 0.22 }, layer.shadows);
       const q = {};
       q.armBInk = el("path", { "stroke-width": 8 }, root); q.armB = el("path", { stroke: skin, "stroke-width": 4.6 }, root);
@@ -4438,13 +4565,14 @@
       }
       q.shortsInk = el("path", { "stroke-width": 23 }, root); q.shorts = el("path", { stroke: kit.shorts, "stroke-width": 18.5 }, root);
       q.torsoInk = el("path", { "stroke-width": 26 }, root); q.torso = el("path", { stroke: kit.shirt, "stroke-width": 21.5 }, root);
+      if (kit.stripe && p.role !== "GK") q.stripe = el("path", { stroke: kit.stripe, "stroke-width": 7, "stroke-linecap": "butt" }, root);
       // The referee's shirt has a black band across the chest, so he never reads as a player.
       if (p === ref) q.band = el("path", { stroke: "var(--color-ink)", "stroke-width": 21.5, "stroke-linecap": "butt" }, root);
       if (p.num != null) {
-        q.num = el("text", { "text-anchor": "middle", "font-family": "var(--font-mono)", "font-size": p.medic ? 17 : 11, "font-weight": 700, fill: p.medic ? "var(--art-red)" : p.role === "GK" ? "var(--color-ink)" : "var(--color-card)", stroke: "none" }, root);
+        q.num = el("text", { "text-anchor": "middle", "font-family": "var(--font-mono)", "font-size": p.medic ? 17 : 11, "font-weight": 700, fill: p.medic ? "var(--art-red)" : p.role === "GK" ? (kit.gkNumberInk ?? "var(--color-ink)") : (kit.numberInk ?? "var(--color-card)"), stroke: "none" }, root);
         q.num.textContent = p.num;
       }
-      q.head = el("g", {}, root); q.head.innerHTML = HEADS[p.head].replaceAll("SKIN", skin).replace("BROWS", BROWS).replace("EYES", EYES);
+      q.head = el("g", {}, root); q.head.innerHTML = headMarkup(p);
       q.mouth = q.head.querySelector("[data-mouth]"); q.whistle = q.head.querySelector("[data-whistle]");
       q.armFInk = el("path", { "stroke-width": 8 }, root); q.armF = el("path", { stroke: skin, "stroke-width": 4.6 }, root);
       if (p.role === "GK") { q.gloveF = el("circle", { r: 4, fill: "var(--color-card)", "stroke-width": 1.8 }, root); q.gloveB = el("circle", { r: 4, fill: "var(--color-card)", "stroke-width": 1.8 }); root.insertBefore(q.gloveB, q.armB.nextSibling); }
@@ -4462,22 +4590,18 @@
     /** Redraws the parts of a figure that belong to the man, not the slot: skin, head and hair, shirt number. */
     function restyle(p) {
       p.drawPoseKey = null;
-      const q = p.sprite.q, skin = p.skin === 2 ? "var(--art-skin-2)" : "var(--art-skin)";
+      const q = p.sprite.q, skin = skinOf(p);
       for (const k of ["thighF", "thighB", "armF", "armB"]) set(q[k], { stroke: skin });
-      q.head.innerHTML = HEADS[p.head].replaceAll("SKIN", skin).replace("BROWS", BROWS).replace("EYES", EYES);
+      q.head.innerHTML = headMarkup(p);
       q.mouth = q.head.querySelector("[data-mouth]"); q.whistle = q.head.querySelector("[data-whistle]");
       if (q.num) q.num.textContent = p.num;
     }
     pickSquads();
     // The back of a head for camera angles behind a player: hair over the crown, one ear, no face.
-    const BACK_HEADS = {
-      curly: `<g fill="HAIR" stroke-width="1.8"><circle cx="-9" cy="-8" r="7" /><circle cx="0" cy="-12" r="7" /><circle cx="8" cy="-8" r="6" /><circle cx="-12" cy="2" r="6" /><circle cx="-4" cy="5" r="6" /></g>`,
-      default: `<path d="M-15 2 Q-17 -16 -1 -16 Q14 -16 14 -4 Q12 7 4 11 Q-9 13 -15 2 Z" fill="HAIR" stroke-width="2" />`,
-    };
     /** A standalone figure in the same rig, ink and kit as the match, for other camera angles (the penalty scene). */
     function figureMarkup(p, name, { back = false, phase = 0 } = {}) {
-      const r = rig(poseOf(name, phase) ?? POSES.ready, p.body), skin = p.skin === 2 ? "var(--art-skin-2)" : "var(--art-skin)";
-      const kit = { shirt: p.role === "GK" ? KIT[p.team].gk : KIT[p.team].shirt, shorts: KIT[p.team].shorts, socks: KIT[p.team].socks };
+      const r = rig(poseOf(name, phase) ?? POSES.ready, p.body), skin = skinOf(p);
+      const kit = { ...KIT[p.team], shirt: p.role === "GK" ? KIT[p.team].gk : KIT[p.team].shirt };
       const path = (d, attrs) => `<path d="${d}" ${attrs} />`, parts = [];
       parts.push(path(seg(r.top, r.elbowB, r.handB), 'stroke-width="8"'), path(seg(r.top, r.elbowB, r.handB), `stroke="${skin}" stroke-width="4.6"`));
       if (p.role === "GK") parts.push(`<circle cx="${r.handB[0].toFixed(1)}" cy="${r.handB[1].toFixed(1)}" r="4" fill="var(--color-card)" stroke-width="1.8" />`);
@@ -4489,14 +4613,13 @@
       }
       parts.push(path(seg(r.hip, r.waist), 'stroke-width="23"'), path(seg(r.hip, r.waist), `stroke="${kit.shorts}" stroke-width="18.5"`));
       parts.push(path(seg(r.waist, r.top), 'stroke-width="26"'), path(seg(r.waist, r.top), `stroke="${kit.shirt}" stroke-width="21.5"`));
+      if (kit.stripe && p.role !== "GK") parts.push(path(seg(lerp(r.waist, r.top, 0.04), lerp(r.waist, r.top, 0.96)), `stroke="${kit.stripe}" stroke-width="7" stroke-linecap="butt"`));
       if (p.num != null) {
         const mid = lerp(r.waist, r.top, back ? 0.5 : 0.55);
-        parts.push(`<text text-anchor="middle" font-family="var(--font-mono)" font-size="${back ? 14 : 11}" font-weight="700" fill="${p.role === "GK" ? "var(--color-ink)" : "var(--color-card)"}" stroke="none" transform="translate(${pt(mid)}) rotate(${(r.lean + r.rot).toFixed(0)}) translate(0 ${back ? 5 : 4})">${p.num}</text>`);
+        parts.push(`<text text-anchor="middle" font-family="var(--font-mono)" font-size="${back ? 14 : 11}" font-weight="700" fill="${p.role === "GK" ? (kit.gkNumberInk ?? "var(--color-ink)") : (kit.numberInk ?? "var(--color-card)")}" stroke="none" transform="translate(${pt(mid)}) rotate(${(r.lean + r.rot).toFixed(0)}) translate(0 ${back ? 5 : 4})">${p.num}</text>`);
       }
-      const hair = ["sidepart", "beard"].includes(p.head) ? "var(--art-hair-brown)" : "var(--art-hair)";
       const mouth = MOUTH[name] ?? SMILE;
-      const head = back ? `<circle r="14.5" fill="${skin}" stroke-width="2.5" />${(BACK_HEADS[p.head] ?? BACK_HEADS.default).replaceAll("HAIR", hair)}<ellipse cx="12" cy="3" rx="2.6" ry="3.8" fill="${skin}" stroke-width="1.6" />`
-        : HEADS[p.head].replaceAll("SKIN", skin).replace("BROWS", BROWS).replace("EYES", EYES).replace('data-mouth=""', `data-mouth="" d="${mouth}" fill="${mouth.endsWith("Z") ? "var(--color-card)" : "none"}"`);
+      const head = back ? backHeadMarkup(p) : headMarkup(p).replace('data-mouth=""', `data-mouth="" d="${mouth}" fill="${mouth.endsWith("Z") ? "var(--color-card)" : "none"}"`);
       parts.push(`<g transform="translate(${pt(r.head)}) rotate(${(r.lean * 0.4 + r.rot).toFixed(1)})">${head}</g>`);
       parts.push(path(seg(r.top, r.elbowF, r.handF), 'stroke-width="8"'), path(seg(r.top, r.elbowF, r.handF), `stroke="${skin}" stroke-width="4.6"`));
       if (p.role === "GK") parts.push(`<circle cx="${r.handF[0].toFixed(1)}" cy="${r.handF[1].toFixed(1)}" r="4" fill="var(--color-card)" stroke-width="1.8" />`);
@@ -4531,6 +4654,7 @@
       }
       set(q.shortsInk, { d: seg(r.hip, r.waist) }); set(q.shorts, { d: seg(r.hip, r.waist) });
       set(q.torsoInk, { d: seg(r.waist, r.top) }); set(q.torso, { d: seg(r.waist, r.top) });
+      if (q.stripe) set(q.stripe, { d: seg(lerp(r.waist, r.top, 0.04), lerp(r.waist, r.top, 0.96)) });
       if (q.band) set(q.band, { d: seg(lerp(r.waist, r.top, 0.55), lerp(r.waist, r.top, 0.78)) });
       if (q.num) {
         // The number reads the right way round whichever way he faces.
@@ -4696,7 +4820,7 @@
         const p = h.selected, visible = !!p && on(p) && ["play", "reset"].includes(game.mode);
         set(ring, { cx: p?.g[0] ?? 0, cy: (p?.g[1] ?? 0) + 2, opacity: visible ? 1 : 0 });
         set(label, { x: p?.g[0] ?? 0, y: (p?.g[1] ?? 0) - 130 * S, opacity: visible ? 1 : 0 });
-        setText(label, `${h.slot} · ${p?.name ?? ""}`);
+        setText(label, `${h.slot} · ${p ? tag(p) : ""}`);
         set(pointer, { transform: `translate(${pt(p?.g ?? [0, 0])})`, opacity: visible ? 1 : 0 });
         const power = chargePower(h), charging = visible && !!h.charge;
         set(powerBg, { x: (p?.g[0] ?? 0) - 18, y: (p?.g[1] ?? 0) + 14, opacity: charging ? 0.95 : 0 });
@@ -4822,7 +4946,7 @@
     function planPlayer(p, sh) {
       const onPitch = !p.bench, slot = onPitch ? shapeSlot(p, sh) : null, skill = GAME_DATA.skills[p.specialId];
       const pen = p.specialSituations?.penaltyAttack ?? p.specialSituations?.penaltyDefense ?? null;
-      return { id: p.id, name: p.name, num: p.num, role: onPitch ? p.role : p.natural, natural: p.natural, line: slot?.line ?? null, spot: slot ? [...slot.home] : null,
+      return { id: p.id, name: p.name, short: tag(p), num: p.num, role: onPitch ? p.role : p.natural, natural: p.natural, roleName: p.roleName ?? "", summary: p.summary ?? "", posName: p.posName ?? "", celebration: p.celebration ?? null, line: slot?.line ?? null, spot: slot ? [...slot.home] : null,
         onPitch, ovr: overall(p), energy: +(p.energy ?? 1).toFixed(3), yellows: p.yellows ?? 0, injured: !!p.injured, bandaged: !!p.bandage, subbing: !!p.subbing, star: !!p.star,
         stats: { ...p.stats }, body: { ...bodyOf(p) }, attack: styleInfo(p.attackStyleId, atkOf(p)), defense: styleInfo(p.defenseStyleId, defOf(p)),
         skill: skill ? { id: p.specialId, name: skill.name, short: skill.short ?? "", desc: skill.desc ?? "", icon: skill.icon ?? "", role: skill.role, used: !!p.specialUsed } : null,
@@ -4834,7 +4958,7 @@
     /** Both sides' plans: shape and the shapes it may switch to, the automatic helpers, everyone on the pitch and on the bench, queued changes. */
     api.plan = () => Object.fromEntries(TEAMS.map(t => {
       const sh = SHAPES[game.shape[t]], size = clamp(outfieldCount(t), 3, 5);
-      return [t, { coached: coached(t), controller: humans.find(h => h.team === t)?.slot ?? (interactive ? "cpu" : "auto"),
+      return [t, { coached: coached(t), controller: humans.find(h => h.team === t)?.slot ?? (interactive ? "cpu" : "auto"), team: TEAM_INFO[t],
         shape: game.shape[t], shapeName: sh.name, planned: game.plannedShape[t], auto: { ...autoOf(t) },
         shapes: Object.entries(SHAPES).filter(([, x]) => x.size === size).map(([id, x]) => ({ id, name: x.name, desc: x.desc ?? x.name, family: x.family, keeper: x.size === 5, home: x.home.map(h => [...h]), lines: [...x.lines] })),
         players: team[t].filter(inSquad).map(p => planPlayer(p, sh)),
@@ -4889,10 +5013,20 @@
       return { ok: true };
     };
     /** Anyone (on the pitch or the bench) drawn in a pose, as SVG markup in the match style, for portraits. */
-    api.figure = (id, pose = "ready") => { const p = people.find(x => x.id === id); return p?.name ? figureMarkup(p, pose) : ""; };
+    // Portraits are asked for on every plan redraw; a man's look does not change within a match, so they are kept.
+    const figureCache = new Map();
+    api.figure = (id, pose = "ready") => {
+      const p = people.find(x => x.id === id);
+      if (!p?.name) return "";
+      const key = p.pid + ":" + pose + ":" + p.team + ":" + p.role;
+      let markup = figureCache.get(key);
+      if (markup == null) { if (figureCache.size > 240) figureCache.clear(); markup = figureMarkup(p, pose); figureCache.set(key, markup); }
+      return markup;
+    };
+    api.teams = () => ({ R: TEAM_INFO.R, B: TEAM_INFO.B });
     api.palette = () => {
       const style = getComputedStyle(root);
-      return Object.fromEntries(["color-ink", "color-card", "color-sky-soft", "color-sun", "color-pear-soft", "art-skin", "art-skin-2", "art-hair", "art-hair-brown", "art-gold", "art-shorts", "art-red", "art-blue", "art-gk-r", "art-gk-b", "art-grass", "art-grass-2", "art-surround", "art-stand", "art-stand-deep", "art-shadow", "font-mono", "font-display"].map(name => ["--" + name, style.getPropertyValue("--" + name).trim()]));
+      return Object.fromEntries(["color-ink", "color-card", "color-sky-soft", "color-sun", "color-pear-soft", "art-skin", "art-skin-2", "art-skin-3", "art-skin-4", "art-hair", "art-hair-brown", "team-R", "team-B", "art-gold", "art-shorts", "art-red", "art-blue", "art-gk-r", "art-gk-b", "art-grass", "art-grass-2", "art-surround", "art-stand", "art-stand-deep", "art-shadow", "font-mono", "font-display"].map(name => ["--" + name, style.getPropertyValue("--" + name).trim()]));
     };
     /** The penalty taker ("taker") or keeper ("keeper") drawn in a pose, as SVG markup in the match style. */
     api.penaltyFigure = (role, pose = "ready", options = {}) => {
@@ -4904,6 +5038,7 @@
       return boardNodes.get(id);
     };
     let shownScore = { R: 0, B: 0 };
+    for (const t of TEAMS) setText($("name-" + t), TEAM_INFO[t].short);
     function drawBoard() {
       game.dirty = false;
       for (const t of TEAMS) {
@@ -5024,7 +5159,8 @@
     return api;
   }
   function mountAll(selector = ".ptsc-football, [data-ptsc-football]") {
-    return Array.from(document.querySelectorAll(selector)).map(el => mount(el));
+    // A host marked data-ptsc-manual is mounted by the page itself, with its own squads and clubs.
+    return Array.from(document.querySelectorAll(selector)).filter(el => !el.hasAttribute("data-ptsc-manual")).map(el => mount(el));
   }
   window.PTSCFootball = { mount, mountAll, data: GAME_DATA, rules: { challengeOutcome, kickProfile } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => mountAll());

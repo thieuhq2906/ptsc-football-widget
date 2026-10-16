@@ -17,9 +17,20 @@ Trang là một game duy nhất trên một màn hình (stage) phủ kín cửa 
 
 Bàn phím trong menu: **↑ ↓** (hoặc W S) chọn, **← →** (A D) đổi giá trị, **Enter** xác nhận (ở màn chuẩn bị là vào sân), **Space** tiếp tục trận, **Esc** quay lại. Chuột: rê vào là chọn, bấm là xác nhận; mũi tên hai bên mỗi hàng cài đặt để đổi. Hộp xác nhận (bỏ thay đổi, xóa layout) cũng nằm trong game. Nút Back của trình duyệt về màn trước. Rời màn trận đấu sẽ tạm dừng trận; quay lại vẫn đá tiếp. Từ Thông tin game quay lại đúng màn đã mở nó.
 
-- **Chỉ xem:** một trận ngẫu nhiên; kịch bản ưu tiên rượt đuổi, lội ngược dòng và bàn thắng muộn. Cả Đỏ và Xanh đều có thể thắng.
-- **Đấu với máy:** bạn chọn áo Đỏ hoặc Xanh và **độ khó** (Dễ, Thường, Khó, Huyền thoại, nhớ trong trình duyệt); máy điều khiển đội còn lại.
-- **Hai người:** A chọn áo, B chọn sân trái/phải lúc bắt đầu và nhận màu áo còn lại. Hai đội đổi sân giữa hiệp.
+- **Chỉ xem:** hai câu lạc bộ ngẫu nhiên; kịch bản ưu tiên rượt đuổi, lội ngược dòng và bàn thắng muộn. Đội nào cũng có thể thắng.
+- **Đấu với máy:** bạn chọn **câu lạc bộ của mình** và **câu lạc bộ của máy** (hoặc "Ngẫu nhiên"), cùng **độ khó** (Dễ, Thường, Khó, Huyền thoại, nhớ trong trình duyệt).
+- **Hai người:** mỗi người chọn một câu lạc bộ; B chọn sân trái/phải lúc bắt đầu. Hai đội đổi sân giữa hiệp. Mỗi bên có **3 lượt tạm dừng**, mỗi lượt tối đa **60 giây** (đếm ngược) để thay người hoặc đổi chiến thuật: người A bấm phím tạm dừng của mình (mặc định **Q**, Space và Esc cũng tính là của A), người B bấm phím của mình (mặc định **P**). Hết giờ trận tự chạy tiếp; hết lượt thì phím không còn tác dụng và sân báo "đã hết 3 lượt". Trong lượt tạm dừng chỉ bên xin dừng được sửa đội hình/chiến thuật của mình.
+
+### Câu lạc bộ và 300 cầu thủ
+
+Dữ liệu trong `teams.js` (`window.PTSC_TEAMS`, sinh từ `document/top_10_clb_bong_da_2026_300_ngoi_sao_25_huyen_thoai_khoi_phuc.xlsx`): **10 câu lạc bộ** (Real Madrid, FC Barcelona, Manchester United, Paris Saint-Germain, Manchester City, Juventus, Liverpool, Chelsea, Bayern Munich, Arsenal), mỗi đội **30 ngôi sao và huyền thoại** với vị trí 11 người (GK/CB/LB/RB/CDM/CM/CAM/LM/RM/LW/RW/ST/CF), vai trò, tóm tắt lối chơi, OVR, chiều cao, cân nặng, **10 chỉ số cố định** 1–99, kiểu tóc/màu tóc/da/râu/lông mày/phụ kiện/dáng mặt, kiểu ăn mừng đặc trưng, số áo quen thuộc và tên hiển thị ngắn. Logo và hai bộ áo (sân nhà, sân khách) của mỗi đội nằm trong `assets/teams/`.
+
+- **Chọn đội → bốc 9 người:** mỗi trận `PTSCTeams.pickSquad` bốc ngẫu nhiên **1 thủ môn, 3 hậu vệ, 2 tiền vệ, 3 tiền đạo** từ 30 người (CB/LB/RB → hậu vệ; CDM/CM/CAM/LM/RM → tiền vệ; LW/RW/ST/CF → tiền đạo). Trong mỗi tuyến, người OVR cao hơn đá chính (6 người: TM, 2 HV, 1 TV, 2 TĐ), ba người còn lại ngồi dự bị. Số áo trùng trong 9 người được đổi sang số trống. Hai người OVR cao nhất ngoài thủ môn là trụ cột (đá lâu hơn, máy không tự thay). **Trận mới** giữ hai câu lạc bộ nhưng bốc lại.
+- **Áo đấu:** đội thứ nhất mặc áo sân nhà; nếu màu áo hai đội gần nhau (so khoảng cách màu), đội thứ hai mặc áo sân khách (ví dụ Liverpool – Manchester United, Real Madrid – Juventus). Thủ môn luôn mặc màu khác cả hai áo. Áo có sọc giữa (Barcelona, PSG, Juventus, Liverpool sân khách…); số áo tự đổi màu mực cho áo sáng. Bảng tỉ số ghi tên ngắn (RMA, BAR…), chấm màu và khán đài theo màu áo.
+- **Khuôn mặt:** đầu được ghép từ các phần cùng phong cách sticker: dáng mặt (tròn/dài/vuông), 18 kiểu tóc (trọc, húi cua, cắt ngắn, dựng, quiff, vuốt ngược, ngôi lệch, xoăn, afro, gợn sóng, dài, búi, mohawk, tết, bát úp, hói trán, undercut, đuôi ngựa), 8 màu tóc, 4 tông da, 6 kiểu râu, 3 kiểu lông mày, băng đô/kính. Mặt sau đầu (góc nhìn penalty) vẽ theo kiểu tóc. Chân dung trong Kế hoạch trận được lưu đệm trong mỗi trận.
+- **Ăn mừng đặc trưng:** mỗi cầu thủ có kiểu riêng (SIUU, chỉ lên trời, trái tim, lộn nhào, khoanh tay, chào kiểu nhà binh, khum tai, quỳ cầu nguyện, máy bay, trượt gối, nhảy múa, hôn huy hiệu, suỵt, ôm đồng đội, chỉ tay cảm ơn, dang tay, vung nắm đấm); anh ta dùng nó khoảng 3/4 số bàn, trừ khi tình huống đặc biệt (gỡ hòa muộn → cả đội ôm nhau; đang bị dẫn → ôm bóng về giữa sân).
+- **Độ khó** cộng/trừ chỉ số của đội máy lên cả chỉ số cố định (trừ Bắt bóng của cầu thủ sân).
+- **Thông tin game → Đội bóng:** duyệt 10 câu lạc bộ: logo, hai bộ áo, số người từng tuyến, OVR đội hình mạnh nhất và danh sách 30 cầu thủ.
 
 Mỗi đội vẫn gồm thủ môn và 5 cầu thủ. Giữ nguyên hình vẽ, góc nhìn, thể lực và thẻ phạt. Camera bám bóng, kể cả khi thay người; thay người (tự động hoặc do bạn chọn trong Kế hoạch trận) chỉ lúc bóng chết và đồng hồ dừng đến khi thay xong. Cầu thủ ra/vào chạy nhanh gấp đôi; bàn giao và chờ đá tiếp đã được rút ngắn.
 Chế độ chơi không dùng lịch bàn thắng của chế độ xem; tỷ số phụ thuộc vào thao tác, vị trí sút, đối thủ và thể lực. Hết giờ có thể hòa.
@@ -121,18 +132,18 @@ Tham khảo thiết kế tình huống từ [hướng dẫn gameplay chính th�
 
 ### Lối chơi (playstyle)
 
-Mỗi cầu thủ có **một lối chơi tấn công** (khi đội mình có bóng) và **một lối chơi phòng ngự** (khi mất bóng). Bộ lối chơi là của riêng PTSC Cup, đặt tên mới và thiết kế cho sân 6 người; mỗi kiểu có tên, một dòng tóm tắt và mô tả. Ngoài các thông số cũ (dâng cao, độ rộng, đi lại, sút, rê, tạt, phối hợp, chuyền dài, áp sát, kèm người, cắt bóng, tuyến hàng thủ, lao ra), có ba hành vi mới: **lệch theo bóng** (dạt về phía có bóng, hoặc ngược lại rình ở phía xa bóng), **chờ rìa vòng cấm** (đứng ngoài vòng cấm đón bóng bật ra) và **che trục** (khi mất bóng đứng trên đường từ bóng tới khung thành nhà). Lối chơi gắn với cầu thủ (đi theo khi thay người; vào ở vị trí khác thì nhận kiểu hợp vị trí đó). Người đang được điều khiển đi theo phím bấm; lối chơi quyết định phần còn lại.
+Mỗi cầu thủ có **một lối chơi tấn công** (khi đội mình có bóng) và **một lối chơi phòng ngự** (khi mất bóng). **Lối chơi không đổi chỉ số**: chỉ số là của riêng cầu thủ (dữ liệu cố định); lối chơi quyết định anh ta tự làm gì khi không được điều khiển (đứng đâu, chạy chỗ nào, áp sát hay chờ, rê hay chuyền). Với 300 cầu thủ, lối chơi được suy từ vai trò, vị trí và chỉ số trong dữ liệu. Bộ lối chơi là của riêng PTSC Cup, đặt tên mới và thiết kế cho sân 6 người; mỗi kiểu có tên, một dòng tóm tắt và mô tả. Ngoài các thông số cũ (dâng cao, độ rộng, đi lại, sút, rê, tạt, phối hợp, chuyền dài, áp sát, kèm người, cắt bóng, tuyến hàng thủ, lao ra), có ba hành vi mới: **lệch theo bóng** (dạt về phía có bóng, hoặc ngược lại rình ở phía xa bóng), **chờ rìa vòng cấm** (đứng ngoài vòng cấm đón bóng bật ra) và **che trục** (khi mất bóng đứng trên đường từ bóng tới khung thành nhà). Lối chơi gắn với cầu thủ (đi theo khi thay người; vào ở vị trí khác thì nhận kiểu hợp vị trí đó). Người đang được điều khiển đi theo phím bấm; lối chơi quyết định phần còn lại.
 
 | Vùng | Khi có bóng · tấn công | Khi mất bóng · phòng ngự |
 |---|---|---|
-| Tiền đạo | **Mũi khoan**: rình phía xa bóng rồi xé khe. **Nam châm**: đứng giữa vòng cấm hút bóng tạt, đánh đầu. **Bức tường**: lùi về phía bóng làm điểm tựa, nhả bóng. **Vũ công biên**: ôm biên, rê bó vào. **Kẻ đón lõng**: chờ rìa vòng cấm, sút một chạm. | **Thợ săn**: áp sát thủ môn và hậu vệ ngay khi mất bóng. **Lò xo**: đứng cao chờ phản công. **Cái bóng**: lùi che trục giữa. |
+| Tiền đạo | **Mũi khoan**: rình phía xa bóng rồi xé khe. **Nam châm**: đứng giữa vòng cấm hút bóng tạt, đánh đầu. **Bức tường**: lùi về phía bóng làm điểm tựa, nhả bóng. **Vũ công biên**: ôm biên, rê bó vào. **Kẻ đón lõng**: chờ rìa vòng cấm, sút một chạm. **Số 9 ảo**: lùi khỏi hàng thủ để nhận bóng, rê và phối hợp. | **Thợ săn**: áp sát thủ môn và hậu vệ ngay khi mất bóng. **Lò xo**: đứng cao chờ phản công. **Cái bóng**: lùi che trục giữa. |
 | Tiền vệ | **Máy đếm nhịp**: chuyền ngắn giữ nhịp. **Cơn gió muộn**: băng muộn vào vòng cấm. **Người rải bóng**: đứng phía ít người, phất dài đổi cánh. **Tự do**: đi khắp sân, rê và sút. | **Lá chắn**: chắn trước hàng thủ, che đường bóng. **Pít-tông**: lên xuống, áp sát liên tục. **Máy cắt cỏ**: lao vào tranh chấp. **Người đọc trận**: đón lõng cắt bóng. |
 | Hậu vệ | **Bệ phóng**: đứng lại, phất dài. **Trung vệ cầm bóng**: dẫn bóng vượt tuyến. **Đường chồng biên**: chạy chồng phía có bóng và tạt. | **Con đỉa**: bám người. **Chốt chặn cuối**: đứng thấp nhất, bọc lót. **Bẫy việt vị**: dâng hàng thủ. **Tường thành**: lùi sát vòng cấm, che đường sút. |
 | Thủ môn | **Thủ môn chia bài**: triển khai ngắn. **Máy bắn đá**: đứng cao, phát bóng thật xa. | **Gác đền**: bám vạch vôi, cứu thua tốt hơn. **Thủ môn quét**: lao ra rất sớm. |
 
 ### Kế hoạch trận
 
-Mở từ menu trận (**Esc → Kế hoạch trận**; khi chỉ xem: **Đội hình & chỉ số**). Hai đội đặt cạnh nhau, mỗi đội một sân nhỏ có chân dung, vị trí và OVR, cùng danh sách đá chính và dự bị (thể lực, thẻ, lượt thay).
+Mở từ menu trận (**Esc → Kế hoạch trận**; khi chỉ xem: **Đội hình & chỉ số**). Hai đội đặt cạnh nhau với logo và màu áo, mỗi đội một sân nhỏ có chân dung, vị trí và OVR, cùng danh sách đá chính và dự bị (thể lực, thẻ, lượt thay). Trang cầu thủ ghi vị trí gốc (ST, CAM…), vai trò, tóm tắt lối chơi và kiểu ăn mừng. Hai người: trong lượt tạm dừng chỉ bên xin dừng được thay người/đổi sơ đồ/đổi tùy chọn.
 
 - **Đội hình:** chọn cầu thủ bất kỳ (cả đội máy) bằng Enter để xem **Thông tin cầu thủ** (chiều cao, cân nặng, tầm với, thể lực, thẻ, hai lối chơi, skill, biểu đồ 6 cạnh) và trang **Chỉ số** (10 chỉ số tô màu theo mức). ← → đổi trang, ↑ ↓ đổi cầu thủ.
 - **Thay người** (X, hoặc nút trong trang cầu thủ): chọn một người trên sân và một người dự bị. Trước giờ bóng lăn đội hình đổi ngay; trong trận, lượt thay chờ tới lần bóng chết kế tiếp (▼ sẽ ra, ▲ sẽ vào; chọn lại để hủy). Không thay được thủ môn (không có thủ môn dự bị) và người đang bị thương.
@@ -142,7 +153,7 @@ Mở từ menu trận (**Esc → Kế hoạch trận**; khi chỉ xem: **Đội 
 
 ### Chỉ số cầu thủ
 
-Mỗi cầu thủ có 10 chỉ số (35–95): **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Chỉ số = nền theo vị trí sở trường + điểm cộng/trừ của lối chơi tấn công và phòng ngự (ví dụ Mũi khoan +8 Tốc độ +6 Dứt điểm, Bức tường +10 Sức mạnh +6 Chuyền ngắn −4 Tốc độ, Máy cắt cỏ +8 Phòng ngự +8 Sức mạnh) + ngôi sao (#10, #7) + ngẫu nhiên ±5. **OVR** tính theo trọng số của vị trí đang đá. Dự bị có vị trí sở trường riêng.
+Mỗi cầu thủ có 10 chỉ số: **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Với 300 cầu thủ của 10 câu lạc bộ, chỉ số là dữ liệu cố định (1–99, mô phỏng phong độ đỉnh cao). Đội hình tùy chỉnh không ghi chỉ số thì sinh từ nền theo vị trí sở trường + ngôi sao (#10, #7) + ngẫu nhiên ±5 (35–95); lối chơi không cộng trừ chỉ số. **OVR** tính theo trọng số của vị trí đang đá. Dự bị có vị trí sở trường riêng.
 
 | Chỉ số | Tác động trong game |
 |---|---|
@@ -177,7 +188,7 @@ Tranh bóng bằng phím (B/M) vẫn giữ tỷ lệ cố định 30/50/15/5% nh
 
 ### Hình thể cầu thủ (player model)
 
-Mỗi cầu thủ có chiều cao, cân nặng, tỉ lệ chân và tay; từ đó tính sải với tay (m) và tầm quét chân khi tranh bóng (m). Chiều cao theo vị trí (thủ môn 182–196 cm, hậu vệ 174–192, tiền vệ 164–184, tiền đạo 165–191) và lối chơi (Bức tường +8 cm, Nam châm +4 cm, Vũ công biên −4 cm…); cân nặng theo chỉ số khối cơ thể 20,5–25. Hình vẽ cao/thấp, to/gầy, chân tay dài/ngắn theo đúng số đo.
+Mỗi cầu thủ có chiều cao, cân nặng, tỉ lệ chân và tay; từ đó tính sải với tay (m) và tầm quét chân khi tranh bóng (m). Với 300 cầu thủ, chiều cao và cân nặng lấy từ dữ liệu. Đội hình tùy chỉnh không ghi thì sinh theo vị trí (thủ môn 182–196 cm, hậu vệ 174–192, tiền vệ 164–184, tiền đạo 165–191) và chỉ số khối cơ thể 20,5–25. Hình vẽ cao/thấp, to/gầy, chân tay dài/ngắn theo đúng số đo.
 
 | Yếu tố | Tác động |
 |---|---|
@@ -191,7 +202,7 @@ Thẻ cầu thủ ghi chiều cao và cân nặng; bảng đội hình có cột
 
 ### Đội hình tùy chỉnh (squads)
 
-Đội hình là dữ liệu (`PTSCFootball.data.squads`). Truyền `squads` (object hoặc chuỗi JSON, cũng dùng được `data-squads`) khi mount để đá với đội khác. Mỗi đội cần đúng 6 người đá chính theo thứ tự thủ môn, hai hậu vệ, tiền vệ, hai tiền đạo; dự bị tùy ý (tối đa 3 người ngồi ghế mỗi trận). Đội nào thiếu dữ liệu hợp lệ thì giữ đội mặc định. Chỉ số không ghi sẽ được sinh tự động; lối chơi không ghi hoặc không hợp vị trí sẽ được chọn tự động.
+Đội hình là dữ liệu (`PTSCFootball.data.squads`). Truyền `squads` (object hoặc chuỗi JSON, cũng dùng được `data-squads`) khi mount để đá với đội khác; `teams` đặt tên, tên ngắn, logo và màu áo (`colors: { shirt, shorts, socks, stripe, gk }`) cho hai bên, dùng cho bảng tỉ số, khán đài và HUD. Mỗi người có thể có `short` (tên hiển thị), `face` ({ hair, hairColor, skin, beard, brows, extras, build }), `celebration`, `roleName`, `summary`, `pos`, `pillar`. `fixedBench: true` giữ nguyên cả băng ghế thay vì bốc 1–3 người. Trang web dùng `PTSCTeams.pickSquad(id, rng)` và `PTSCTeams.teamOption(idA, idB)` để tạo hai tham số này từ dữ liệu câu lạc bộ. Mỗi đội cần đúng 6 người đá chính theo thứ tự thủ môn, hai hậu vệ, tiền vệ, hai tiền đạo; dự bị tùy ý (tối đa 3 người ngồi ghế mỗi trận). Đội nào thiếu dữ liệu hợp lệ thì giữ đội mặc định. Chỉ số không ghi sẽ được sinh tự động; lối chơi không ghi hoặc không hợp vị trí sẽ được chọn tự động.
 
 ```js
 PTSCFootball.mount(el, { mode: "cpu", squads: { R: {
@@ -206,7 +217,7 @@ PTSCFootball.mount(el, { mode: "cpu", squads: { R: {
 } } });
 ```
 
-Kiểu tóc: `buzz`, `spiky`, `curly`, `beard`, `glasses`, `quiff`, `sidepart`. Mã lối chơi xem `PTSCFootball.data.playstyles`.
+`head` cũ (`buzz`, `spiky`, `curly`, `beard`, `glasses`, `quiff`, `sidepart`) vẫn dùng được và được ánh xạ sang hệ mặt mới; `face.hair` nhận `bald, buzz, crop, spiky, quiff, slick, sidepart, curly, afro, wavy, long, bun, mohawk, braids, bowl, receding, undercut, ponytail`; `hairColor`: `black, darkBrown, brown, blond, ginger, grey, white, platinum`; `skin` 1–4; `beard`: `none, stubble, goatee, short, full, moustache`; `extras`: `none, headband, glasses`; `build`: `round, long, square`. Mã lối chơi xem `PTSCFootball.data.playstyles`.
 
 ### Khung thành
 
@@ -219,6 +230,8 @@ Lưới khung thành chia lớp theo chiều sâu: lưới sau và lưới hông
 Trạng thái cầu thủ lưu `specialId`, `specialSituations`, `specialUsed`, `specialActiveId`, `specialUntil`; các trường theo danh tính khi thay người. Phạt góc và penalty lưu hiệu ứng theo đúng tình huống/lượt, không mang buff sang lần tiếp theo. Trạng thái giao bóng chờ chuyền tách khỏi bóng trong cuộc, nên không tự đá do hết thời gian chờ.
 
 ### Hiệu năng
+
+Dữ liệu 300 cầu thủ nằm trong `teams.js` tải một lần (khoảng 170 KB); mỗi trận chỉ 18 người được tạo trong engine. Chân dung (`api.figure`) và phần đầu theo mô tả mặt được lưu đệm; ảnh logo/áo tải lười (`loading="lazy"`) và chỉ khi lên màn.
 
 - Khán đài, mặt sân và băng ghế nằm trên một lớp nền riêng do GPU dịch chuyển theo camera, không phải vẽ lại mỗi khung hình (chỉ vẽ lại khi đổi mức zoom hoặc khán giả ăn mừng). Khán giả đứng yên khi không có bàn thắng. Trong thử nghiệm, công việc raster giảm khoảng 3–5 lần, khung hình p99 từ 33 ms xuống 16,8 ms.
 
@@ -320,5 +333,8 @@ useEffect(() => {
 - `index.html`, `game.js`, `game.css`: game một stage: menu chính, chuẩn bị trận, trận đấu với menu trận và các bảng, thông tin game, hộp xác nhận, toàn màn hình (điều hướng bằng hash), bàn phím.
 - `assets/control-pad.svg`: hình pad minh họa phím di chuyển.
 - `penalties.js`: giao diện penalty/luân lưu và góc nhìn từ sau cầu thủ sút.
-- `keymap.js`: layout phím mặc định và tự tạo, lưu trong `localStorage`.
+- `keymap.js`: layout phím mặc định và tự tạo (có phím tạm dừng riêng cho mỗi người), lưu trong `localStorage`.
+- `teams.js`: 10 câu lạc bộ, 300 cầu thủ và các hàm bốc đội hình, chọn áo (`PTSCTeams`).
+- `assets/teams/`: logo và áo sân nhà/sân khách của 10 câu lạc bộ (PNG).
+- `document/`: file Excel nguồn của dữ liệu cầu thủ.
 - `tests/game-browser.cjs`: kiểm tra tích hợp game trên trình duyệt.

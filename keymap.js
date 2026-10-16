@@ -2,11 +2,11 @@
   "use strict";
   // Key layouts: built-in A/B sets plus the player's own, kept in this browser's localStorage.
   const STORAGE_KEY = "ptsc-football.key-layouts.v1";
-  const ACTIONS = ["up", "down", "left", "right", "switch", "sprint", "pass", "shoot", "press", "challenge", "special"];
-  const LABELS = { up: "Lên", down: "Xuống · giữa (pen)", left: "Trái", right: "Phải", switch: "Đổi người", sprint: "Chạy nhanh", pass: "Chuyền", shoot: "Sút / xoạc", press: "Áp sát", challenge: "Tranh bóng", special: "Skill" };
+  const ACTIONS = ["up", "down", "left", "right", "switch", "sprint", "pass", "shoot", "press", "challenge", "special", "pause"];
+  const LABELS = { up: "Lên", down: "Xuống · giữa (pen)", left: "Trái", right: "Phải", switch: "Đổi người", sprint: "Chạy nhanh", pass: "Chuyền", shoot: "Sút / xoạc", press: "Áp sát", challenge: "Tranh bóng", special: "Skill", pause: "Tạm dừng / menu" };
   const BUILT_IN = {
-    "default-a": { name: "Mặc định A · WASD", keys: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", switch: "KeyR", sprint: "KeyT", pass: "KeyF", shoot: "KeyG", press: "KeyV", challenge: "KeyB", special: "KeyE" } },
-    "default-b": { name: "Mặc định B · mũi tên", keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", switch: "KeyU", sprint: "KeyI", pass: "KeyJ", shoot: "KeyK", press: "KeyN", challenge: "KeyM", special: "KeyO" } },
+    "default-a": { name: "Mặc định A · WASD", keys: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", switch: "KeyR", sprint: "KeyT", pass: "KeyF", shoot: "KeyG", press: "KeyV", challenge: "KeyB", special: "KeyE", pause: "KeyQ" } },
+    "default-b": { name: "Mặc định B · mũi tên", keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", switch: "KeyU", sprint: "KeyI", pass: "KeyJ", shoot: "KeyK", press: "KeyN", challenge: "KeyM", special: "KeyO", pause: "KeyP" } },
   };
   const DEFAULT_ASSIGN = { cpu: { A: "default-a" }, local: { A: "default-a", B: "default-b" } };
   const NAMES = { ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", ShiftLeft: "⇧ trái", ShiftRight: "⇧ phải", Enter: "Enter", Backspace: "⌫", Semicolon: ";", Quote: "'", Comma: ",",
@@ -28,6 +28,10 @@
     try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { saved = null; }
     const layouts = new Map(Object.entries(BUILT_IN).map(([id, layout]) => [id, { id, name: layout.name, keys: { ...layout.keys }, builtIn: true, edited: false }]));
     for (const item of Array.isArray(saved?.layouts) ? saved.layouts : []) {
+      if (typeof item?.id === "string" && item.keys && typeof item.keys === "object" && !item.keys.pause) {
+        const used = new Set(Object.values(item.keys)), fallback = BUILT_IN[item.id]?.keys.pause ?? "KeyQ";
+        item.keys = { ...item.keys, pause: !used.has(fallback) ? fallback : ["KeyQ", "KeyP", "KeyZ", "KeyX", "KeyC", "KeyL", "Semicolon", "Quote"].find(code => !used.has(code)) };
+      }
       if (typeof item?.id !== "string" || !validKeys(item.keys)) continue;
       const name = String(item.name || "").trim().slice(0, 40) || "Layout";
       layouts.set(item.id, { id: item.id, name, keys: Object.fromEntries(ACTIONS.map(action => [action, item.keys[action]])), builtIn: item.id in BUILT_IN, edited: item.id in BUILT_IN });
