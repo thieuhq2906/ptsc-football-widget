@@ -57,7 +57,7 @@ button.prompt:hover, button.prompt:focus-visible { background: #ffffff18; color:
 .arena { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; container-type: size; outline: none; }
 .arena-surface { position: relative; width: min(100cqw, calc((100cqh - 8px) * 16 / 9 + 7px)); }
 .arena-tools { position: absolute; right: 16px; bottom: 12px; z-index: 8; display: flex; flex-direction: column; gap: 6px; }
-.arena-flash { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 2; margin: 0; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 99px; background: var(--pear); color: var(--ink); font-size: clamp(11px, 1.3vw, 14px); font-weight: 800; white-space: nowrap; pointer-events: none; }
+.arena-flash { position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 2; margin: 0; padding: 6px 14px; border: 2px solid var(--ink); border-radius: 99px; background: var(--pear); color: var(--ink); font-size: clamp(11px, 1.3vw, 14px); font-weight: 800; white-space: nowrap; pointer-events: none; }
 .arena-result { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 2; padding: 9px 14px; border: 1px solid #f5dd83; border-radius: 10px; background: #10261fed; color: #fff; text-align: center; pointer-events: none; }
 .arena-result strong, .arena-result span { display: block; }
 .arena-result strong { color: #f5dd83; font-size: clamp(12px, 1.8vw, 20px); }
@@ -267,8 +267,8 @@ button.prompt:hover, button.prompt:focus-visible { background: #ffffff18; color:
 .pc-ovr b[data-level="high"] { color: #b8f58c; } .pc-ovr b[data-level="mid"] { color: #ffe27a; } .pc-ovr b[data-level="low"] { color: #ffa48f; }
 .pc-ovr small { margin-top: 3px; font-size: 10px; font-weight: 800; letter-spacing: .14em; opacity: .7; }
 .pc-id { display: grid; gap: 2px; min-width: 0; }
-.pc-tag { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: color-mix(in srgb, var(--team-R, #c63d33) 65%, #1d2340); }
-.player-card[data-team="B"] .pc-tag { color: color-mix(in srgb, var(--team-B, #2b67ad) 65%, #1d2340); }
+.pc-tag { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: color-mix(in srgb, var(--team-R, #c63d33) 35%, #1d2340); }
+.player-card[data-team="B"] .pc-tag { color: color-mix(in srgb, var(--team-B, #2b67ad) 35%, #1d2340); }
 .player-card .pc-id strong { display: block; margin: 0; font-size: 24px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pc-meta { font-size: 12px; color: var(--muted); }
 .pc-skill { display: grid; justify-items: center; gap: 2px; min-width: 84px; text-align: center; }

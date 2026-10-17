@@ -77,6 +77,12 @@ function stylesFor(p) {
   }
   return { attack, defense };
 }
+// Ratings corrected over the workbook: these centre-backs were given a midfielder's defending numbers.
+const OVERRIDES = {
+  "Bayern Munich|Jérôme Boateng": { defending: 91, heading: 86, strength: 86 },
+  "Juventus|Leonardo Bonucci": { defending: 92, heading: 84, strength: 80 },
+  "Manchester City|John Stones": { defending: 88, heading: 82, strength: 78 }
+};
 const used = new Map();
 const out = TEAMS.map(team => {
   const list = players.filter(p => p.team === team.sheet);
@@ -89,7 +95,7 @@ const out = TEAMS.map(team => {
     const role = ROLE_OF[p.pos], { attack, defense } = stylesFor(p);
     const star = role !== "GK" && p.stats.dribbling >= 92 && p.stats.dribbling >= p.stats.finishing ? 10 : role !== "GK" && p.stats.finishing >= 92 ? 7 : 0;
     const key = team.id + ":" + p.no;
-    return { id: key, name: p.name, short, num: Number.isInteger(f.num) && f.num > 0 && f.num < 100 ? f.num : null, pos: p.pos, role, roleName: p.role, summary: p.summary, ovr: p.ovr, height: p.height, weight: p.weight, stats: p.stats, star, attack, defense,
+    return { id: key, name: p.name, short, num: Number.isInteger(f.num) && f.num > 0 && f.num < 100 ? f.num : null, pos: p.pos, role, roleName: p.role, summary: p.summary, ovr: p.ovr, height: p.height, weight: p.weight, stats: { ...p.stats, ...(OVERRIDES[team.sheet + "|" + p.name] ?? {}) }, star, attack, defense,
       celebration: f.celebration ?? null, face: { hair: f.hair ?? "buzz", hairColor: f.hairColor ?? "black", skin: f.skin ?? 1, beard: f.beard ?? "none", brows: f.brows ?? "normal", extras: f.extras ?? "none", build: f.build ?? "round" } };
   });
   for (const p of squad) if (!faces.has(team.sheet + "|" + p.name)) used.set(p.name, (used.get(p.name) ?? 0) + 1);

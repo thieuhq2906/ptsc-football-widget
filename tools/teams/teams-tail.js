@@ -40,7 +40,7 @@ window.PTSCTeams = (() => {
     const gk = line("GK"), df = line("DF"), mf = line("MF"), fw = line("FW");
     const starters = [gk[0], df[0], df[1], mf[0], fw[0], fw[1]], bench = [df[2], mf[1], fw[2]].filter(Boolean);
     // The two best outfielders are the key men: they last longer and are not rotated by the coach.
-    const key = new Set([...df, ...mf, ...fw].sort(byOvr).slice(0, 2));
+    const key = new Set(starters.filter(p => p && p !== gk[0]).sort(byOvr).slice(0, 2));
     const toEntry = p => ({ ...entry(p, num.get(p)), pillar: key.has(p) });
     return { players: starters.map(toEntry), bench: bench.map(toEntry), fixedBench: true, picked: picked.map(p => p.id) };
   }

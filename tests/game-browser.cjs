@@ -495,6 +495,8 @@ const server = http.createServer((req, res) => {
     await page.waitForTimeout(200);
     assert.equal(await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.__state().T), paused);
     console.log("PASS pause freezes match");
+    // In a two-player match the plan opens only during a side's own timeout (Q is player A's).
+    await page.locator('#panel-local [data-act="resume"]').click(); await page.keyboard.press("KeyQ"); await page.waitForTimeout(150);
     await page.locator('#panel-local [data-act="plan"]').click();
     assert(await page.locator('#panel-local .sheet[data-sheet="plan"]').isVisible(), "The game plan opens from the match menu");
     assert.equal(await page.locator('#panel-local .plan-team').count(), 2);
@@ -1128,8 +1130,18 @@ const server = http.createServer((req, res) => {
     await page.keyboard.press("Space"); await page.waitForTimeout(100);
     for (let i = 0; i < 2; i++) { await page.keyboard.press("KeyP"); await page.waitForTimeout(80); await page.keyboard.press("Space"); await page.waitForTimeout(80); }
     await page.keyboard.press("KeyP"); await page.waitForTimeout(100);
-    t = await timeouts(); assert(!t.paused && t.B === 0, "A fourth timeout is refused: " + JSON.stringify(t));
+    t = await timeouts(); assert(t.paused && t.slot === null && t.B === 0, "A fourth timeout is refused but the menu still opens: " + JSON.stringify(t));
     assert.match(await page.locator("#panel-local .arena-flash").textContent(), /hết 3 lượt/);
+    assert(await page.locator('#panel-local [data-act="plan"]').isHidden(), "A plain pause in a two-player match offers no coaching");
+    await page.keyboard.press("Space"); await page.waitForTimeout(100);
+    await page.keyboard.press("Escape"); await page.waitForTimeout(100);
+    t = await timeouts(); assert(t.paused && t.slot === null && t.A === 2, "Esc opens the menu without spending a timeout: " + JSON.stringify(t));
+    await page.keyboard.press("Space"); await page.waitForTimeout(100);
+    await page.keyboard.press("KeyQ"); await page.waitForTimeout(100);
+    t = await timeouts(); assert(t.paused && t.slot === "A" && t.A === 1, "Q is player A's timeout: " + JSON.stringify(t));
+    await page.locator('#panel-local [data-act="menu"]').click(); await routeIs("#/menu");
+    await route("#/local/match");
+    t = await timeouts(); assert(t.paused && t.slot === null && await page.locator("#panel-local .start-overlay").isVisible(), "Leaving the match turns the timeout into a plain pause that waits: " + JSON.stringify(t));
     await page.evaluate(() => { const s = document.getElementById("panel-local").__session; s.api.pause(); });
     console.log("PASS two-player timeouts: three per side, a minute each, own key per player, refused when spent");
 
@@ -1141,6 +1153,45 @@ const server = http.createServer((req, res) => {
     assert(await page.evaluate(() => PTSC_TEAMS.teams.every(t => t.players.every(p => p.face && p.face.hair && p.celebration && p.num && p.short && p.attack && p.defense && Object.keys(p.stats).length === 10))), "Every one of the 300 has a face, a celebration, a number, a short name, two styles and ten ratings");
     await route("#/cpu");
     console.log("PASS clubs pane and the 300-player data set");
+
+    // Club data in the engine: ratings keep their 1–99 scale, the overall is the data's, and the key men start.
+    const dataScale = await page.evaluate(() => {
+      let seed = 5; const rng = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+      const squad = PTSCTeams.pickSquad("barcelona", rng), club = PTSCTeams.get("barcelona");
+      const host = document.createElement("div"); document.body.append(host);
+      const api = PTSCFootball.mount(host, { mode: "cpu", teamA: "R", seed: 1, still: 0, fonts: "none", squads: { R: squad }, teams: PTSCTeams.teamOption("barcelona", "arsenal") });
+      const plan = api.plan().R, all = [...plan.players, ...plan.bench];
+      const rows = all.map(p => { const d = club.players.find(x => x.name === p.name); return { name: p.name, ovr: p.ovr, dataOvr: d.ovr, max: Math.max(...Object.values(p.stats)), dataMax: Math.max(...Object.values(d.stats)), min: Math.min(...Object.values(p.stats)), dataMin: Math.min(...Object.values(d.stats)) }; });
+      api.destroy(); host.remove();
+      let pillars = 0, squads = 0;
+      for (let k = 0; k < 150; k++) { const sq = PTSCTeams.pickSquad(PTSCTeams.list()[k % 10].id, rng); squads++; if (sq.players.filter(p => p.pillar).length === 2 && sq.bench.every(p => !p.pillar)) pillars++; }
+      return { rows, pillars, squads };
+    });
+    assert(dataScale.rows.every(r => r.ovr === r.dataOvr && r.max === r.dataMax && r.min === r.dataMin), "Club ratings and overalls are shown as the data gives them: " + JSON.stringify(dataScale.rows.slice(0, 3)));
+    assert(dataScale.rows.some(r => r.max > 95 || r.min < 35), "The 1–99 scale is kept (a 96+ or sub-35 rating survives)");
+    assert.equal(dataScale.pillars, dataScale.squads, "Both key men are always among the starters");
+    assert(await page.evaluate(() => PTSC_TEAMS.teams.every(t => t.players.filter(p => p.role === "DF").every(p => p.stats.defending >= 78))), "Every defender defends like one");
+
+    // A rematch keeps a randomly drawn opponent; the window losing focus never lets a timeout resume the match.
+    await route("#/cpu"); await choose("cpu", "clubB", "random"); await startMatch("cpu");
+    const firstB = await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.teams().B.id);
+    await page.keyboard.press("Space"); await page.keyboard.press("Escape"); await page.locator('#panel-cpu [data-act="restart"]').click(); await page.waitForTimeout(500);
+    assert.equal(await page.evaluate(() => document.querySelector("#panel-cpu .match-host").__ptscFootball.teams().B.id), firstB, "Trận mới keeps the clubs that played");
+    assert.notEqual(firstB, "psg");
+    await route("#/local"); await startMatch("local"); await page.keyboard.press("Space"); await page.waitForTimeout(200);
+    await page.keyboard.press("KeyP"); await page.waitForTimeout(100);
+    await page.evaluate(() => { window.dispatchEvent(new Event("blur")); });
+    await page.evaluate(() => { const s = document.getElementById("panel-local").__session; s.timeout = s.timeout ?? null; });
+    t = await timeouts(); assert(t.paused && t.slot === null, "A blur turns a timeout into a plain pause: " + JSON.stringify(t));
+    await page.evaluate(() => { document.getElementById("panel-local").__session.api.pause(); });
+    console.log("PASS club ratings on the data scale, key men start, rematch keeps clubs, blur ends a timeout");
+
+    // Layouts saved before the pause key existed never give both players the same pause key.
+    await page.evaluate(() => { localStorage.setItem("ptsc-football.key-layouts.v1", JSON.stringify({ version: 1, layouts: [{ id: "default-a", name: "Mặc định A · WASD", keys: { up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD", switch: "KeyR", sprint: "KeyT", pass: "KeyF", shoot: "KeyG", press: "KeyV", challenge: "KeyB", special: "KeyQ" } }], assign: { cpu: { A: "default-a" }, local: { A: "default-a", B: "default-b" } } })); PTSCKeymap.reload(); });
+    const migrated = await page.evaluate(() => { const b = PTSCKeymap.bindings("local"); return { a: b.A.pause, b: b.B.pause, special: b.A.special, clash: PTSCKeymap.conflicts(b.A, b.B) }; });
+    assert(migrated.special === "KeyQ" && migrated.a && migrated.b && migrated.a !== migrated.b && migrated.clash.length === 0, "The migrated layout gets a free pause key: " + JSON.stringify(migrated));
+    await page.evaluate(() => { localStorage.clear(); PTSCKeymap.reload(); });
+    console.log("PASS pause-key migration avoids the other player's keys");
 
     // A shooting skill always fires when pressed, and goes in about 70% of the time, not always.
     const skillShots = await page.evaluate(() => {

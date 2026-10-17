@@ -9,6 +9,8 @@
     "default-b": { name: "Mặc định B · mũi tên", keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", switch: "KeyU", sprint: "KeyI", pass: "KeyJ", shoot: "KeyK", press: "KeyN", challenge: "KeyM", special: "KeyO", pause: "KeyP" } },
   };
   const DEFAULT_ASSIGN = { cpu: { A: "default-a" }, local: { A: "default-a", B: "default-b" } };
+  // Pause keys handed to layouts saved before the pause action existed, in order of preference.
+  const PAUSE_CHOICES = ["KeyQ", "KeyP", "KeyZ", "KeyX", "KeyC", "KeyL", "Semicolon", "Quote", "Period", "Comma"];
   const NAMES = { ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", ShiftLeft: "⇧ trái", ShiftRight: "⇧ phải", Enter: "Enter", Backspace: "⌫", Semicolon: ";", Quote: "'", Comma: ",",
     Period: ".", Slash: "/", Backslash: "\\", IntlBackslash: "\\", BracketLeft: "[", BracketRight: "]", Minus: "-", Equal: "=", Backquote: "`", Insert: "Ins", Delete: "Del", PageUp: "PgUp", PageDown: "PgDn",
     NumpadAdd: "Num +", NumpadSubtract: "Num −", NumpadMultiply: "Num *", NumpadDivide: "Num /", NumpadDecimal: "Num .", NumpadEnter: "Num Enter" };
@@ -27,10 +29,12 @@
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { saved = null; }
     const layouts = new Map(Object.entries(BUILT_IN).map(([id, layout]) => [id, { id, name: layout.name, keys: { ...layout.keys }, builtIn: true, edited: false }]));
+    const migrated = new Set();
     for (const item of Array.isArray(saved?.layouts) ? saved.layouts : []) {
       if (typeof item?.id === "string" && item.keys && typeof item.keys === "object" && !item.keys.pause) {
         const used = new Set(Object.values(item.keys)), fallback = BUILT_IN[item.id]?.keys.pause ?? "KeyQ";
-        item.keys = { ...item.keys, pause: !used.has(fallback) ? fallback : ["KeyQ", "KeyP", "KeyZ", "KeyX", "KeyC", "KeyL", "Semicolon", "Quote"].find(code => !used.has(code)) };
+        item.keys = { ...item.keys, pause: !used.has(fallback) ? fallback : PAUSE_CHOICES.find(code => !used.has(code)) };
+        migrated.add(item.id);
       }
       if (typeof item?.id !== "string" || !validKeys(item.keys)) continue;
       const name = String(item.name || "").trim().slice(0, 40) || "Layout";
@@ -40,6 +44,13 @@
     for (const mode of Object.keys(assign)) for (const slot of Object.keys(assign[mode])) {
       const id = saved?.assign?.[mode]?.[slot];
       if (layouts.has(id)) assign[mode][slot] = id;
+    }
+    // A pause key added just now must not be one the other player of a two-player match already uses.
+    for (const [mine, other] of [[assign.local.A, assign.local.B], [assign.local.B, assign.local.A]].map(([a, b]) => [layouts.get(a), layouts.get(b)])) {
+      if (mine === other || !migrated.has(mine.id) || !conflicts(mine.keys, other.keys).includes(mine.keys.pause)) continue;
+      const taken = new Set([...Object.values(mine.keys), ...Object.values(other.keys)]);
+      const free = PAUSE_CHOICES.find(code => !taken.has(code));
+      if (free) mine.keys.pause = free;
     }
     if (conflicts(layouts.get(assign.local.A).keys, layouts.get(assign.local.B).keys).length) assign.local = { ...DEFAULT_ASSIGN.local };
     return { layouts, assign };

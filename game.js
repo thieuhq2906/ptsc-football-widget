@@ -366,7 +366,7 @@
     press: "Giữ để bám người cầm bóng, người sắp nhận bóng hoặc bóng tự do; thả là dừng. Phạt góc: " + gameData.corners[2].name.toLowerCase() + ".",
     challenge: "Bấm khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng. Phạt góc: " + gameData.corners[3].name.toLowerCase() + ".",
     special: "Dùng skill theo tình huống, tốn 40% thể lực, một lần mỗi trận; penalty dùng trước khi chốt hướng.",
-    pause: "Mở menu trận. Đấu với máy: dừng bao nhiêu lần cũng được (Space và Esc cũng dừng). Hai người: mỗi bên có 3 lượt tạm dừng, mỗi lượt tối đa 60 giây để thay người hay đổi chiến thuật; hết giờ trận tự chạy tiếp. Space và Esc là lượt của người A."
+    pause: "Xin tạm dừng. Đấu với máy: dừng bao nhiêu lần cũng được. Hai người: mỗi bên có 3 lượt, mỗi lượt tối đa 60 giây để thay người hay đổi chiến thuật; hết giờ trận tự chạy tiếp; Space cũng là lượt của người A. Esc và nút tạm dừng trên sân chỉ mở menu, không tính lượt và không cho sửa đội hình."
   };
   const MENU_KEYS = [
     ["nav", "Chọn trong menu", ["ArrowUp", "ArrowDown", "KeyW", "KeyS"], "↑ ↓ (hoặc W S) di chuyển con trỏ trong mọi menu."],
@@ -630,7 +630,7 @@
     if (session.paused || session.api.status().ended) return;
     if (session.options.mode !== "local" || session.awaitingStart) { setPaused(session, true, true); return; }
     const left = session.timeouts[slot] ?? 0;
-    if (left <= 0) { session.flash = { text: `Người ${slot} đã hết ${TIMEOUTS} lượt tạm dừng`, until: performance.now() + 2500 }; updateHud(session); return; }
+    if (left <= 0) { session.flash = { text: `Người ${slot} đã hết ${TIMEOUTS} lượt tạm dừng · chỉ mở menu`, until: performance.now() + 2500 }; session.timeout = null; setPaused(session, true, true); return; }
     session.timeouts[slot] = left - 1;
     session.timeout = { slot, used: TIMEOUTS - left + 1, until: performance.now() + TIMEOUT_SECONDS * 1000 };
     setPaused(session, true, true);
@@ -786,7 +786,7 @@
     if (capture) { capture = null; renderKeymaps(); }
     releaseKeys(); endPeeks();
     watchArena.tabIndex = next.name === "menu" ? -1 : 0;
-    for (const session of sessions.values()) { closeSheets(session.arena); setPaused(session, true); }
+    for (const session of sessions.values()) { closeSheets(session.arena); session.timeout = null; setPaused(session, true); }
     activeMode = next.name === "menu" || next.name === "watch" ? "watch" : next.name;
     const screen = screenOf(next);
     game.dataset.screen = screen;
@@ -814,7 +814,7 @@
     const sameScreen = previous.name === next.name && screenOf(previous) === screen;
     if (screen === "menu") focusOn(mainMenu.lastItem ?? mainMenu.querySelector(".menu-item"));
     else if (screen === "watch") watchView.paused ? showOverlay(watchView, "pause", true) : focusOn(watchArena);
-    else if (screen === "match") { const session = sessions.get(next.name); if (session.awaitingStart) focusOn(session.arena); else showOverlay(session, "pause", true); }
+    else if (screen === "match") { const session = sessions.get(next.name); if (session.awaitingStart || !session.paused) focusOn(session.arena); else showOverlay(session, "pause", true); }
     else if (screen === "setup") { const panel = document.getElementById(SCREENS[next.name]); if (!sameScreen || !panel.contains(document.activeElement)) focusOn(panel.lastOpt?.isConnected ? panel.lastOpt : panel.querySelector(".opt")); }
     else if (screen === "info" && !infoScreen.querySelector(".info-panes").contains(document.activeElement)) focusOn(infoScreen.querySelector(`.info-nav [data-pane="${next.sub}"]`));
   }
@@ -1146,7 +1146,7 @@
   function layoutSummary(layout) {
     if (!layout) return "";
     const k = layout.keys;
-    return "Di chuyển " + ["up", "left", "down", "right"].map(a => label(k[a])).join(" ") + " · " + ["pass", "shoot", "switch", "sprint", "press", "challenge", "special"].map(a => keymap.LABELS[a] + " " + label(k[a])).join(" · ");
+    return "Di chuyển " + ["up", "left", "down", "right"].map(a => label(k[a])).join(" ") + " · " + ["pass", "shoot", "switch", "sprint", "press", "challenge", "special", "pause"].map(a => keymap.LABELS[a] + " " + label(k[a])).join(" · ");
   }
   const LINE_NAMES = { GK: "TM", DF: "HV", MF: "TV", FW: "TĐ" };
   function clubDesc(id, who) {
@@ -1277,7 +1277,8 @@
     const options = optionsFor(panel), arena = panel.querySelector(".arena");
     const host = panel.querySelector(".match-host"); host.replaceChildren();
     // The two clubs and a fresh nine from each; a rematch keeps the clubs but draws again.
-    const idA = resolveClub(options.clubA), idB = resolveClub(options.clubB, idA), rng = rngFrom(host.dataset.seed);
+    const keep = rematch && previous?.options?.clubA && previous?.options?.clubB;
+    const idA = keep ? previous.options.clubA : resolveClub(options.clubA), idB = keep ? previous.options.clubB : resolveClub(options.clubB, idA), rng = rngFrom(host.dataset.seed);
     options.clubA = idA; options.clubB = idB;
     options.squads = { R: clubs.pickSquad(idA, rng), B: clubs.pickSquad(idB, rng) };
     options.teams = clubs.teamOption(idA, idB);
@@ -1449,7 +1450,7 @@
     }
     // A timeout counts down on the menu card and lets play go on when it runs out; a refused pause flashes a note.
     if (session.timeout && session.paused) {
-      if (performance.now() >= session.timeout.until) setPaused(session, false);
+      if (performance.now() >= session.timeout.until && !document.hidden && document.hasFocus()) setPaused(session, false);
       else { const left = timeoutLeft(session); if (session.shownLeft !== left) { session.shownLeft = left; showOverlay(session, "pause"); } }
     }
     const flash = q(".arena-flash");
@@ -1665,7 +1666,7 @@
     panel.querySelector(".pause").addEventListener("click", () => {
       const session = sessions.get(mode);
       if (!session || session.api.status().ended) return;
-      if (session.paused) resumeView(session); else requestPause(session, "A");
+      if (session.paused) resumeView(session); else { session.timeout = null; setPaused(session, true, true); }
     });
     const flash = document.createElement("p"); flash.className = "arena-flash"; flash.hidden = true; flash.setAttribute("role", "status");
     surface.append(flash);
@@ -1790,6 +1791,7 @@
       if (session.api.status().ended) { session.endShown = true; showOverlay(session, "end", true); return; }
       // Paused with the pitch focused: Esc (or a pause key) puts the cursor on the menu, Space plays on.
       if (session.paused) { if (event.code === "Space") setPaused(session, false); else showOverlay(session, session.awaitingStart ? "start" : "pause", true); return; }
+      if (event.code === "Escape") { session.timeout = null; setPaused(session, true, true); return; }
       requestPause(session, bound?.action === "pause" ? bound.slot : "A");
       return;
     }
@@ -1882,7 +1884,7 @@
   function suspend() {
     if (capture) { capture = null; renderKeymaps(); }
     releaseKeys(); endPeeks(); watcher?.pause();
-    for (const session of sessions.values()) setPaused(session, true);
+    for (const session of sessions.values()) { session.timeout = null; setPaused(session, true); }
   }
   window.addEventListener("blur", suspend);
   window.addEventListener("pagehide", suspend);

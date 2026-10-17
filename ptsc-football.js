@@ -439,7 +439,7 @@
       pray: P({ hF: -4, kF: 105, hB: -4, kB: 105, aF: -30, eF: -110, aB: -30, eB: -110, L: -6 }),
       flipUp: P({ hF: 38, kF: 62, hB: 30, kB: 60, aF: -125, eF: 0, aB: -125, eB: 0, L: -14, j: 16 }),
       flipOver: P({ hF: 100, kF: 125, hB: 100, kB: 125, aF: 30, eF: -60, aB: 30, eB: -60, L: 0, rot: 180, j: 24 }),
-      flipLand: P({ hF: 30, kF: 52, hB: -20, kB: 42, aF: -62, eF: -20, aB: -62, eB: -20, L: 12, j: 0 }),
+      flipLand: P({ hF: 30, kF: 52, hB: -20, kB: 42, aF: -62, eF: -20, aB: -62, eB: -20, L: 12, j: 0, rot: 360 }),
       rally: P({ hF: 12, kF: 10, hB: -12, kB: 10, aF: -30, eF: -60, aB: 110, eB: -30, L: 2 }),
       // Tempers: pointing the finger, arms wide ("what was that?"), waving him off, a shove, squaring up.
       blamePoint: P({ hF: 10, kF: 10, hB: -12, kB: 12, aF: -5, eF: 0, aB: 100, eB: -30, L: 8 }),
@@ -614,7 +614,7 @@
       return m;
     });
     let personCount = 0;
-    const IDENT = ["pid", "name", "short", "look", "celebration", "roleName", "summary", "posName", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural", "body"];
+    const IDENT = ["pid", "name", "short", "look", "celebration", "dataOvr", "roleName", "summary", "posName", "head", "skin", "num", "star", "pillar", "yellows", "energy", "stamina", "injured", "tiredSaid", "lastSkill", "specialId", "specialSituations", "specialUsed", "specialPrimed", "specialPrimedId", "specialActiveId", "specialUntil", "abilityCheckAt", "onSince", "stintLen", "benchSince", "bandage", "attackStyleId", "defenseStyleId", "stats", "natural", "body"];
     /** Open-play skills a man in this position may have: keeper skills for keepers only, no shooting skill for a keeper. */
     function skillFits(id, role) {
       const skill = GAME_DATA.skills[id];
@@ -663,8 +663,10 @@
       return Object.fromEntries(rules.keys.map(k => {
         const rolled = base[k] + (p.star ? rules.star[k] ?? 0 : 0) + Math.round((statRng() * 2 - 1) * rules.spread) - (p.role === "SUB" ? 2 : 0);
         // The computer's level shifts its whole squad, fixed ratings included (never an outfielder's goalkeeping).
-        const value = (Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : rolled) + (k === "goalkeeping" && p.natural !== "GK" ? 0 : level(p.team).stats);
-        return [k, clamp(Math.round(value), rules.range[0], rules.range[1])];
+        const fixedV = Number.isFinite(Number(fixed?.[k])) ? Number(fixed[k]) : null;
+        const value = (fixedV ?? rolled) + (k === "goalkeeping" && p.natural !== "GK" ? 0 : level(p.team).stats);
+        // Ratings given as data keep their 1–99 scale; only rolled ones stay within the ordinary range.
+        return [k, fixedV != null ? clamp(Math.round(value), 1, 99) : clamp(Math.round(value), rules.range[0], rules.range[1])];
       }));
     }
     function setIdent(p, entry) {
@@ -678,6 +680,7 @@
         injured: false, bandage: null, tiredSaid: false, lastSkill: null, specialUsed: false, specialPrimed: false, specialPrimedId: null, specialActiveId: null, specialUntil: 0, onSince: 0, stintLen: newStint(), benchSince: -99 });
       assignSpecial(p); p.abilityCheckAt = 0; p.attackStyleId = entry.attack ?? null; p.defenseStyleId = entry.defense ?? null; ensureStyle(p);
       p.stats = makeStats(p, entry.stats);
+      p.dataOvr = Number.isFinite(Number(entry.ovr)) ? Number(entry.ovr) : null;
       p.body = makeBody(p, entry);
       p.stamina = 0.35 + p.stats.stamina * 0.0095 + (p.pillar ? 0.25 : 0) + jitter * 0.12;
       if (p.sprite) restyle(p);
@@ -703,6 +706,8 @@
     const edge = (p, key) => (stat(p, key) - 70) / 100;
     /** Overall rating in the position he is playing (or his natural one on the bench). */
     function overall(p) {
+      // A man from the club data carries the overall his data gives him, shifted with the computer's level.
+      if (Number.isFinite(p?.dataOvr)) return clamp(Math.round(p.dataOvr + level(p.team).stats), 1, 99);
       const weights = GAME_DATA.stats.weights[p?.role === "SUB" ? p.natural : p?.role];
       if (!weights || !p.stats) return null;
       return Math.round(Object.entries(weights).reduce((sum, [k, w]) => sum + stat(p, k) * w, 0));
@@ -2982,7 +2987,10 @@
       if (!c.celebration && c.star === 7) weights.siu = 18;
       if (!c.celebration && c.star === 10) weights.sky = 22;
       // A man with a signature celebration does it most of the time, unless the moment calls for something else.
-      const signature = c.celebration && SIGNATURES.has(c.celebration) && c.celebration !== game.lastCeleb[c.team] ? c.celebration : null;
+      // A hug needs a team-mate close by and a thank-you needs one at all; without them he celebrates some other way.
+      const mate = nearest(outfield(team[c.team]).filter(m => m !== c), c.pos);
+      const fits = style => style === "mate" ? !!(mate.p && mate.d < 12) : style === "pointMate" ? !!mate.p : true;
+      const signature = c.celebration && SIGNATURES.has(c.celebration) && c.celebration !== game.lastCeleb[c.team] && fits(c.celebration) ? c.celebration : null;
       delete weights[game.lastCeleb[c.team]];
       const pickW = w => { let r = rng() * Object.values(w).reduce((a, b) => a + b, 0); for (const [k, v] of Object.entries(w)) { r -= v; if (r <= 0) return k; } return "fist"; };
       const style = lead < 0 ? "hurry" : big ? (rng() < 0.75 ? "groupHug" : "kneelBrief") : signature && (lead < 3 || rng() < 0.4) && rng() < 0.78 ? signature : pickW(weights);
@@ -2996,7 +3004,6 @@
         c.keys.push([T + 0.2, tArr, style === "airplane" ? "airplane" : "run"]);
         return { spot, tArr };
       };
-      const mate = nearest(outfield(team[c.team]).filter(m => m !== c), c.pos);
       let endAt = T + 3.0;
       if (big) {
         say("ball", lead === 0 ? "Gỡ hòa!" : late ? "Phút cuối!" : "Ngược dòng!", "var(--art-gold)", 1.6);
@@ -3060,7 +3067,7 @@
         endAt = tArr + 3.0;
       } else {
         const { tArr } = runTo(style === "shush" ? [c.pos[0], c.pos[1] < 0.5 ? 0.02 : 0.98] : cornerSpot);
-        const hold = { siu: null, sky: "pointSky", badge: "badge", shush: "shush", airplane: "cheer", arms: "cheer", fist: "fistPump", dance: null, heart: "heart", armsFolded: "armsFolded", salute: "salute", earCup: "earCup", pray: "pray", flip: null }[style];
+        const hold = { siu: null, sky: "pointSky", badge: "badge", shush: "shush", airplane: "cheer", arms: "cheer", fist: "fistPump", dance: null, heart: "heart", armsFolded: "armsFolded", salute: "salute", earCup: "earCup", pray: "pray", flip: null, mate: "fistPump", pointMate: "fistPump" }[style] ?? "fistPump";
         if (style === "flip") {
           c.keys.push([tArr, tArr + 0.28, "flipUp"], [tArr + 0.28, tArr + 0.62, "flipOver"], [tArr + 0.62, tArr + 1.05, "flipLand"], [tArr + 1.05, tArr + 1.7, "cheer"]);
           at(tArr + 0.3, () => say(c, "Hú!", "var(--color-pear)", 1.0));
@@ -3441,10 +3448,13 @@
       const key = p.keys.filter(k => T >= k[0] && T < k[1]).pop();
       p.poseName = key ? key[2] : autoPose(p, speed);
       const target = poseOf(p.poseName, p.stride), k = Math.min(1, dt * (key ? 20 : 14));
+      const flipping = typeof p.poseName === "string" && p.poseName.startsWith("flip");
+      // Back on his feet after a full flip: the turn is complete, so the next pose starts from upright.
+      if (p.pose.rot >= 300 && (target.rot ?? 0) <= 180) p.pose.rot -= 360;
       for (const q in target) {
         const step = (target[q] - p.pose[q]) * k;
-        // A body does not swing up from lying to standing in a couple of frames: at most about 240°/s.
-        p.pose[q] += q === "rot" ? clamp(step, -240 * dt, 240 * dt) : step;
+        // A body does not swing up from lying to standing in a couple of frames: at most about 240°/s (a flip excepted).
+        p.pose[q] += q === "rot" && !flipping ? clamp(step, -240 * dt, 240 * dt) : step;
       }
     }
     
@@ -3714,7 +3724,7 @@
         at(tOut, () => {
           // He is off the pitch: the man waiting at halfway comes on in his place. (The injured man keeps his
           // script: carried down the tunnel, or he hobbles to the bench, or off behind the near touchline.)
-          const hurt = { name: c.name, num: c.num };
+          const hurt = { name: c.name, short: c.short, num: c.num };
           swapPlaces(c, sub);
           // Into the ambulance and away; he takes no further part, but now and then he is back later, strapped up.
           at(tEnd, () => { sub.off = true; });
@@ -5102,6 +5112,8 @@
       shoot(c, options); render(); return c.name;
     };
     /** Test hook: a foul that injures a Red outfield player where he stands. */
+    /** Test hook: everyone's current pose and body rotation. */
+    api.__poses = () => players.filter(on).map(p => ({ name: p.name, pose: p.poseName, rot: p.pose.rot }));
     api.__injure = (forceReturn = false) => {
       const c = outfield(team.R).find(p => p.role !== "GK"), d = outfield(team.B)[0];
       game.mode = "play"; game.stoppage = false; carry(c); game.carrier = c;

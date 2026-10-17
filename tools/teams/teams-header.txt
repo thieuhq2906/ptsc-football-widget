@@ -1,0 +1,2 @@
+/* PTSC Cup 6v6 · mười câu lạc bộ, 300 cầu thủ. Sinh từ document/top_10_clb_bong_da_2026_300_ngoi_sao_25_huyen_thoai_khoi_phuc.xlsx;
+ * chỉ số, chiều cao, cân nặng và lối chơi của từng người là dữ liệu cố định. Dùng qua window.PTSCTeams (xem cuối tệp). */
