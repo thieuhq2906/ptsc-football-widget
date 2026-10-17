@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
     // Human dead balls (kick-off, free kick, corner) wait for the player; tests take them straight away.
     await page.addInitScript(() => {
       window.__takeRestart = api => {
-        const state = api.status(), restart = [state.kickoff, state.freeKick].find(r => r?.slot && r.ready);
+        const state = api.status(), restart = [state.kickoff, state.freeKick, state.goalKick].find(r => r?.slot && r.ready);
         if (restart) return api.action(restart.slot, "pass");
         if (state.corner?.slot && state.corner.ready) return api.takeCorner(state.corner.slot, state.corner.options[0].id);
         return false;
@@ -1290,6 +1290,121 @@ const server = http.createServer((req, res) => {
     assert(builds.gk > builds.mf + 5, "Keepers are taller than midfielders on average");
     assert(builds.rushes >= 6, "Keepers come off their line regularly: " + builds.rushes);
     console.log("PASS player builds by position and keepers sweeping off their line");
+
+    await page.evaluate(() => {
+      const rngOf = seed => () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+      window.__clubMatch = (opts, seed = 3) => { const host = document.createElement("div"); document.body.append(host); const r = rngOf(seed); const api = PTSCFootball.mount(host, { seed, still: 0, fonts: "none", teams: PTSCTeams.teamOption("barcelona", "bayern"), squads: { R: PTSCTeams.pickSquad("barcelona", r), B: PTSCTeams.pickSquad("bayern", r) }, ...opts }); return { api, destroy: () => { api.destroy(); host.remove(); } }; };
+    });
+    // Dead balls keep their shape: a waiting kick-off keeps everyone in his half; a waiting corner keeps the men placed for it where they are.
+    const deadBalls = await page.evaluate(() => {
+      const k = __clubMatch({ mode: "local", teamA: "R", duration: 4 });
+      let maxD = 0, kickoffSeen = false;
+      for (let s = 0; s < 12; s++) { k.api.__step(1); if (k.api.status().kickoff?.slot) kickoffSeen = true; maxD = Math.max(maxD, ...k.api.__players().map(p => p.d)); }
+      const kickoff = { maxD: +maxD.toFixed(3), kickoffSeen, phase: k.api.status().phase };
+      k.destroy();
+      const c = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 });
+      c.api.__step(1); __takeRestart(c.api); c.api.__step(2);
+      c.api.__corner("R", 0);
+      c.api.__step(3);   // the men placed for it walk over first
+      let minBox = 9, samples = 0;
+      for (let s = 0; s < 15; s++) { c.api.__step(1); if (!c.api.status().corner) break; samples++; minBox = Math.min(minBox, c.api.__players().filter(p => p.team === "R" && p.role !== "GK" && p.d > .7).length); }
+      const corner = { minBox, samples, waiting: !!c.api.status().corner, hold: c.api.__hold().corner?.length ?? 0 };
+      c.destroy();
+      return { kickoff, corner };
+    });
+    assert(deadBalls.kickoff.kickoffSeen && deadBalls.kickoff.maxD <= .505, "Nobody crosses the halfway line while a kick-off waits: " + JSON.stringify(deadBalls.kickoff));
+    assert(deadBalls.corner.waiting && deadBalls.corner.samples >= 12 && deadBalls.corner.hold >= 6 && deadBalls.corner.minBox >= 3, "The men placed for a corner hold their spots while the taker waits: " + JSON.stringify(deadBalls.corner));
+    console.log("PASS a waiting kick-off and a waiting corner keep their shape");
+
+    // A goal kick: the keeper walks back to his goal, waits for his player's pass and restarts with it; the computer's keeper passes by himself.
+    const goalKicks = await page.evaluate(() => {
+      const f = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 });
+      f.api.__step(1); __takeRestart(f.api); f.api.__step(2);
+      f.api.__goalKick("R");
+      let ready = null, carriedEarly = false;
+      for (let s = 0; s < 8 && !ready; s++) { f.api.__step(.5); if (f.api.__state().carrier) carriedEarly = true; const st = f.api.status(); if (st.goalKick?.ready) ready = { t: (s + 1) / 2, slot: st.goalKick.slot, gk: f.api.__players().find(p => p.team === "R" && p.role === "GK") }; }
+      f.api.__step(3);
+      const stillWaiting = f.api.status().stoppage && !!f.api.status().goalKick;
+      const shootRefused = !f.api.action("A", "shoot");
+      const accepted = f.api.action("A", "pass"), kick = f.api.__state().kick;
+      f.api.__step(.5);
+      const human = { ready: ready && { t: ready.t, slot: ready.slot, d: +ready.gk.d.toFixed(3), w: +ready.gk.w.toFixed(2) }, carriedEarly, stillWaiting, shootRefused, accepted, kick: kick && { action: kick.action, origin: kick.origin.map(v => +v.toFixed(2)) }, resumed: !f.api.status().stoppage };
+      f.api.__step(3); f.api.__goalKick("B");
+      let cpuTaken = null;
+      for (let s = 0; s < 16 && !cpuTaken; s++) { f.api.__step(.5); if (!f.api.status().stoppage) cpuTaken = { t: (s + 1) / 2 }; }
+      const cpu = { cpuTaken, goalKicks: f.api.__stats().goalKicks };
+      f.destroy();
+      return { human, cpu };
+    });
+    assert(goalKicks.human.ready && goalKicks.human.ready.slot === "A" && Math.abs(goalKicks.human.ready.d - .06) < .02 && Math.abs(goalKicks.human.ready.w - .5) < .05, "The keeper stands in front of his goal for the goal kick: " + JSON.stringify(goalKicks.human));
+    assert(!goalKicks.human.carriedEarly && goalKicks.human.stillWaiting && goalKicks.human.shootRefused, "The goal kick waits for the pass key and allows nothing else: " + JSON.stringify(goalKicks.human));
+    assert(goalKicks.human.accepted && goalKicks.human.kick?.action === "pass" && goalKicks.human.resumed, "Pass takes the goal kick and play goes on: " + JSON.stringify(goalKicks.human));
+    assert(goalKicks.cpu.cpuTaken && goalKicks.cpu.cpuTaken.t <= 4 && goalKicks.cpu.goalKicks === 2, "The computer's keeper takes his goal kick by himself: " + JSON.stringify(goalKicks.cpu));
+    console.log("PASS goal kicks go back to the keeper in front of his goal and restart with a pass");
+
+    // Ratings per line, a swap of two men on the pitch, the best line-up on a shape change, and the team rating.
+    const tactics = await page.evaluate(() => {
+      const f = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 });
+      const plan = f.api.plan().R;
+      const fw = plan.players.find(p => p.line === "FW"), df = plan.players.find(p => p.line === "DF"), gk = plan.players.find(p => p.role === "GK");
+      const natural = [...plan.players, ...plan.bench].every(p => p.ovrs[p.natural] === p.ovr);
+      const gkSwap = f.api.swapSlots("R", gk.id, fw.id), cpuSwap = f.api.swapSlots("B", "B4", "B1");
+      const swap = f.api.swapSlots("R", fw.id, df.id);
+      const after = f.api.plan().R, fwNow = after.players.find(p => p.id === fw.id), dfNow = after.players.find(p => p.id === df.id);
+      const arranged = f.api.arrange("R"), back = f.api.plan().R;
+      const shape = f.api.setShape("R", "3-1-1"), three = f.api.plan().R;
+      f.destroy();
+      return { rating: plan.rating, natural, gkSwap, cpuSwap, swap, fw: { ovr: fw.ovr, ovrs: fw.ovrs }, fwNow: { line: fwNow.line, ovr: fwNow.ovr }, dfNow: { line: dfNow.line, ovr: dfNow.ovr }, ratingAfter: after.rating, arranged, ratingBack: back.rating, shape,
+        three: { shape: three.shape, rating: three.rating, lines: three.players.map(p => p.line).sort().join("") }, shapes: plan.shapes.map(s => [s.id, s.ovr]) };
+    });
+    assert(tactics.natural && tactics.rating.players === 6 && tactics.rating.ovr >= 80 && Math.abs(tactics.rating.sum / 6 - tactics.rating.ovr) < 1, "Every man's overall is his own in his natural line: " + JSON.stringify(tactics.rating));
+    assert(!tactics.gkSwap.ok && !tactics.cpuSwap.ok && tactics.swap.ok, "Only two outfield men of a coached side change places: " + JSON.stringify([tactics.gkSwap, tactics.cpuSwap, tactics.swap]));
+    assert(tactics.fwNow.line === "DF" && tactics.dfNow.line === "FW" && tactics.fwNow.ovr === tactics.fw.ovrs.DF && tactics.fwNow.ovr < tactics.fw.ovr, "A forward at centre-back plays at his centre-back rating: " + JSON.stringify(tactics));
+    assert(tactics.ratingAfter.sum < tactics.rating.sum && tactics.arranged.ok && tactics.arranged.moved >= 1 && tactics.ratingBack.sum === tactics.rating.sum, "Arranging restores the best line-up: " + JSON.stringify([tactics.ratingAfter, tactics.arranged, tactics.ratingBack]));
+    assert(tactics.shape.ok && tactics.three.shape === "3-1-1" && tactics.three.lines === "DFDFDFFWGKMF" && tactics.three.rating.ovr === tactics.shapes.find(s => s[0] === "3-1-1")[1], "A shape change rates the side in its new lines, as the tactics tab promised: " + JSON.stringify(tactics.three) + " " + JSON.stringify(tactics.shapes));
+    console.log("PASS ratings per line, swaps on the pitch, the best line-up after a shape change, team ratings");
+
+    // The rapid pass, automatic switching and penalty skills that need no key.
+    const feel = await page.evaluate(() => {
+      const f = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 });
+      let rapid = null;
+      for (let i = 0; i < 600 && !rapid; i++) {
+        __takeRestart(f.api); f.api.__step(.1);
+        const st = f.api.status(), me = st.players[0];
+        if (me.hasBall && me.ready && !st.stoppage) { const before = me.energy, ok = f.api.action("A", "pass", { rapid: true }), kick = f.api.__state().kick; f.api.__step(.2); rapid = { ok, rapid: kick.rapid, height: kick.height, receiver: kick.receiver, drop: +(before - f.api.status().players[0].energy).toFixed(3) }; }
+      }
+      f.destroy();
+      const run = on => { const g = __clubMatch({ mode: "cpu", teamA: "R", duration: 4, autoSwitch: on }); for (let i = 0; i < 400; i++) { __takeRestart(g.api); g.api.__step(.1); } const r = { switches: g.api.__stats().autoSwitches ?? 0, flag: g.api.status().autoSwitch }; g.api.setAutoSwitch(!on); r.toggled = g.api.status().autoSwitch; g.destroy(); return r; };
+      const switching = { on: run(true), off: run(false) };
+      const pen = [];
+      for (let seed = 1; seed <= 12; seed++) { const h = __clubMatch({ mode: "local", teamA: "R", duration: 4 }, seed); h.api.__step(1); h.api.__penalties(); pen.push(...h.api.status().players.map(p => ({ kind: p.special.kind, label: p.special.label, ready: p.special.ready }))); h.destroy(); }
+      const legs = __clubMatch({ mode: "cpu", teamA: "R", duration: 4, autoSubs: false });
+      for (let i = 0; i < 360 && legs.api.status().minute < 40; i++) { __takeRestart(legs.api); legs.api.__step(1); }
+      const field = Object.entries(legs.api.__energy()).filter(([k]) => k.startsWith("R:") && !k.endsWith("*")).map(([, v]) => v);
+      const energy = { minute: legs.api.status().minute, min: Math.min(...field), max: Math.max(...field) };
+      legs.destroy();
+      return { rapid, switching, pen, energy };
+    });
+    assert(feel.rapid?.ok && feel.rapid.rapid && feel.rapid.height === 0 && feel.rapid.receiver && feel.rapid.drop >= .059, "Two taps of pass send a hard ground ball to a far team-mate at a price: " + JSON.stringify(feel.rapid));
+    assert(feel.switching.on.flag && feel.switching.on.switches > 0 && !feel.switching.on.toggled && !feel.switching.off.flag && feel.switching.off.switches === 0 && feel.switching.off.toggled, "Automatic switching moves the cursor only when it is on: " + JSON.stringify(feel.switching));
+    const penSkilled = feel.pen.filter(r => r.kind);
+    assert(penSkilled.length > 0 && penSkilled.every(r => !r.ready && /Tự/.test(r.label)), "Penalty skills are on by themselves: " + JSON.stringify(penSkilled.slice(0, 4)));
+    assert(feel.energy.minute >= 40 && feel.energy.min < .7, "Legs tire over a match even without skills: " + JSON.stringify(feel.energy));
+    console.log("PASS rapid pass, automatic switching, penalty skills on by themselves, tiring legs");
+
+    // A long note under the scoreboard must not stretch the bug past its clock (measured on the visible watch match).
+    await route("#/watch");
+    const board = await page.evaluate(() => {
+      const root = document.getElementById("watch-match").shadowRoot, note = root.querySelector('[data-id="note"]'), bug = root.querySelector(".sb-bug"), clock = root.querySelector('[data-id="clock"]');
+      const was = { hidden: note.hidden, text: note.textContent };
+      note.hidden = false; note.textContent = "Thay người · Bayern Munich: Hummels #5 vào, J. Martínez #8 ra · ghi chú thật dài để thử bảng";
+      const r = { bug: bug.getBoundingClientRect().width, note: note.getBoundingClientRect().width, gap: Math.abs(bug.getBoundingClientRect().right - clock.getBoundingClientRect().right) };
+      note.hidden = was.hidden; note.textContent = was.text;
+      return r;
+    });
+    assert(board.note > board.bug && board.gap < 3, "The scoreboard ends at its clock whatever the note says: " + JSON.stringify(board));
+    console.log("PASS the scoreboard keeps its width under a long note");
+    await route("#/local/match");   // back to the paused match, with the watcher frozen again
 
     const watcherTime = await page.evaluate(() => document.getElementById("watch-match").__ptscFootball.__state().T);
     await page.waitForTimeout(200);

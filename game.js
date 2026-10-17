@@ -212,7 +212,7 @@
         return `<div class="bd-hero"><svg class="bd-badge" viewBox="0 0 24 24" aria-hidden="true">${skillBadge(kind, skill.icon, "hero-" + kind)}</svg><div><span class="bd-kicker">${skill.auto ? "Tự kích hoạt" : "Skill"}</span><h3>${escapeHtml(skill.short)}</h3><p class="bd-sub">${escapeHtml(skill.name)}</p></div></div>`
           + '<div class="bd-chips">' + skillRoles(skill).map(r => chip(ROLE_GROUPS[r], ROLE_COLORS[r])).join("") + skill.contexts.map(c => chip(gameData.skillContexts[c].label)).join("") + "</div>"
           + `<p class="bd-text">${escapeHtml(skill.desc)}</p>`
-          + facts([["Kích hoạt", skill.auto || kind === "penaltySaver" ? "Tự động" : `Đấu máy ${kbd(cpuKey)} · Hai người ${kbd(keyA)} / ${kbd(keyB)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", !skill.auto && !penalty ? Math.round(rules.cost * 100) + "%" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : openPlay ? rules.usesPerMatch + " lần mỗi trận" : rules.usesPerMatch + " lần mỗi trận, chung với skill kia"]]);
+          + facts([["Kích hoạt", skill.auto || penalty ? "Tự động" : `Đấu máy ${kbd(cpuKey)} · Hai người ${kbd(keyA)} / ${kbd(keyB)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", !skill.auto && !penalty ? Math.round(rules.cost * 100) + "%" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : openPlay ? rules.usesPerMatch + " lần mỗi trận" : rules.usesPerMatch + " lần mỗi trận, chung với skill kia"]]);
       }
     });
     keymapRenders.add(() => browser.render());
@@ -361,8 +361,8 @@
     move: "Di chuyển theo hướng màn hình; giữ hướng khi tạm dừng vẫn được nhớ. Penalty và luân lưu: trái, giữa (xuống), phải để chọn hướng sút hoặc đổ người.",
     switch: "Bấm: chọn cầu thủ gần bóng nhất, kể cả lúc chờ; giữ để đổi liên tục. Khi đang cầm bóng: gọi đồng đội theo hướng mũi tên chạy chỗ thẳng về khung thành.",
     sprint: "Giữ để chạy nhanh; tốn thể lực nhanh hơn.",
-    pass: "Giữ để nạp lực, thả để chuyền; lực mạnh cho bóng bổng hơn. Cũng dùng để giao bóng và đá phạt. Phạt góc: chọn kiểu " + gameData.corners[0].name.toLowerCase() + ".",
-    shoot: "Có bóng: giữ nạp lực, thả để sút; bấm hai lần nhanh để sút thần sầu (cần 23% thể lực, tốn 18%). Không có bóng: xoạc, tự bám đối thủ trong 5,5 m; trúng thì 50% cướp bóng, 50% thẻ đỏ. Phạt góc: " + gameData.corners[1].name.toLowerCase() + ".",
+    pass: "Giữ để nạp lực, thả để chuyền; lực mạnh cho bóng bổng hơn. Bấm hai lần nhanh: chuyền siêu tốc, bóng sệt rất nhanh tới đồng đội xa nhất (tốn 6% thể lực, hơn một cú sút). Cũng dùng để giao bóng, phát bóng và đá phạt. Phạt góc: chọn kiểu " + gameData.corners[0].name.toLowerCase() + ".",
+    shoot: "Có bóng: giữ nạp lực, thả để sút; bấm hai lần nhanh để sút thần sầu (cần 30% thể lực, tốn 30%). Không có bóng: xoạc, tự bám đối thủ trong 5,5 m; trúng thì 50% cướp bóng, 50% thẻ đỏ. Phạt góc: " + gameData.corners[1].name.toLowerCase() + ".",
     press: "Giữ để bám người cầm bóng, người sắp nhận bóng hoặc bóng tự do; thả là dừng. Phạt góc: " + gameData.corners[2].name.toLowerCase() + ".",
     challenge: "Bấm khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng. Phạt góc: " + gameData.corners[3].name.toLowerCase() + ".",
     special: "Dùng skill theo tình huống, tốn 40% thể lực, một lần mỗi trận; penalty dùng trước khi chốt hướng.",
@@ -417,18 +417,22 @@
   const RULE_ITEMS = [
     ["time", "Thời lượng", "2–10 phút bóng lăn, hai hiệp, đổi sân giữa hiệp. Hiệp phụ và luân lưu tuỳ chọn ở màn chuẩn bị."],
     ["corner", "Phạt góc", "Chỉ có phạt góc khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra. Người đá góc chọn một trong bốn kiểu: " + gameData.corners.map(c => c.name.toLowerCase()).join(", ") + "."],
-    ["free", "Đá phạt", "Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc, dù người đá chờ bao lâu."],
+    ["free", "Đá phạt · phạt góc", "Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc, dù người đá chờ bao lâu. Người chạy chỗ, người kèm và hàng rào giữ nguyên vị trí cho tới khi bóng được đá."],
+    ["goalkick", "Phát bóng", "Bóng qua vạch cuối sân: thủ môn đi về đứng trước khung thành, bóng đặt trước gôn và mọi người chờ; thủ môn phải chuyền để đưa bóng vào cuộc (đội người chơi: nhấn phím chuyền), không được dẫn bóng."],
+    ["stamina", "Thể lực", "Cầu thủ mất sức dần trong cả trận, nhanh hơn khi chạy nhiều; dưới 70% thể lực mọi chỉ số giảm dần (tới −20% khi kiệt sức) và chạy chậm lại. Sút thần sầu tốn 30%, chuyền siêu tốc 6%, skill 40%."],
+    ["swap", "Đổi vị trí · OVR theo vị trí", "Mỗi cầu thủ có OVR riêng cho từng vị trí (TM/HV/TV/TĐ); OVR đội là trung bình của 6 người theo vị trí đang đá. Trong Kế hoạch trận có thể đổi chỗ hai người trên sân; đổi sơ đồ hay thay người tự động sẽ tự xếp lại cho OVR đội cao nhất."],
     ["goal", "Sau bàn thắng", "Trọng tài chỉ thổi giao bóng khi hai đội đã về hết nửa sân nhà."],
     ["cards", "Thẻ phạt", "Tranh bóng: 30% lỗi nhẹ, 15% lỗi đáng thẻ vàng, 5% lỗi nặng. Xoạc trúng người: 50% cướp bóng, 50% thẻ đỏ."],
     ["injury", "Chấn thương", "Xe cấp cứu đưa đi, không vào lại trận đó; đôi khi quay lại ngồi ghế dự bị với băng gạc. Luôn có người dự bị vào thay nếu còn."],
-    ["subs", "Thay người", "Chỉ lúc bóng chết. Tự động thay người là tùy chọn; tự chọn trong Kế hoạch trận (trước giờ bóng lăn đổi ngay)."],
-    ["tactics", "Chiến thuật", "Sơ đồ bạn chọn được giữ nguyên; bật Tự động đổi chiến thuật để máy đổi theo tỉ số. Bị đuổi người thì đội tự bớt một vị trí cùng kiểu."]
+    ["subs", "Thay người", "Chỉ lúc bóng chết. Tự động thay người là tùy chọn; tự chọn trong Kế hoạch trận (trước giờ bóng lăn đổi ngay). Người vào do bạn chọn đá đúng chỗ người ra; thay người tự động thì đội tự xếp lại vị trí."],
+    ["tactics", "Chiến thuật", "Sơ đồ bạn chọn được giữ nguyên; bật Tự động đổi chiến thuật để máy đổi theo tỉ số. Mỗi lần đổi sơ đồ, cầu thủ được xếp lại vị trí cho OVR đội cao nhất. Bị đuổi người thì đội tự bớt một vị trí cùng kiểu."],
+    ["switch", "Tự động đổi người", "Mặc định bật: khi mất bóng, con trỏ tự nhảy sang đồng đội gần bóng nhất (hoặc gần điểm bóng rơi); người bạn vừa chọn tay được giữ 1,2 giây. Tắt trong Kế hoạch trận → Hỗ trợ hoặc ở màn chuẩn bị."]
   ];
   const PEN_ITEMS = [
     ["wrong", "Thủ môn đoán sai hướng", 100, "Sút khác hướng thủ môn đổ người luôn vào lưới."],
-    ["saver", "Đoán đúng · thủ môn có Bắt pen", 0, "Thủ môn có Bắt pen đoán đúng thì bắt được 100%; nếu người sút bật Sút pen thì còn bắt 80% (20% vào)."],
-    ["plain", "Đoán đúng · không có Bắt pen", 20, "Thủ môn không có Bắt pen đoán đúng thì bắt 80%; người sút bật Sút pen thì chỉ còn bắt 20% (80% vào)."],
-    ["who", "Ai có skill penalty", 30, "Chỉ khoảng 30% cầu thủ sân có Sút pen và 50% thủ môn có Bắt pen."]
+    ["saver", "Đoán đúng · thủ môn có Bắt pen", 0, "Thủ môn có Bắt pen đoán đúng thì bắt được 100%; nếu người sút có Sút pen thì còn bắt 80% (20% vào)."],
+    ["plain", "Đoán đúng · không có Bắt pen", 20, "Thủ môn không có Bắt pen đoán đúng thì bắt 80%; người sút có Sút pen thì chỉ còn bắt 20% (80% vào)."],
+    ["who", "Ai có skill penalty", 30, "Chỉ khoảng 30% cầu thủ sân có Sút pen và 50% thủ môn có Bắt pen. Skill penalty tự bật ở mọi lượt sút, không cần bấm phím."]
   ];
   function renderRulesGuide(container) {
     const levels = gameData.difficulty;
@@ -929,7 +933,7 @@
   const findPlanPlayer = (data, t, id) => data?.[t] && [...data[t].players, ...data[t].bench].find(p => p.id === id);
   function planRow(t, p, col, data, ui) {
     const queued = data[t].queue.find(q => q.off === p.id || q.on === p.id), picking = ui.pick?.team === t && ui.pick.id === p.id;
-    const choosable = ui.pick?.team === t && !picking && (ui.pick.onPitch ? p.canOn : p.canOff);
+    const choosable = ui.pick?.team === t && !picking && (ui.pick.onPitch ? (p.canOn && ui.pick.canOff) || (ui.pick.canSwap && p.onPitch && p.canSwap) : p.canOff);
     const flags = (queued ? queued.off === p.id ? '<i class="flag off" title="Sẽ ra sân">▼</i>' : '<i class="flag on" title="Sẽ vào sân">▲</i>' : "")
       + (p.yellows ? '<i class="flag card" title="Thẻ vàng"></i>' : "") + (p.injured ? '<i class="flag hurt" title="Chấn thương">+</i>' : "");
     const state = picking ? "pick" : choosable ? "choose" : queued ? (queued.off === p.id ? "off" : "on") : "";
@@ -938,10 +942,12 @@
       + posBadge(p.onPitch ? p.line ?? p.role : p.role) + `<span class="plan-name"><b>${escapeHtml(p.name)}</b><small>${escapeHtml(sub)}</small></span>`
       + `<span class="plan-energy" title="Thể lực ${Math.round(p.energy * 100)}%"><i style="width:${Math.round(p.energy * 100)}%"></i></span><span class="plan-flags">${flags}</span><b class="plan-ovr" data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b></button>`;
   }
+  /** The side's strength as it stands: the mean overall of the six in the lines they play, the sum, attack and defence. */
+  const ratingHtml = r => r ? `<div class="plan-rating" title="OVR đội: trung bình OVR theo vị trí đang đá của những người trên sân · Sức mạnh: tổng OVR · Công: tiền vệ và tiền đạo · Thủ: hậu vệ và thủ môn"><span><small>OVR đội</small><b data-level="${levelOf(r.ovr)}">${r.ovr}</b></span><span><small>Sức mạnh</small><b>${r.sum}</b></span><span><small>Công</small><b>${r.attack}</b></span><span><small>Thủ</small><b>${r.defense}</b></span></div>` : "";
   function planColumn(view, t, col) {
     const ui = view.planUI, data = ui.data, d = data[t], api = view.api;
     const club = d.team, badge = club?.logo ? `<img class="plan-logo" src="${escapeHtml(club.logo)}" alt="" width="40" height="40" loading="lazy">` : `<span class="kit-shirt" style="background:var(--team-${t})" aria-hidden="true"></span>`;
-    const head = `<header class="plan-head" data-team="${t}">${badge}<div class="plan-title"><b>${escapeHtml(club?.name ?? DEFAULT_NAMES[t])}</b><small>${escapeHtml(planWho(view, d.controller))}${d.coached ? "" : " · chỉ xem"}</small></div><div class="plan-formation"><b>${d.shape}</b><small>${escapeHtml(d.shapeName)}</small></div></header>`;
+    const head = `<header class="plan-head" data-team="${t}">${badge}<div class="plan-title"><b>${escapeHtml(club?.name ?? DEFAULT_NAMES[t])}</b><small>${escapeHtml(planWho(view, d.controller))}${d.coached ? "" : " · chỉ xem"}</small></div>${ratingHtml(d.rating)}<div class="plan-formation"><b>${d.shape}</b><small>${escapeHtml(d.shapeName)}</small></div></header>`;
     const tokens = d.players.map(p => {
       const [dd, w] = p.spot ?? [0.3, 0.5], queued = d.queue.some(q => q.off === p.id), top = dd <= .05 ? 91 : 79 - (dd - .1) / .6 * 70;
       return `<button type="button" class="pp-token" tabindex="-1" data-team="${t}" data-id="${p.id}" style="left:${(10 + w * 80).toFixed(1)}%;top:${top.toFixed(1)}%;z-index:${Math.round(100 - top)}"${queued ? ' data-state="off"' : ""}>`
@@ -955,13 +961,16 @@
     } else if (ui.tab === "tactics") {
       pane = '<div class="plan-list">' + d.shapes.map(s => {
         const current = s.id === d.shape, tag = d.coached ? "button" : "div";
-        return `<${tag} ${d.coached ? `type="button" data-nav data-col="${col}" data-key="${t}:shape:${s.id}" ` : ""}class="plan-shape" data-team="${t}" data-shape="${s.id}" aria-pressed="${current}">${shapeSvg(s)}<span><b>${s.id}</b><small>${escapeHtml(s.name)}</small>${s.desc && s.desc !== s.name ? `<em>${escapeHtml(s.desc)}</em>` : ""}</span>${current ? '<i class="plan-check">Đang dùng</i>' : ""}</${tag}>`;
-      }).join("") + `<p class="plan-note">${d.coached ? d.auto.tactics ? "Tự động đổi chiến thuật đang bật: máy có thể đổi sơ đồ theo tỉ số." : "Sơ đồ bạn chọn được giữ nguyên; chỉ khi bị đuổi người, đội tự bớt một vị trí cùng kiểu." : "Máy tự chọn và đổi sơ đồ theo diễn biến trận."}</p></div>`;
+        return `<${tag} ${d.coached ? `type="button" data-nav data-col="${col}" data-key="${t}:shape:${s.id}" ` : ""}class="plan-shape" data-team="${t}" data-shape="${s.id}" aria-pressed="${current}">${shapeSvg(s)}<span><b>${s.id}</b><small>${escapeHtml(s.name)}</small>${s.desc && s.desc !== s.name ? `<em>${escapeHtml(s.desc)}</em>` : ""}</span><span class="shape-end">${current ? '<i class="plan-check">Đang dùng</i>' : ""}<b class="shape-ovr" data-level="${levelOf(s.ovr ?? 0)}" title="OVR đội nếu dùng sơ đồ này">${s.ovr ?? "–"}</b></span></${tag}>`;
+      }).join("")
+        + (d.coached ? `<button type="button" class="plan-toggle plan-arrange" data-nav data-col="${col}" data-key="${t}:arrange" data-team="${t}" data-arrange><span><b>Tự xếp vị trí tối ưu</b><small>Đặt từng người vào chỗ cho OVR đội cao nhất với sơ đồ đang dùng (đổi sơ đồ và thay người tự động cũng tự xếp lại).</small></span><b class="toggle-state">Xếp</b></button>` : "")
+        + `<p class="plan-note">${d.coached ? d.auto.tactics ? "Tự động đổi chiến thuật đang bật: máy có thể đổi sơ đồ theo tỉ số. Số bên phải là OVR đội với từng sơ đồ." : "Sơ đồ bạn chọn được giữ nguyên; chỉ khi bị đuổi người, đội tự bớt một vị trí cùng kiểu. Số bên phải là OVR đội với từng sơ đồ." : "Máy tự chọn và đổi sơ đồ theo diễn biến trận."}</p></div>`;
     } else {
       const toggle = (key, title, desc, on, attr) => `<button type="button" class="plan-toggle" data-nav data-col="${col}" data-key="${t}:${key}" data-team="${t}" ${attr} aria-pressed="${on}"><span><b>${title}</b><small>${desc}</small></span><b class="toggle-state">${on ? "Bật" : "Tắt"}</b></button>`;
       pane = d.coached ? '<div class="plan-list">'
         + toggle("auto:tactics", "Tự động đổi chiến thuật", "Máy đổi sơ đồ theo tỉ số: giữ chắc khi dẫn, dồn lên khi bị dẫn.", d.auto.tactics, 'data-auto="tactics"')
-        + toggle("auto:subs", "Tự động thay người", "Máy đưa người dự bị khỏe vào thay cầu thủ mệt ở lúc bóng chết.", d.auto.subs, 'data-auto="subs"')
+        + toggle("auto:subs", "Tự động thay người", "Máy đưa người dự bị khỏe vào thay cầu thủ mệt ở lúc bóng chết, rồi tự xếp lại vị trí.", d.auto.subs, 'data-auto="subs"')
+        + toggle("autoswitch", "Tự động đổi người", "Mất bóng: con trỏ tự nhảy sang đồng đội gần bóng nhất; người bạn vừa chọn tay được giữ 1,2 giây.", !!d.autoSwitch, "data-autoswitch")
         + (col === 0 && view.panel?.setup ? toggle("support", "Hỗ trợ ngắm", "Chuyền tới đồng đội gần hướng ngắm, sút trúng khung thành.", !!view.panel.setup.values.support, "data-support") : "")
         + "</div>" : '<p class="plan-note">Máy tự đổi chiến thuật và thay người cho đội này.</p>';
     }
@@ -978,16 +987,18 @@
         + `<div class="pd-styles"><div class="pd-style atk"><small>Có bóng</small><b>${escapeHtml(p.attack.name)}</b><em>${escapeHtml(p.attack.tag)}</em><p>${escapeHtml(p.attack.desc)}</p></div><div class="pd-style def"><small>Mất bóng</small><b>${escapeHtml(p.defense.name)}</b><em>${escapeHtml(p.defense.tag)}</em><p>${escapeHtml(p.defense.desc)}</p></div></div>`
         + (p.skill ? `<div class="pd-skill"><svg viewBox="0 0 24 24" aria-hidden="true">${skillBadge(p.skill.id, p.skill.icon, "pd-" + p.id)}</svg><span><b>${escapeHtml(p.skill.name)}${p.skill.used ? " · đã dùng" : ""}</b><small>${escapeHtml(p.skill.desc)}</small>${p.penaltySkill ? `<small class="pd-pen">Penalty: ${escapeHtml(p.penaltySkill.name)}</small>` : ""}</span></div>` : "")
       : '<ol class="pd-stats">' + gameData.stats.keys.map(k => `<li><b data-tone="${statTone(p.stats[k])}">${p.stats[k]}</b><span>${gameData.stats.labels[k]}</span><i><i style="width:${Math.round(clamp01((p.stats[k] - 35) / 60) * 100)}%"></i></i></li>`).join("") + "</ol>";
-    const canSwap = d.coached && (queued || (p.onPitch ? p.canOff : p.canOn));
-    return `<div class="plan-detail" tabindex="-1" role="region" aria-label="Thông tin ${escapeHtml(p.name)}"><div class="pd-head"><b>${page === 0 ? "Thông tin cầu thủ" : "Chỉ số"}</b><span class="pd-pages"><kbd>←</kbd><kbd>→</kbd> ${page + 1}/2 · <kbd>↑</kbd><kbd>↓</kbd> đổi người</span></div>${top}<div class="pd-body">${info}</div>`
-      + `<div class="pd-actions"><button type="button" class="secondary" data-nav data-pd="page">${page === 0 ? "Xem chỉ số ›" : "‹ Thông tin"}</button>${canSwap ? `<button type="button" class="secondary" data-nav data-pd="sub">${queued ? "Hủy lượt thay" : "Thay người"} <kbd>X</kbd></button>` : ""}<button type="button" class="secondary" data-nav data-pd="close">Quay lại <kbd>Esc</kbd></button></div></div>`;
+    const canSwap = d.coached && (queued || (p.onPitch ? p.canOff || p.canSwap : p.canOn));
+    const nowLine = p.onPitch ? p.line ?? p.role : p.role;
+    const lines = p.ovrs ? `<div class="pd-lines" title="OVR nếu đá ở từng vị trí"><em>OVR theo vị trí</em>${["GK", "DF", "MF", "FW"].map(l => `<span${nowLine === l ? ' class="is-now"' : ""}><small>${LINE_LABEL[l]}</small><b data-level="${levelOf(p.ovrs[l] ?? 0)}">${p.ovrs[l] ?? "–"}</b></span>`).join("")}</div>` : "";
+    return `<div class="plan-detail" tabindex="-1" role="region" aria-label="Thông tin ${escapeHtml(p.name)}"><div class="pd-head"><b>${page === 0 ? "Thông tin cầu thủ" : "Chỉ số"}</b><span class="pd-pages"><kbd>←</kbd><kbd>→</kbd> ${page + 1}/2 · <kbd>↑</kbd><kbd>↓</kbd> đổi người</span></div>${top}<div class="pd-body">${lines}${info}</div>`
+      + `<div class="pd-actions"><button type="button" class="secondary" data-nav data-pd="page">${page === 0 ? "Xem chỉ số ›" : "‹ Thông tin"}</button>${canSwap ? `<button type="button" class="secondary" data-nav data-pd="sub">${queued ? "Hủy lượt thay" : p.onPitch ? "Thay / đổi vị trí" : "Thay người"} <kbd>X</kbd></button>` : ""}<button type="button" class="secondary" data-nav data-pd="close">Quay lại <kbd>Esc</kbd></button></div></div>`;
   }
   const PLAN_PROMPTS = {
-    lineup: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Đổi đội</span><span><kbd>Enter</kbd> Xem cầu thủ</span><span><kbd>X</kbd> Thay người</span><span><kbd>Esc</kbd> Quay lại</span>",
+    lineup: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Đổi đội</span><span><kbd>Enter</kbd> Xem cầu thủ</span><span><kbd>X</kbd> Thay / đổi vị trí</span><span><kbd>Esc</kbd> Quay lại</span>",
     tactics: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Đổi đội</span><span><kbd>Enter</kbd> Dùng sơ đồ</span><span><kbd>Esc</kbd> Quay lại</span>",
     support: "<span><kbd>Q</kbd><kbd>E</kbd> Đổi mục</span><span><kbd>↑</kbd><kbd>↓</kbd> Chọn</span><span><kbd>Enter</kbd> Bật / Tắt</span><span><kbd>Esc</kbd> Quay lại</span>",
-    detail: "<span><kbd>←</kbd><kbd>→</kbd> Trang</span><span><kbd>↑</kbd><kbd>↓</kbd> Đổi cầu thủ</span><span><kbd>X</kbd> Thay người</span><span><kbd>Esc</kbd> Quay lại</span>",
-    pick: "<span><kbd>↑</kbd><kbd>↓</kbd> Chọn người</span><span><kbd>Enter</kbd> Xác nhận</span><span><kbd>Esc</kbd> Hủy thay người</span>"
+    detail: "<span><kbd>←</kbd><kbd>→</kbd> Trang</span><span><kbd>↑</kbd><kbd>↓</kbd> Đổi cầu thủ</span><span><kbd>X</kbd> Thay / đổi vị trí</span><span><kbd>Esc</kbd> Quay lại</span>",
+    pick: "<span><kbd>↑</kbd><kbd>↓</kbd> Chọn người</span><span><kbd>Enter</kbd> Xác nhận</span><span><kbd>Esc</kbd> Hủy</span>"
   };
   function renderPlan(view, focusKey) {
     const sheet = view.arena.querySelector('.sheet[data-sheet="plan"]'), ui = view.planUI;
@@ -1006,7 +1017,7 @@
     sheet.dataset.mode = ui.detail ? "detail" : ui.pick ? "pick" : "list";
     sheet.querySelector(".plan-prompts").innerHTML = PLAN_PROMPTS[sheet.dataset.mode === "list" ? ui.tab : sheet.dataset.mode];
     const pick = ui.pick && findPlanPlayer(data, ui.pick.team, ui.pick.id);
-    writeText(sheet.querySelector(".plan-status"), pick ? `Chọn người ${pick.onPitch ? "vào thay cho" : "ra sân để"} ${pick.name}${pick.onPitch ? "" : " vào"} · Esc để hủy` : ui.note ?? "");
+    writeText(sheet.querySelector(".plan-status"), pick ? (pick.onPitch ? `Chọn người dự bị vào thay ${pick.name}${ui.pick.canSwap ? ", hoặc một người trên sân để đổi vị trí" : ""} · Esc để hủy` : `Chọn người ra sân để ${pick.name} vào · Esc để hủy`) : ui.note ?? "");
     if (ui.detail) focusOn(sheet.querySelector(".plan-detail"));
     else if (keep && keep !== "detail") focusOn(sheet.querySelector(`[data-key="${CSS.escape(keep)}"]`) ?? firstPlanItem(sheet, 0));
   }
@@ -1047,13 +1058,14 @@
     if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được thay người."; renderPlan(view); return; }
     if (view.api.status().ended) { ui.note = "Trận đấu đã kết thúc."; renderPlan(view); return; }
     if (d.queue.some(q => q.off === id || q.on === id)) { view.api.cancelSub(t, id); ui.note = `Đã hủy lượt thay của ${p.name}.`; ui.detail = null; renderPlan(view, `${t}:${id}`); return; }
-    if (p.onPitch ? !p.canOff : !p.canOn) {
-      ui.note = p.role === "GK" && p.onPitch ? "Không có thủ môn dự bị để thay." : p.injured ? `${p.name} đang bị thương.` : p.subbing ? `${p.name} đang được thay ra.` : `${p.name} chưa thay được lúc này.`;
+    if (p.onPitch ? !p.canOff && !p.canSwap : !p.canOn) {
+      ui.note = p.role === "GK" && p.onPitch ? "Không có thủ môn dự bị để thay, và thủ môn không đổi vị trí." : p.injured ? `${p.name} đang bị thương.` : p.subbing ? `${p.name} đang được thay ra.` : `${p.name} chưa thay được lúc này.`;
       renderPlan(view); return;
     }
-    const other = (p.onPitch ? d.bench : d.players).filter(x => p.onPitch ? x.canOn : x.canOff);
-    if (!other.length) { ui.note = p.onPitch ? "Không còn cầu thủ dự bị nào vào sân được." : "Không có ai trên sân để thay ra."; renderPlan(view); return; }
-    ui.detail = null; ui.note = ""; ui.pick = { team: t, id, onPitch: p.onPitch };
+    // On the pitch: a substitute to come on for him, or a team-mate on the pitch to change places with.
+    const other = p.onPitch ? [...(p.canOff ? d.bench.filter(x => x.canOn) : []), ...(p.canSwap ? d.players.filter(x => x.id !== id && x.canSwap) : [])] : d.players.filter(x => x.canOff);
+    if (!other.length) { ui.note = p.onPitch ? "Không còn ai để thay hay đổi vị trí." : "Không có ai trên sân để thay ra."; renderPlan(view); return; }
+    ui.detail = null; ui.note = ""; ui.pick = { team: t, id, onPitch: p.onPitch, canSwap: !!p.canSwap, canOff: !!p.canOff };
     renderPlan(view, `${t}:${other[0].id}`);
   }
   function completePick(view, t, id) {
@@ -1061,6 +1073,14 @@
     const ui = view.planUI, pick = ui.pick, p = findPlanPlayer(ui.data, t, id), first = pick && findPlanPlayer(ui.data, pick.team, pick.id);
     if (!pick || !p || !first) return;
     if (t !== pick.team || id === pick.id) { ui.pick = null; renderPlan(view, `${pick.team}:${pick.id}`); return; }
+    if (p.onPitch && pick.onPitch && pick.canSwap && p.canSwap) {
+      // Two men on the pitch change places in the line-up, at once.
+      const result = view.api.swapSlots(t, pick.id, id);
+      ui.pick = null;
+      ui.note = result.ok ? `Đã đổi vị trí: ${first.name} ↔ ${p.name}.` : result.reason;
+      renderPlan(view, `${t}:${id}`);
+      return;
+    }
     if (p.onPitch === pick.onPitch) {
       const able = p.onPitch ? p.canOff : p.canOn;
       ui.pick = able ? { team: t, id, onPitch: p.onPitch } : pick;
@@ -1080,7 +1100,18 @@
     else if (el.matches(".plan-shape[data-shape]") && ui.data[t]?.coached) {
       if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được đổi chiến thuật."; renderPlan(view, el.dataset.key); return; }
       const result = view.api.setShape(t, el.dataset.shape);
-      ui.note = result.ok ? `${ui.data[t].team?.name ?? DEFAULT_NAMES[t]} đá ${el.dataset.shape}.` : "Sơ đồ này không dùng được lúc này.";
+      ui.note = result.ok ? `${ui.data[t].team?.name ?? DEFAULT_NAMES[t]} đá ${el.dataset.shape}.${result.moved ? ` Đã xếp lại ${result.moved} vị trí cho OVR đội cao nhất.` : ""}` : "Sơ đồ này không dùng được lúc này.";
+      renderPlan(view, el.dataset.key);
+    } else if (el.matches("[data-arrange]")) {
+      if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được xếp lại đội hình."; renderPlan(view, el.dataset.key); return; }
+      const result = view.api.arrange(t);
+      ui.note = !result.ok ? "Không xếp được lúc này." : result.moved ? `Đã xếp lại ${result.moved} vị trí.` : "Đội hình đã ở vị trí tối ưu.";
+      renderPlan(view, el.dataset.key);
+    } else if (el.matches("[data-autoswitch]")) {
+      const on = !ui.data[t].autoSwitch;
+      view.api.setAutoSwitch(on);
+      if (view.panel?.setup) { view.panel.setup.values.autoSwitch = on; renderSetup(view.panel); }
+      ui.note = "Tự động đổi người " + (on ? "bật." : "tắt.");
       renderPlan(view, el.dataset.key);
     } else if (el.matches("[data-auto]")) {
       if (!mayCoach(view, t)) { ui.note = "Chỉ bên đang xin tạm dừng được đổi tùy chọn này."; renderPlan(view, el.dataset.key); return; }
@@ -1103,7 +1134,7 @@
       if (action === "page") { ui.detail.page = 1 - ui.detail.page; renderPlan(view); return; }
       if (action === "sub") { startPick(view, ui.detail.team, ui.detail.id); return; }
       if (action === "close") { closeDetail(view); return; }
-      const item = event.target.closest(".plan-row, .pp-token, .plan-shape[data-shape], [data-auto], [data-support]");
+      const item = event.target.closest(".plan-row, .pp-token, .plan-shape[data-shape], [data-auto], [data-support], [data-arrange], [data-autoswitch]");
       if (item && !item.closest(".plan-detail")) planActivate(view, item);
     });
   }
@@ -1184,7 +1215,10 @@
       { key: "autoTactics", label: "Tự động đổi chiến thuật", initial: false, values: () => onOff,
         desc: v => v ? "Máy đổi sơ đồ theo tỉ số cho đội của bạn: giữ chắc khi dẫn, dồn lên khi bị dẫn." : "Sơ đồ bạn chọn trong Kế hoạch trận được giữ nguyên suốt trận." },
       { key: "autoSubs", label: "Tự động thay người", initial: true, values: () => onOff,
-        desc: v => v ? "Máy đưa người dự bị khỏe vào thay cầu thủ mệt ở lúc bóng chết; bạn vẫn tự thay được." : "Chỉ thay người khi bạn chọn trong Kế hoạch trận (chấn thương vẫn được thay)." },
+        desc: v => v ? "Máy đưa người dự bị khỏe vào thay cầu thủ mệt ở lúc bóng chết rồi tự xếp lại vị trí; bạn vẫn tự thay được." : "Chỉ thay người khi bạn chọn trong Kế hoạch trận (chấn thương vẫn được thay)." },
+      { key: "autoSwitch", label: cpu ? "Tự động đổi người" : "Tự động đổi người (A và B)", initial: true, values: () => onOff,
+        desc: v => v ? "Mất bóng: con trỏ tự nhảy sang đồng đội gần bóng nhất (hoặc gần điểm bóng rơi); người bạn vừa chọn tay được giữ 1,2 giây. Đổi được trong Kế hoạch trận → Hỗ trợ." : "Chỉ đổi người bằng phím đổi người.",
+        changed: v => { sessions.get(mode)?.api.setAutoSwitch(v); } },
       keyRow("A"), !cpu && keyRow("B")
     ].filter(Boolean);
   }
@@ -1242,7 +1276,7 @@
   }
   function optionsFor(panel) {
     const v = panel.setup.values, mode = panel.dataset.mode, teamA = "R", teamB = "B";
-    return { mode, duration: v.duration, extraTime: v.extraTime, penalties: v.penalties, support: v.support, difficulty: v.level ?? "normal", autoTactics: v.autoTactics, autoSubs: v.autoSubs,
+    return { mode, duration: v.duration, extraTime: v.extraTime, penalties: v.penalties, support: v.support, difficulty: v.level ?? "normal", autoTactics: v.autoTactics, autoSubs: v.autoSubs, autoSwitch: v.autoSwitch,
       clubA: v.clubA, clubB: v.clubB, teamA, leftTeam: mode === "local" ? (v.side === "left" ? teamB : teamA) : "R" };
   }
   function renderMatchup(panel) {
@@ -1256,7 +1290,7 @@
       const art = club ? `<img class="vs-logo" src="${escapeHtml(club.logo)}" alt="" width="64" height="64" loading="lazy"><img class="vs-kit" src="${escapeHtml(kit?.image ?? club.kits.home.image)}" alt="" width="60" height="94" loading="lazy">` : '<span class="vs-logo vs-unknown" aria-hidden="true">?</span>';
       return `<div class="vs-team" data-team="${t}">${art}<b>${escapeHtml(club?.name ?? "Ngẫu nhiên")}</b><small>${name} · ${side(t)}${club ? " · OVR " + clubs.strength(club) : ""}${kit ? " · áo " + (kit.kit === "home" ? "sân nhà" : "sân khách") : ""}</small></div>`;
     };
-    const facts = [["Thời gian", o.duration + " phút"], cpu && ["Độ khó", gameData.difficulty[o.difficulty]?.name ?? "Thường"], ["Hiệp phụ", o.extraTime ? "Có" : "Không"], ["Luân lưu", o.penalties ? "Có" : "Không"], ["Hỗ trợ ngắm", o.support ? "Bật" : "Tắt"], ["Tự động", [o.autoTactics && "chiến thuật", o.autoSubs && "thay người"].filter(Boolean).join(", ") || "Tắt"]].filter(Boolean);
+    const facts = [["Thời gian", o.duration + " phút"], cpu && ["Độ khó", gameData.difficulty[o.difficulty]?.name ?? "Thường"], ["Hiệp phụ", o.extraTime ? "Có" : "Không"], ["Luân lưu", o.penalties ? "Có" : "Không"], ["Hỗ trợ ngắm", o.support ? "Bật" : "Tắt"], ["Tự động", [o.autoTactics && "chiến thuật", o.autoSubs && "thay người", o.autoSwitch && "đổi người"].filter(Boolean).join(", ") || "Tắt"]].filter(Boolean);
     const html = `<div class="vs">${team(o.teamA, who[0])}<span class="vs-mark">VS</span>${team(teamB, who[1])}</div><dl class="vs-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`
       + (sessions.has(o.mode) ? '<p class="vs-note">Trận đang dở sẽ được thay bằng trận mới.</p>' : "");
     const matchup = panel.querySelector(".matchup");
@@ -1410,17 +1444,17 @@
     if (accepts !== session.acceptedMovement) { session.acceptedMovement = accepts; applyKeys(session); }
     session.penaltyView.update(state, session.paused);
     q(".arena-hints").hidden = !!state.penalty || state.ended;
-    const restartChoice = q(".restart-choice"), corner = state.corner, kickoff = state.kickoff, freeKick = state.freeKick;
-    restartChoice.hidden = state.ended || !!state.penalty || !(corner?.slot || kickoff?.slot || freeKick?.slot);
-    const restartSlot = corner?.slot ?? kickoff?.slot ?? freeKick?.slot;
+    const restartChoice = q(".restart-choice"), corner = state.corner, kickoff = state.kickoff, freeKick = state.freeKick, goalKick = state.goalKick;
+    restartChoice.hidden = state.ended || !!state.penalty || !(corner?.slot || kickoff?.slot || freeKick?.slot || goalKick?.slot);
+    const restartSlot = corner?.slot ?? kickoff?.slot ?? freeKick?.slot ?? goalKick?.slot;
     for (const guide of q(".arena-hints").querySelectorAll(".pad-help")) guide.hidden = !restartChoice.hidden && guide.dataset.slot === restartSlot;
     if (!restartChoice.hidden) {
-      const restart = corner ?? kickoff ?? freeKick, set = bindings[restart.slot];
+      const restart = corner ?? kickoff ?? freeKick ?? goalKick, set = bindings[restart.slot];
       restartChoice.dataset.slot = restart.slot;
-      const text = state.refBreak ? "Chờ trọng tài quay lại" : `${corner ? "Phạt góc" : freeKick ? "Đá phạt" : "Giao bóng"} · ${restart.name}${restart.ready ? "" : " · đang vào vị trí"}`;
+      const text = state.refBreak ? "Chờ trọng tài quay lại" : `${corner ? "Phạt góc" : freeKick ? "Đá phạt" : goalKick ? "Phát bóng" : "Giao bóng"} · ${restart.name}${restart.ready ? "" : " · đang vào vị trí"}`;
       writeText(restartChoice.querySelector(".restart-label"), text);
       const hints = !set ? "" : corner ? gameData.corners.map((c, i) => `<span>${kbd(set[CORNER_ACTIONS[i]])} ${c.name}</span>`).join("")
-        : freeKick ? `<span>Giữ/thả ${kbd(set.pass)} chuyền</span><span>${kbd(set.shoot)} sút</span>` : `<span>${kbd(set.pass)} Chuyền giao bóng</span>`;
+        : freeKick ? `<span>Giữ/thả ${kbd(set.pass)} chuyền</span><span>${kbd(set.shoot)} sút</span>` : goalKick ? `<span>Giữ/thả ${kbd(set.pass)} chuyền phát bóng</span>` : `<span>${kbd(set.pass)} Chuyền giao bóng</span>`;
       const hintNode = restartChoice.querySelector(".restart-keys");
       if (session.restartHints !== hints) { hintNode.innerHTML = hints; session.restartHints = hints; }
       restartChoice.classList.toggle("is-preparing", !restart.ready || !!state.refBreak);
@@ -1472,7 +1506,7 @@
       const card = cards.find(c => c.dataset.slot === player.slot);
       if (!card) continue;
       card.querySelector("progress").value = player.charge?.power ?? 0;
-      writeText(card.querySelector(".charge-text"), player.charge ? (player.charge.action === "pass" ? "Lực chuyền" : "Lực sút") + ": " + Math.round(player.charge.power * 100) + "%" : player.pressing ? "Đang bám người · giữ phím áp sát" : "Giữ phím chuyền/sút để nạp lực");
+      writeText(card.querySelector(".charge-text"), player.charge ? (player.charge.action === "pass" ? "Lực chuyền" : "Lực sút") + ": " + Math.round(player.charge.power * 100) + "%" : player.pressing ? "Đang bám người · giữ phím áp sát" : "Giữ chuyền/sút để nạp lực · bấm 2 lần: siêu tốc / thần sầu");
     }
   }
 
@@ -1838,9 +1872,10 @@
       const act = action === "shoot" && !player?.hasBall && state.freeKick?.slot !== slot ? "slide" : action;
       if (act === "pass" || act === "shoot") {
         const pending = pendingShots.get(slot);
-        if (act === "shoot" && pending?.session === session) {
+        if (pending?.session === session && pending.action === act) {
+          // The second of two quick taps: a special shot, or a rapid pass.
           clearTimeout(pending.timer); pendingShots.delete(slot);
-          session.api.releaseCharge(slot, { special: true, power: Math.max(.55, pending.power) });
+          session.api.releaseCharge(slot, act === "shoot" ? { special: true, power: Math.max(.55, pending.power) } : { rapid: true });
         } else {
           if (pending) { clearTimeout(pending.timer); pendingShots.delete(slot); session.api.cancelCharge(slot); }
           if (session.api.beginCharge(slot, act)) chargeStarts.set(slot, performance.now());
@@ -1869,15 +1904,16 @@
     const elapsed = performance.now() - chargeStarts.get(slot); chargeStarts.delete(slot);
     const charge = session.api.status().players.find(p => p.slot === slot)?.charge;
     if (!charge || charge.action !== action) return;
-    if (action === "shoot" && elapsed < 220) {
+    if (elapsed < 220) {
+      // A short tap waits a moment for a second one (a special shot, a rapid pass); otherwise it is an ordinary kick.
       session.api.freezeCharge(slot);
-      const pending = { session, power: charge.power, timer: null };
+      const pending = { session, action, power: charge.power, timer: null };
       pending.timer = setTimeout(() => {
         if (pendingShots.get(slot) !== pending) return;
         pendingShots.delete(slot);
         if (!session.paused && sessions.get(activeMode) === session) session.api.releaseCharge(slot);
         else session.api.cancelCharge(slot);
-      }, 230);
+      }, action === "shoot" ? 230 : 200);
       pendingShots.set(slot, pending);
     } else session.api.releaseCharge(slot);
   }, true);

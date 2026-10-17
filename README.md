@@ -38,12 +38,13 @@ Chế độ chơi không dùng lịch bàn thắng của chế độ xem; tỷ s
 Tam giác xanh trên đầu và vòng dưới chân đánh dấu người đang điều khiển, giống mẫu tham chiếu; người B dùng xanh lam.
 Mũi nhỏ dưới chân hiển thị hướng theo input và giữ hướng cuối cùng khi thả phím. Cầu thủ đã nhận thẻ vàng luôn có biểu tượng vàng trên đầu (theo danh tính khi thay người).
 **Hỗ trợ ngắm** bật mặc định, có thể bật/tắt ở màn chuẩn bị hoặc trong menu trận: chuyền tới đồng đội gần hướng ngắm nhất và sút trúng khung thành.
+**Tự động đổi người** bật mặc định (màn chuẩn bị hoặc Kế hoạch trận → Hỗ trợ): khi đội mình không có bóng, con trỏ tự nhảy sang đồng đội gần bóng nhất (bóng đang bay thì gần điểm rơi; thủ môn chỉ khi bóng trong vòng cấm), chỉ khi người đó gần hơn rõ rệt (1,5 m) để không nhấp nháy; người bạn vừa chọn bằng phím đổi người được giữ 1,2 giây. Tắt thì chỉ đổi bằng phím.
 Thủ môn vẫn có thể cứu thua. Khi tắt hỗ trợ, bóng đi theo mũi tên; có thể chuyền hụt, ra biên, sút lệch hoặc phản lưới.
 
 | Thao tác | Người A / đấu với máy | Người B |
 |---|---|---|
 | Di chuyển theo hướng màn hình | W A S D | Các phím mũi tên |
-| Giữ để nạp lực chuyền, thả để đá (khi có bóng) | F | J |
+| Giữ để nạp lực chuyền, thả để đá (khi có bóng); **bấm hai lần nhanh: chuyền siêu tốc** (bóng sệt rất nhanh tới đồng đội xa nhất, tốn 6% thể lực) | F | J |
 | Có bóng: giữ để nạp lực sút, thả để đá; phòng ngự: bấm để xoạc (tự bám đối thủ trong 5,5m) | G | K |
 | Chọn cầu thủ gần bóng nhất, kể cả lúc chờ; **khi đang cầm bóng: gọi đồng đội theo hướng mũi tên chạy chỗ thẳng về khung thành** | R | U |
 | Giữ để chạy nhanh | T | I |
@@ -79,12 +80,13 @@ Phạt góc có người đá đứng trong 1,4m cạnh cờ, luôn điều khi�
 | Chuyền ngắn | G | K |
 | Đập nhả | V | N |
 | Trả tuyến hai | B | M |
-Các cầu thủ khác vẫn có thể di chuyển lúc bóng chết, thay người và trọng tài nghỉ. Với người được điều khiển không phải người thực hiện bóng chết, input di chuyển ngắt đường chạy bố trí tự động; nhấn hướng phản hồi ngay, nhả phím dừng ngay. Space vẫn đóng băng trận. Đồng hồ và thể lực không giảm trong các khoảng chờ.
+Khi giao bóng chờ người chơi, cả hai đội đứng yên ở vị trí giao bóng trong nửa sân nhà (người được điều khiển cũng không qua được vạch giữa). Khi phạt góc hay đá phạt chờ người chơi, người chạy chỗ, người kèm, người giữ cột, hàng rào và thủ môn giữ nguyên chỗ đã bố trí cho tới khi bóng được đá. Các cầu thủ khác vẫn có thể di chuyển lúc bóng chết, thay người và trọng tài nghỉ. Với người được điều khiển không phải người thực hiện bóng chết, input di chuyển ngắt đường chạy bố trí tự động; nhấn hướng phản hồi ngay, nhả phím dừng ngay. Space vẫn đóng băng trận. Đồng hồ và thể lực không giảm trong các khoảng chờ.
 Giữ V/N là bám theo ngay, chạy 6,8 m/s: bám người đối phương đang cầm bóng (cách 0,85 m); khi đối phương chuyền thì bám người nhận (hoặc chạy tới điểm bóng rơi); bóng tự do thì chạy tới bóng. Đội mình có bóng hoặc bóng chết thì phím không có tác dụng. Thả nút dừng ngay, không tự tranh bóng/xoạc.
 Đá phạt thường ưu tiên cầu thủ có **Vua đá phạt** còn lượt và đủ thể lực, tự điều khiển người đó. Người đá tự vào vị trí cạnh bóng rồi đứng yên chờ thực hiện; không đổi sang người khác trong lúc chờ. Giữ rồi thả **F/J** để chuyền, **G/K** để sút; có nạp lực, hướng ngắm và đường bóng cao/thấp như lúc chơi. Trên sân chỉ hiện chỉ dẫn phím nhỏ. Đội phòng ngự (kể cả người điều khiển) luôn lùi cách bóng 5 m từ lúc thổi còi cho tới khi bóng được đá, dù người chơi chờ bao lâu. Cú đá của đội người chơi chờ thao tác; máy chỉ đá sau khi người đá và hàng rào chuẩn bị xong, cân nhắc kích hoạt Vua đá phạt.
 Phạm lỗi trong vòng cấm bán nguyệt của đội phòng ngự dẫn tới **penalty trong trận**: màn camera từ sau người sút, hai bên chọn trái/giữa/phải. Vào thì cộng bàn thật và chuẩn bị giao bóng; bị cản thì thủ môn ôm bóng tiếp tục. Tình huống này tách khỏi luân lưu cuối trận, không cộng vào tỷ số luân lưu.
 Thủ môn được tăng nhẹ khả năng cản sút thường và bắt dính; sút thần sầu dễ ghi bàn hơn nhưng vẫn có thể bị cứu thua.
 Thủ môn băng ra thường xuyên: cắt bóng ở điểm sớm nhất trên đường bay mà kịp tới (bóng đủ thấp, trong vòng cấm), xét lại mỗi 0,35 giây, tầm lao ra 9 m; gặp tiền đạo thoát xuống đối mặt thì lao ra sớm từ mép vòng cấm. **Khi bóng vào tầm với (sải tay + nhoài khoảng 1,6 m), thủ môn nhoài người tới vị trí bóng sẽ tới**, không chạy lên rồi đứng chờ. Nhoài vào chân đối phương là tranh chấp: Bắt bóng đấu Rê bóng (35–90%); thua thì bị qua người và nằm sân. Đối phương sút ngay lúc thủ môn đang lao ra/nhoài tới trong 6 m thì khả năng thủng lưới giảm theo khoảng cách (sát 1 m chỉ còn khoảng 40%).
+**Phát bóng** (bóng qua vạch cuối sân do đội tấn công): thủ môn chạy về chỗ phát bóng cách giữa khung thành khoảng 2,7 m, bóng đặt ở đó, cả hai đội chờ ở vị trí sơ đồ. Thủ môn đội máy chuyền lên (chuyền dài hoặc ngắn tùy lối chơi) sau 0,5 giây; thủ môn đội người chơi được tự chọn và **chờ phím chuyền** (giữ nạp lực được, không sút, không dẫn bóng); trên sân hiện "Phát bóng · tên thủ môn".
 Thủ môn ôm bóng trên tay tối đa 6 giây trước khi tự phát bóng. Khi đi ra khỏi vòng cấm bán nguyệt, thủ môn tự hạ bóng xuống chân và tiếp tục điều khiển bình thường; không bị ép phá bóng khi bóng đã ở chân. Việc kiểm tra xét cả vị trí bóng trên tay và sân hiện tại sau đổi sân.
 Đồng đội hỗ trợ tự động. Xoạc có thời gian hồi, tốn thể lực, có thể phạm lỗi hoặc bị thẻ; xoạc hụt vẫn có động tác trượt và đứng dậy.
 Khi chuyển chế độ hoặc rời cửa sổ, trận chơi tạm dừng để tránh kẹt phím.
@@ -98,7 +100,8 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 
 ### Thao tác nâng cao
 
-- Nhấn **sút hai lần nhanh** (G hoặc K): sút thần sầu, lấy đà 0,6 giây, tiêu hao 18% thể lực, cần ít nhất 23% thể lực. Có thể bị cản; không bảo đảm ghi bàn.
+- Nhấn **sút hai lần nhanh** (G hoặc K): sút thần sầu, lấy đà 0,6 giây, tiêu hao 30% thể lực, cần ít nhất 30% thể lực. Có thể bị cản; không bảo đảm ghi bàn.
+- Nhấn **chuyền hai lần nhanh** (F hoặc J): chuyền siêu tốc, bóng sệt 26 m/s tới đồng đội xa nhất (ưu tiên người ở phía trước), bất kể hướng ngắm; tốn 6% thể lực (hơn cú sút mạnh nhất, 3%), cần ít nhất 12%. Một lần bấm chuyền ngắn chờ 0,2 giây xem có lần bấm thứ hai không rồi mới chuyền thường.
 - Khi phòng ngự, bấm **B hoặc M** khi gần đối thủ: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng. Thẻ đỏ và vàng thứ hai được xét thêm theo mức độ lỗi và kế hoạch thẻ đỏ thường của trận. Giữ V/N chỉ áp sát, không tự tranh bóng.
 - Xoạc tự hướng và bám theo người cầm bóng trong phạm vi 5,5m, kể cả khi hướng ngắm chưa chính xác. Ngoài phạm vi này vẫn trượt theo hướng ngắm và có thể hụt; đối thủ chuyền/sút trước khi tiếp xúc cũng thoát được pha xoạc. Khi thực sự chạm đối thủ: **50% lấy bóng / 50% thẻ đỏ trực tiếp**. Một lần rút độc lập cho **30% gây chấn thương**, kể cả pha lấy bóng sạch. Có chấn thương thì dừng đồng hồ, xử lý và thay người trước khi đá tiếp; lấy bóng sạch vẫn giữ quyền kiểm soát sau khi chữa trị. Người chấn thương (được cáng hoặc được dìu) luôn ra đường biên gần, nơi **xe cấp cứu 115** chạy tới đón rồi chạy khỏi màn hình; anh ta không thể trở lại trận đó. Khoảng một nửa số ca, sau đó anh ta quay lại đứng cạnh băng ghế với chân băng bó và nạng, tay băng treo hoặc đầu quấn băng, chỉ để cổ vũ.
 - Tranh chấp tự động trong chế độ chơi có 22% phạm lỗi khi áp sát và thực sự chạm người cầm bóng. Chế độ xem tăng xác suất phạm lỗi khi tranh bóng từ 9–17% lên 22–32%, tùy thể lực. Nhánh xử lý lỗi thông thường tăng khả năng xét thẻ từ 12% lên 45%.
@@ -119,8 +122,8 @@ Mỗi cầu thủ có một skill trận thường, phần lớn theo vị trí 
 | Đá phạt trực tiếp | Vua đá phạt (MF), Đại bác bóng chết (FW) | Chỉ người thực hiện, đã đứng cạnh bóng và trọng tài cho phép. E/O thực hiện cú sút đặc biệt 70% ghi bàn. Không dùng ở phạt gián tiếp. |
 | Đá phạt góc | Đường cong góc cờ (MF/FW) | Chỉ người đá đã sẵn sàng. E/O tạt bổng; kích hoạt thành công đưa bóng đến người tấn công đánh đầu, không bảo đảm bàn thắng. Các phím F/G/V/B hoặc J/K/N/M vẫn đá góc thường. |
 | Chống phạt góc | Lá chắn không chiến (DF) | Lúc đối thủ chờ đá góc. E/O chuẩn bị cản đúng quả góc đó, tối đa một lá chắn mỗi đội/tình huống. Thành công ưu tiên phá bóng; hết tình huống hủy hiệu ứng. |
-| Sút penalty | Bản lĩnh chấm phạt (khoảng 30% cầu thủ sân) | E/O trước khi chốt hướng, mỗi lượt sút, không tốn thể lực, không tính vào lượt skill trong trận. |
-| Bắt penalty | Người hùng bắt pen (50% thủ môn) | Bị động, tự áp dụng. |
+| Sút penalty | Bản lĩnh chấm phạt (khoảng 30% cầu thủ sân) | **Tự bật ở mọi lượt sút** (trong trận và luân lưu), không cần bấm phím, không tốn thể lực, không tính vào lượt skill trong trận. |
+| Bắt penalty | Người hùng bắt pen (50% thủ môn) | Tự bật ở mọi lượt, bị động. |
 
 Skill sút (Dứt điểm, Đá phạt, Đại bác) luôn tung ra cú sút đặc biệt trúng khung với **70% vào lưới**; nếu thủ môn đối phương đang bật skill thủ môn thì tỷ lệ giảm theo mức của skill đó (Bàn tay thép còn 42%, Phản xạ 38,5%, Thủ môn quét 56%). Khi hai skill đối nhau cùng bật ở phạt góc (Phạt góc và Không chiến), hai lợi thế triệt tiêu, quay về cách xử lý thường. Penalty: sút khác hướng thủ môn đoán là vào. Thủ môn đoán đúng hướng: có Bắt pen thì luôn bắt được, trừ khi người sút dùng Sút pen (80% bắt được); không có Bắt pen thì bắt được 80%, nhưng chỉ 20% nếu người sút dùng Sút pen. Áp dụng cả penalty trong trận và luân lưu.
 
@@ -143,27 +146,31 @@ Mỗi cầu thủ có **một lối chơi tấn công** (khi đội mình có b�
 
 ### Kế hoạch trận
 
-Mở từ menu trận (**Esc → Kế hoạch trận**; khi chỉ xem: **Đội hình & chỉ số**). Hai đội đặt cạnh nhau với logo và màu áo, mỗi đội một sân nhỏ có chân dung, vị trí và OVR, cùng danh sách đá chính và dự bị (thể lực, thẻ, lượt thay). Trang cầu thủ ghi vị trí gốc (ST, CAM…), vai trò, tóm tắt lối chơi và kiểu ăn mừng. Hai người: trong lượt tạm dừng chỉ bên xin dừng được thay người/đổi sơ đồ/đổi tùy chọn.
+Mở từ menu trận (**Esc → Kế hoạch trận**; khi chỉ xem: **Đội hình & chỉ số**). Hai đội đặt cạnh nhau với logo và màu áo; đầu mỗi đội là **OVR đội** (trung bình OVR theo vị trí đang đá của những người trên sân), **Sức mạnh** (tổng OVR), **Công** (tiền vệ + tiền đạo) và **Thủ** (hậu vệ + thủ môn), rồi sơ đồ. Mỗi đội một sân nhỏ có chân dung, vị trí và OVR, cùng danh sách đá chính và dự bị (thể lực, thẻ, lượt thay). Trang cầu thủ ghi vị trí gốc (ST, CAM…), vai trò, tóm tắt lối chơi, kiểu ăn mừng và **OVR theo vị trí** (TM/HV/TV/TĐ). Hai người: trong lượt tạm dừng chỉ bên xin dừng được thay người/đổi vị trí/đổi sơ đồ/đổi tùy chọn.
 
 - **Đội hình:** chọn cầu thủ bất kỳ (cả đội máy) bằng Enter để xem **Thông tin cầu thủ** (chiều cao, cân nặng, tầm với, thể lực, thẻ, hai lối chơi, skill, biểu đồ 6 cạnh) và trang **Chỉ số** (10 chỉ số tô màu theo mức). ← → đổi trang, ↑ ↓ đổi cầu thủ.
-- **Thay người** (X, hoặc nút trong trang cầu thủ): chọn một người trên sân và một người dự bị. Trước giờ bóng lăn đội hình đổi ngay; trong trận, lượt thay chờ tới lần bóng chết kế tiếp (▼ sẽ ra, ▲ sẽ vào; chọn lại để hủy). Không thay được thủ môn (không có thủ môn dự bị) và người đang bị thương.
-- **Chiến thuật:** chọn sơ đồ 2-1-2, 3-1-1, 1-2-2 hoặc 1-1-3 (khi thiếu người là các sơ đồ 4 hoặc 3 người). Sơ đồ đã chọn được giữ nguyên; bị đuổi người thì đội tự bớt một vị trí cùng kiểu.
-- **Hỗ trợ:** bật/tắt **Tự động đổi chiến thuật** (mặc định tắt: máy đổi sơ đồ theo tỉ số), **Tự động thay người** (mặc định bật: máy thay người mệt lúc bóng chết; chấn thương luôn được thay) và **Hỗ trợ ngắm**. Hai tùy chọn tự động cũng có ở màn chuẩn bị trận.
-- Phím: **Q/E** đổi mục, **↑ ↓** chọn, **← →** đổi đội, **Enter** xem cầu thủ, **X** thay người, **Esc** quay lại. Đội máy chỉ xem, không sửa được.
+- **Thay người / đổi vị trí** (X, hoặc nút trong trang cầu thủ): chọn một người trên sân rồi chọn **một người dự bị** (thay người) hoặc **một người khác trên sân** (hai người đổi chỗ cho nhau trong sơ đồ, có hiệu lực ngay cả khi bóng đang lăn; mỗi người giữ bóng, vị trí đứng và chạy dần sang chỗ mới). Thay người: trước giờ bóng lăn đội hình đổi ngay; trong trận, lượt thay chờ tới lần bóng chết kế tiếp (▼ sẽ ra, ▲ sẽ vào; chọn lại để hủy); người vào đá đúng chỗ người ra. Không thay được thủ môn (không có thủ môn dự bị), không đổi vị trí với thủ môn, không thay/đổi người đang bị thương.
+- **Chiến thuật:** chọn sơ đồ 2-1-2, 3-1-1, 1-2-2 hoặc 1-1-3 (khi thiếu người là các sơ đồ 4 hoặc 3 người); mỗi sơ đồ ghi OVR đội sẽ có nếu dùng nó. **Đổi sơ đồ sẽ tự xếp lại vị trí** cho OVR đội cao nhất (thử mọi cách xếp 5 cầu thủ sân vào 5 chỗ, lấy tổng OVR theo vị trí lớn nhất; bằng nhau thì giữ nguyên); nút **Tự xếp vị trí tối ưu** làm việc đó bất cứ lúc nào. Thay người tự động và thay người vì chấn thương cũng tự xếp lại; thay người do bạn chọn thì không. Sơ đồ đã chọn được giữ nguyên; bị đuổi người thì đội tự bớt một vị trí cùng kiểu (và xếp lại).
+- **Hỗ trợ:** bật/tắt **Tự động đổi chiến thuật** (mặc định tắt: máy đổi sơ đồ theo tỉ số), **Tự động thay người** (mặc định bật: máy thay người mệt lúc bóng chết; chấn thương luôn được thay), **Tự động đổi người** (mặc định bật) và **Hỗ trợ ngắm**. Ba tùy chọn tự động cũng có ở màn chuẩn bị trận.
+- Phím: **Q/E** đổi mục, **↑ ↓** chọn, **← →** đổi đội, **Enter** xem cầu thủ, **X** thay người / đổi vị trí, **Esc** quay lại. Đội máy chỉ xem, không sửa được.
 
 ### Chỉ số cầu thủ
 
-Mỗi cầu thủ có 10 chỉ số: **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Với 300 cầu thủ của 10 câu lạc bộ, chỉ số là dữ liệu cố định (1–99, mô phỏng phong độ đỉnh cao). Đội hình tùy chỉnh không ghi chỉ số thì sinh từ nền theo vị trí sở trường + ngôi sao (#10, #7) + ngẫu nhiên ±5 (35–95); lối chơi không cộng trừ chỉ số. **OVR** tính theo trọng số của vị trí đang đá. Dự bị có vị trí sở trường riêng.
+Mỗi cầu thủ có 10 chỉ số: **Tốc độ, Rê bóng, Chuyền ngắn, Chuyền dài, Dứt điểm, Đánh đầu, Phòng ngự, Sức mạnh, Thể lực, Bắt bóng**. Với 300 cầu thủ của 10 câu lạc bộ, chỉ số là dữ liệu cố định (1–99, mô phỏng phong độ đỉnh cao). Đội hình tùy chỉnh không ghi chỉ số thì sinh từ nền theo vị trí sở trường + ngôi sao (#10, #7) + ngẫu nhiên ±5 (35–95); lối chơi không cộng trừ chỉ số. **OVR theo vị trí:** với cầu thủ câu lạc bộ, OVR ở vị trí sở trường đúng như dữ liệu; ở vị trí khác, OVR cộng/trừ hiệu giữa điểm có trọng số của vị trí đó và của vị trí sở trường (trọng số: TĐ dứt điểm 30%, tốc độ 20%, rê 20%, đầu 10%, sức 10%, chuyền ngắn 10%; TV chuyền ngắn 25%, rê 20%, chuyền dài 15%, bền 15%, thủ 15%, dứt điểm 10%; HV phòng ngự 35%, sức 20%, đầu 15%, tốc 15%, chuyền ngắn 15%; TM bắt bóng 70%, chuyền dài/ngắn/tốc 10%). Ví dụ một cánh phải 94 đá trung vệ chỉ còn khoảng 70. Đội hình tùy chỉnh dùng thẳng điểm có trọng số. Vị trí đang đá là tuyến mà chỗ đứng trong sơ đồ quy định (trong 3-1-1 một tiền đạo đá như hậu vệ và được tính OVR hậu vệ); dự bị tính theo vị trí sở trường.
 
 | Chỉ số | Tác động trong game |
 |---|---|
 | Tốc độ | Tốc chạy của mọi cầu thủ (AI và người điều khiển): 85 nhanh hơn khoảng 9% so với 70. |
-| Thể lực | Tốc độ hao thể lực, nên quyết định khi nào bị thay. |
+| Thể lực | Tốc độ hao thể lực, nên quyết định khi nào bị thay. Thể lực còn lại dưới 70% kéo mọi chỉ số đang dùng xuống dần (tới −20% khi gần kiệt sức) và chạy chậm lại; chỉ số hiển thị không đổi. |
 | Dứt điểm / Đánh đầu | Khả năng ghi bàn ở chế độ chơi (đánh đầu dùng chỉ số Đánh đầu); Đánh đầu còn tăng tỷ lệ đánh đầu khi đón bóng tạt. |
 | Bắt bóng | Khả năng cứu thua ở chế độ chơi. |
 | Chuyền ngắn | Đường chuyền sệt ít bị cắt hơn. |
 | Chuyền dài | Ít chuyền dài quá tay ra biên hơn. |
 | Rê bóng + Sức mạnh đấu Phòng ngự + Sức mạnh | Tranh chấp tự động: ai thắng, người rê giỏi đôi khi lách qua pha vào bóng. |
+
+### Thể lực
+
+Mọi cầu thủ trên sân mất sức suốt trận khi bóng lăn (đồng hồ dừng thì không), nhanh hơn khi chạy nhiều: một cầu thủ sân chạy vừa phải còn khoảng 45–55% ở phút 46 và 30–45% hết trận; sprint liên tục thì kiệt sức sau khoảng 25 phút. Thủ môn hao rất ít; dự bị hồi 4,5%/phút; nghỉ giữa hiệp hồi 12%. Dưới 70% thể lực, các chỉ số đang dùng (không phải số hiển thị) giảm tuyến tính tới −20% ở 8%, tốc độ chạy giảm tới 30%, chuyền dễ bị cắt hơn, dứt điểm kém hơn. Tiêu hao thêm: skill 40%, sút thần sầu 30%, chuyền siêu tốc 6%, xoạc 3,5%, tranh bóng 1,5%, cú đá thường 0,5–3% theo lực. Máy thay người khi ai đó dưới 33% (trụ cột 25%).
 
 ### Độ khó máy
 
@@ -300,6 +307,7 @@ Chép 2 file `ptsc-football.js` và `ptsc-football.css` vào cùng một thư m�
 | `data-mode="cpu"` / `data-mode="local"` | Chơi với máy / hai người, có thể truyền bằng `PTSCFootball.mount`. |
 | `data-team-a="R"` / `data-team-a="B"` | Màu áo của người A. |
 | `data-left-team="R"` / `data-left-team="B"` | Đội bắt đầu ở sân trái; tự đổi sân sau hiệp 1. |
+| `data-auto-tactics`, `data-auto-subs`, `data-auto-switch` | Tự động đổi chiến thuật (mặc định tắt), thay người (bật), đổi người điều khiển (bật) cho đội của người chơi; `"false"` để tắt. |
 
 ## Điều khiển bằng JavaScript
 

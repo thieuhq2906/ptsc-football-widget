@@ -61,7 +61,7 @@
 .ptsc-football .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--color-danger); animation: pf-blink 1.2s steps(2, jump-none) infinite; }
 @keyframes pf-blink { 50% { opacity: .25; } }
 .ptsc-football .sb { position: absolute; top: 3cqw; left: 3cqw; display: grid; gap: .5cqw; font-size: max(11px, 1.9cqw); }
-.ptsc-football .sb-bug { display: flex; align-items: stretch; border: 2px solid var(--color-ink); border-radius: 12px; overflow: hidden; background: var(--color-card); box-shadow: 3px 4px 0 var(--color-ink); }
+.ptsc-football .sb-bug { justify-self: start; display: flex; align-items: stretch; border: 2px solid var(--color-ink); border-radius: 12px; overflow: hidden; background: var(--color-card); box-shadow: 3px 4px 0 var(--color-ink); }
 .ptsc-football .sb-cup { display: grid; place-items: center; padding: 0 1.2cqw; background: var(--color-ink); color: var(--color-card); font-family: var(--font-mono); font-size: .78em; letter-spacing: .08em; }
 .ptsc-football .sb-team { display: flex; align-items: center; gap: .8cqw; padding: .7cqw 1.2cqw; font-weight: 800; }
 .ptsc-football .sb-team.has-ball { background: var(--color-pear-soft); }

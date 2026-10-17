@@ -440,12 +440,28 @@ button.prompt:hover, button.prompt:focus-visible { background: #ffffff18; color:
 .plan-tab.is-current { border-color: var(--ink); background: var(--pear); color: var(--ink); }
 .plan-teams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-height: 0; }
 .plan-team { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; overflow: hidden; border: 2px solid var(--ink); border-radius: 16px; background: var(--card); color: var(--ink); box-shadow: 4px 5px 0 #000a; }
-.plan-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--team-R, #e45248) 78%, #000), var(--team-R, #e45248)); color: var(--team-R-ink, #fff); }
+.plan-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--team-R, #e45248) 78%, #000), var(--team-R, #e45248)); color: var(--team-R-ink, #fff); }
 .plan-head[data-team="B"] { background: linear-gradient(90deg, color-mix(in srgb, var(--team-B, #397eca) 78%, #000), var(--team-B, #397eca)); color: var(--team-B-ink, #fff); }
 .plan-logo { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 1px 0 #0006); }
 .plan-head .kit-shirt { width: 30px; border-width: 2.5px; }
 .plan-title b { display: block; font-size: 19px; font-weight: 900; letter-spacing: -.02em; }
 .plan-title small, .plan-formation small { font-size: 11px; font-weight: 700; opacity: .85; }
+.plan-rating { display: flex; gap: 10px; padding: 4px 10px; border-radius: 9px; background: #0000003d; }
+.plan-rating span { display: grid; justify-items: center; min-width: 38px; }
+.plan-rating small { font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; opacity: .8; white-space: nowrap; }
+.plan-rating b { font-family: "JetBrains Mono", Consolas, monospace; font-size: 18px; line-height: 1.1; }
+.plan-rating b[data-level="high"] { color: #b8f58c; } .plan-rating b[data-level="mid"] { color: #ffe27a; } .plan-rating b[data-level="low"] { color: #ffa48f; }
+.shape-end { display: grid; justify-items: end; gap: 3px; }
+.shape-ovr { padding: 1px 7px; border-radius: 6px; background: #d9dbd0; font-family: "JetBrains Mono", Consolas, monospace; font-size: 14px; font-weight: 800; }
+.shape-ovr[data-level="high"] { background: #8fe35a; } .shape-ovr[data-level="mid"] { background: #f2d24c; } .shape-ovr[data-level="low"] { background: #f2994a; }
+.plan-arrange { margin-top: 6px; }
+.pd-lines { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.pd-lines em { margin-right: 4px; color: var(--soft); font-size: 11px; font-style: normal; font-weight: 800; }
+.pd-lines span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1.5px solid #ffffff2a; border-radius: 99px; }
+.pd-lines span.is-now { border-color: #5ee6f5; background: #5ee6f51f; }
+.pd-lines small { font-size: 10px; font-weight: 800; letter-spacing: .04em; opacity: .85; }
+.pd-lines b { font-family: "JetBrains Mono", Consolas, monospace; font-size: 15px; font-weight: 900; }
+.pd-lines b[data-level="high"] { color: #b8f58c; } .pd-lines b[data-level="mid"] { color: #ffe27a; } .pd-lines b[data-level="low"] { color: #ffa48f; }
 .plan-formation { display: grid; justify-items: end; }
 .plan-formation b { font-family: "JetBrains Mono", Consolas, monospace; font-size: 22px; line-height: 1; }
 .plan-main { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(150px, .8fr) minmax(0, 1.2fr); gap: 10px; min-height: 0; padding: 10px; }
@@ -570,6 +586,8 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
   .plan-detail { border-radius: 14px; }
 }
 @media (max-width: 560px) {
+  .plan-head { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .plan-rating { grid-column: 1 / -1; justify-content: space-between; }
   .plan-main { grid-template-columns: 1fr; }
   .plan-pitch { width: min(100%, 260px); justify-self: center; }
   .plan-pitch { width: min(100%, 230px); }

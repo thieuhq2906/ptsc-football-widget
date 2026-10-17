@@ -154,7 +154,7 @@
         if (keyNode.innerHTML !== keyHtml) keyNode.innerHTML = keyHtml;
         text(card.querySelector(".penalty-lock"), paused ? "Tạm dừng" : player.locked && p.phase === "choose" ? "Đã chốt · đợi đối thủ" : p.phase === "choose" ? "Bấm phím để chốt hướng" : "");
         const skill = state.players.find(item => item.slot === player.slot)?.special;
-        text(card.querySelector(".penalty-skill"), !skill?.kind ? "Không có skill pen" : player.role === "attack" ? `${keys.special} · ${skill.name} · ${skill.label}` : `${skill.name} · tự động`);
+        text(card.querySelector(".penalty-skill"), !skill?.kind ? "Không có skill pen" : `${skill.name} · tự bật`);
         card.classList.toggle("is-locked", paused || player.locked || p.phase !== "choose");
       }
       const cast = `${p.actors?.taker?.id}:${p.actors?.keeper?.id}`;
