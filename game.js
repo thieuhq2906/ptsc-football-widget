@@ -166,13 +166,76 @@
   const facts = rows => '<dl class="bd-facts">' + rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") + "</dl>";
 
   /* Clubs */
+  /* ------------------------------ player card ------------------------------ */
+  // The hexagon reads clockwise from the top as in the reference: shooting, passing, strength, defending, speed, dribbling.
+  const HEX = [["SÚT", s => s.finishing], ["CHUYỀN", s => (s.passing + s.longPass) / 2], ["SỨC", s => (s.strength + s.heading) / 2], ["THỦ", s => s.defending], ["TỐC", s => s.speed], ["RÊ", s => s.dribbling]];
+  const HEX_GK = [["BẮT", s => s.goalkeeping], ...HEX.slice(1)];
+  function hexSvg(stats, line) {
+    const axes = line === "GK" ? HEX_GK : HEX;
+    const point = (i, r) => { const a = -Math.PI / 2 + i * Math.PI / 3; return [60 + Math.cos(a) * r * 38, 58 + Math.sin(a) * r * 38]; };
+    const ring = r => axes.map((_, i) => point(i, r).map(v => v.toFixed(1)).join(",")).join(" ");
+    const values = axes.map(([, f]) => Math.round(f(stats)));
+    const shape = values.map((v, i) => point(i, Math.max(.06, clamp01((v - 30) / 69))).map(n => n.toFixed(1)).join(",")).join(" ");
+    return `<svg class="hex" viewBox="0 0 120 116" role="img" aria-label="${axes.map(([k], i) => k + " " + values[i]).join(", ")}"><polygon class="hex-ring" points="${ring(1)}"/><polygon class="hex-ring" points="${ring(2 / 3)}"/><polygon class="hex-ring" points="${ring(1 / 3)}"/>`
+      + axes.map((_, i) => { const [x, y] = point(i, 1); return `<line class="hex-axis" x1="60" y1="58" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join("")
+      + `<polygon class="hex-shape" points="${shape}"/>`
+      + axes.map(([k], i) => { const [x, y] = point(i, 1.32); return `<text x="${x.toFixed(1)}" y="${(y - 3).toFixed(1)}" class="hex-key">${k}</text><text x="${x.toFixed(1)}" y="${(y + 6).toFixed(1)}" class="hex-val" data-tone="${statTone(values[i])}">${values[i]}</text>`; }).join("") + "</svg>";
+  }
+  // Where a position sits on a vertical pitch (attack at the top): row 0 forwards … row 3 the keeper; column 0 left.
+  const POS_ZONE = { LW: [0, 0], ST: [0, 1], CF: [0, 1], RW: [0, 2], LM: [1, 0], CAM: [1, 1], CM: [1, 1], CDM: [1, 1], RM: [1, 2], LB: [2, 0], CB: [2, 1], RB: [2, 2], GK: [3, 1] };
+  const ZONE_LINES = ["FW", "MF", "DF", "GK"];
+  /** The pitch map: his own position bright, the lines he can play nearly as well in green, the rest grey; each line's OVR. */
+  function posMapSvg(posName, natural, ovrs) {
+    const own = POS_ZONE[posName] ?? [ZONE_LINES.indexOf(natural), 1], best = ovrs?.[natural] ?? 0;
+    const tone = (row, col) => {
+      if (row === own[0] && col === own[1]) return "own";
+      const d = best - (ovrs?.[ZONE_LINES[row]] ?? 0);
+      return d <= 3 ? "good" : d <= 8 ? "fair" : "off";
+    };
+    let cells = "";
+    for (let row = 0; row < 4; row++) for (let col = 0; col < 3; col++) {
+      if (row === 3 && col !== 1) continue;
+      const x = row === 3 ? 22 : 4 + col * 24, w = row === 3 ? 24 : 22, y = 4 + row * 27, h = row === 3 ? 18 : 25;
+      cells += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" data-zone="${tone(row, col)}"/>`;
+    }
+    const labels = ZONE_LINES.map((line, row) => `<text x="77" y="${(row === 3 ? 16 : 19) + row * 27}" class="pm-ovr">${LINE_LABEL[line]} <tspan data-tone="${statTone(ovrs?.[line] ?? 0)}">${ovrs?.[line] ?? "–"}</tspan></text>`).join("");
+    return `<svg class="posmap" viewBox="0 0 104 108" role="img" aria-label="Vị trí sở trường ${escapeHtml(posName || natural)}"><rect x="1" y="1" width="74" height="106" rx="4" class="pm-pitch"/>${cells}<path class="pm-lines" d="M4 54.5h68M26 107v-6h24v6M26 1v6h24V1"/>${labels}</svg>`;
+  }
+  /** OVR in each line for a man from the club data (the match engine works these out the same way). */
+  function lineOvrs(p) {
+    const weighted = line => Object.entries(gameData.stats.weights[line]).reduce((sum, [k, w]) => sum + (p.stats[k] ?? 70) * w, 0);
+    return Object.fromEntries(ZONE_LINES.map(line => [line, Math.max(1, Math.min(99, Math.round(p.ovr + weighted(line) - weighted(p.role))))]));
+  }
+  /**
+   * A player card in the style of the reference: the card itself (position, OVR, portrait or shirt, name, club),
+   * the ratings hexagon, the position map and the facts underneath.
+   */
+  function playerCardHtml(p, { art = "", logo = "", club = "", color = "#1d2340", rows = [] } = {}) {
+    const natural = p.natural ?? p.role, ovr = p.ovrs?.[natural] ?? p.ovr;
+    return `<div class="pcard" style="--pc-team:${escapeHtml(color)}"><div class="pcard-top"><div class="pcard-card" data-line="${natural}"><span class="pcard-pos">${escapeHtml(p.posName || p.pos || LINE_LABEL[natural])}</span><b class="pcard-ovr">${ovr ?? "–"}</b><div class="pcard-art">${art}</div>${logo ? `<img class="pcard-logo" src="${escapeHtml(logo)}" alt="" width="26" height="26" loading="lazy">` : ""}<span class="pcard-num">#${p.num ?? ""}</span><strong class="pcard-name">${escapeHtml(p.short || p.name)}</strong></div>`
+      + `<div class="pcard-hex">${hexSvg(p.stats, natural)}</div><div class="pcard-map">${posMapSvg(p.posName || p.pos, natural, p.ovrs)}</div></div>`
+      + `<dl class="pcard-facts">${[["Họ tên", escapeHtml(p.name)], club && ["Câu lạc bộ", escapeHtml(club)], ...rows].filter(Boolean).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl></div>`;
+  }
+  const styleName = (phase, id) => gameData.playstyles[phase][id]?.name ?? "–";
   function renderTeamsGuide(container) {
     const ovrTone = v => v >= 95 ? "top" : v >= 90 ? "good" : v >= 85 ? "fair" : "low";
     makeBrowser(container, {
       cls: "teams-browser", title: "Đội bóng",
-      lead: "10 câu lạc bộ, mỗi đội 30 ngôi sao và huyền thoại với chỉ số, chiều cao, cân nặng và lối chơi riêng. Mỗi trận bốc ngẫu nhiên 9 người: 1 thủ môn, 3 hậu vệ, 2 tiền vệ, 3 tiền đạo (6 đá chính, 3 dự bị).",
-      tabs: () => [{ label: "Câu lạc bộ", items: clubs.list().map(t => ({ key: t.id, html: `<button type="button" class="br-item club-row" data-br data-nav data-key="${t.id}"><img class="club-logo" src="${escapeHtml(t.logo)}" alt="" width="40" height="40" loading="lazy"><span><b>${escapeHtml(t.name)}</b><small>${escapeHtml(t.country)} · OVR ${clubs.strength(t)} · ${t.players.length} cầu thủ</small></span></button>` })) }],
+      lead: "10 câu lạc bộ, mỗi đội 30 ngôi sao và huyền thoại; mỗi trận bốc 9 người (1 thủ môn, 3 hậu vệ, 2 tiền vệ, 3 tiền đạo). Mục đầu là danh sách đội; Q/E sang từng đội để xem thẻ của từng cầu thủ: OVR theo vị trí, lục giác chỉ số, vị trí sở trường.",
+      tabs: () => [{ label: "Câu lạc bộ", items: clubs.list().map(t => ({ key: t.id, html: `<button type="button" class="br-item club-row" data-br data-nav data-key="${t.id}"><img class="club-logo" src="${escapeHtml(t.logo)}" alt="" width="40" height="40" loading="lazy"><span><b>${escapeHtml(t.name)}</b><small>${escapeHtml(t.country)} · OVR ${clubs.strength(t)} · ${t.players.length} cầu thủ</small></span></button>` })) },
+        ...clubs.list().map(t => ({ label: t.short, items: ["GK", "DF", "MF", "FW"].flatMap(r => t.players.filter(p => p.role === r).sort((a, b) => b.ovr - a.ovr).map(p => ({ group: ROLE_GROUPS[r], key: p.id,
+          html: `<button type="button" class="br-item player-row" data-br data-nav data-key="${escapeHtml(p.id)}">${posBadge(p.role)}<span><b>${escapeHtml(p.name)}</b><small>#${p.num} · ${escapeHtml(p.pos)} · ${escapeHtml(p.roleName)}</small></span><b class="club-ovr" data-tone="${ovrTone(p.ovr)}">${p.ovr}</b></button>` }))) }))],
       detail: id => {
+        if (id.includes(":")) {
+          const t = clubs.get(id.split(":")[0]), p = t?.players.find(x => x.id === id);
+          if (!p) return "";
+          const card = { ...p, natural: p.role, posName: p.pos, ovrs: lineOvrs(p) };
+          const art = `<img src="${escapeHtml(t.kits.home.image)}" alt="" width="64" height="100" loading="lazy">`;
+          return playerCardHtml(card, { art, logo: t.logo, club: t.name, color: t.kits.home.shirt, rows: [
+            ["Vai trò", escapeHtml(p.roleName)], ["Chiều cao · cân nặng", p.height + " cm · " + p.weight + " kg"],
+            ["Lối chơi", `${escapeHtml(styleName("attack", p.attack))} <small>có bóng</small> · ${escapeHtml(styleName("defense", p.defense))} <small>mất bóng</small>`],
+            ["Ăn mừng", escapeHtml(CELEBRATION_NAMES[p.celebration] ?? p.celebration ?? "–")], ["Tóm tắt", escapeHtml(p.summary)]] });
+        }
         const t = clubs.get(id);
         if (!t) return "";
         const lines = ["GK", "DF", "MF", "FW"].map(r => [ROLE_GROUPS[r], t.players.filter(p => p.role === r).length]);
@@ -212,7 +275,7 @@
         return `<div class="bd-hero"><svg class="bd-badge" viewBox="0 0 24 24" aria-hidden="true">${skillBadge(kind, skill.icon, "hero-" + kind)}</svg><div><span class="bd-kicker">${skill.auto ? "Tự kích hoạt" : "Skill"}</span><h3>${escapeHtml(skill.short)}</h3><p class="bd-sub">${escapeHtml(skill.name)}</p></div></div>`
           + '<div class="bd-chips">' + skillRoles(skill).map(r => chip(ROLE_GROUPS[r], ROLE_COLORS[r])).join("") + skill.contexts.map(c => chip(gameData.skillContexts[c].label)).join("") + "</div>"
           + `<p class="bd-text">${escapeHtml(skill.desc)}</p>`
-          + facts([["Kích hoạt", skill.auto || penalty ? "Tự động" : `Đấu máy ${kbd(cpuKey)} · Hai người ${kbd(keyA)} / ${kbd(keyB)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", !skill.auto && !penalty ? Math.round(rules.cost * 100) + "%" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : openPlay ? rules.usesPerMatch + " lần mỗi trận" : rules.usesPerMatch + " lần mỗi trận, chung với skill kia"]]);
+          + facts([["Kích hoạt", skill.auto || penalty ? "Tự động" : `Đấu máy ${kbd(cpuKey)} · Hai người ${kbd(keyA)} / ${kbd(keyB)}`], ["Thời gian", skillTiming(skill)], ["Thể lực", !skill.auto && !penalty ? Math.round(rules.cost * 100) + "% × hệ số thể lực (cầu thủ bền 100 tốn một nửa, 50 tốn đủ)" : "Không tốn"], ["Số lần", penalty ? "Mỗi lượt sút" : skill.auto ? "Tự bật khi bị tấn công" : openPlay ? rules.usesPerMatch + " lần mỗi trận" : rules.usesPerMatch + " lần mỗi trận, chung với skill kia"]]);
       }
     });
     keymapRenders.add(() => browser.render());
@@ -359,13 +422,13 @@
   const MOVE_GROUP = ["up", "left", "down", "right"];
   const ACTION_NOTES = {
     move: "Di chuyển theo hướng màn hình; giữ hướng khi tạm dừng vẫn được nhớ. Penalty và luân lưu: trái, giữa (xuống), phải để chọn hướng sút hoặc đổ người.",
-    switch: "Bấm: chọn cầu thủ gần bóng nhất, kể cả lúc chờ; giữ để đổi liên tục. Khi đang cầm bóng: gọi đồng đội theo hướng mũi tên chạy chỗ thẳng về khung thành.",
+    switch: "Bấm: chọn cầu thủ gần bóng nhất (nếu đang chọn người đó thì sang người gần thứ hai), kể cả lúc chờ; giữ để đổi liên tục. Khi đang cầm bóng: gọi đồng đội theo hướng mũi tên chạy chỗ thẳng về khung thành.",
     sprint: "Giữ để chạy nhanh; tốn thể lực nhanh hơn.",
-    pass: "Giữ để nạp lực, thả để chuyền; lực mạnh cho bóng bổng hơn. Bấm hai lần nhanh: chuyền siêu tốc, bóng sệt rất nhanh tới đồng đội xa nhất (tốn 6% thể lực, hơn một cú sút). Cũng dùng để giao bóng, phát bóng và đá phạt. Phạt góc: chọn kiểu " + gameData.corners[0].name.toLowerCase() + ".",
-    shoot: "Có bóng: giữ nạp lực, thả để sút; bấm hai lần nhanh để sút thần sầu (cần 30% thể lực, tốn 30%). Không có bóng: xoạc, tự bám đối thủ trong 5,5 m; trúng thì 50% cướp bóng, 50% thẻ đỏ. Phạt góc: " + gameData.corners[1].name.toLowerCase() + ".",
+    pass: "Giữ để nạp lực, thả để chuyền; lực mạnh cho bóng bổng hơn. Bấm hai lần nhanh: chuyền siêu tốc, bóng sệt rất nhanh tới đồng đội xa nhất (tốn khoảng 4,5% thể lực, nhân hệ số thể lực). Cũng dùng để giao bóng, phát bóng và đá phạt. Phạt góc: chọn kiểu " + gameData.corners[0].name.toLowerCase() + ".",
+    shoot: "Có bóng: giữ nạp lực, thả để sút; bấm hai lần nhanh để sút thần sầu (tốn khoảng 15% thể lực, nhân hệ số thể lực). Không có bóng: xoạc, tự bám đối thủ trong 5,5 m; trúng thì 50% cướp bóng, 50% thẻ đỏ. Phạt góc: " + gameData.corners[1].name.toLowerCase() + ".",
     press: "Giữ để bám người cầm bóng, người sắp nhận bóng hoặc bóng tự do; thả là dừng. Phạt góc: " + gameData.corners[2].name.toLowerCase() + ".",
     challenge: "Bấm khi đủ gần để tranh bóng: 30% lỗi nhẹ, 50% cướp bóng, 15% lỗi đáng nhận vàng, 5% lỗi nặng. Phạt góc: " + gameData.corners[3].name.toLowerCase() + ".",
-    special: "Dùng skill theo tình huống, tốn 40% thể lực, một lần mỗi trận; penalty dùng trước khi chốt hướng.",
+    special: "Dùng skill theo tình huống, tốn khoảng 25% thể lực (nhân hệ số thể lực: bền 100 tốn một nửa), một lần mỗi trận. Skill penalty tự bật.",
     pause: "Xin tạm dừng. Đấu với máy: dừng bao nhiêu lần cũng được. Hai người: mỗi bên có 3 lượt, mỗi lượt tối đa 60 giây để thay người hay đổi chiến thuật; hết giờ trận tự chạy tiếp; Space cũng là lượt của người A. Esc và nút tạm dừng trên sân chỉ mở menu, không tính lượt và không cho sửa đội hình."
   };
   const MENU_KEYS = [
@@ -419,7 +482,8 @@
     ["corner", "Phạt góc", "Chỉ có phạt góc khi bóng chạm hậu vệ chắn đường hoặc thủ môn đẩy ra. Người đá góc chọn một trong bốn kiểu: " + gameData.corners.map(c => c.name.toLowerCase()).join(", ") + "."],
     ["free", "Đá phạt · phạt góc", "Đội phòng ngự luôn lùi 5 m khi chờ đá phạt/phạt góc, dù người đá chờ bao lâu. Người chạy chỗ, người kèm và hàng rào giữ nguyên vị trí cho tới khi bóng được đá."],
     ["goalkick", "Phát bóng", "Bóng qua vạch cuối sân: thủ môn đi về đứng trước khung thành, bóng đặt trước gôn và mọi người chờ; thủ môn phải chuyền để đưa bóng vào cuộc (đội người chơi: nhấn phím chuyền), không được dẫn bóng."],
-    ["stamina", "Thể lực", "Cầu thủ mất sức dần trong cả trận, nhanh hơn khi chạy nhiều; dưới 70% thể lực mọi chỉ số giảm dần (tới −20% khi kiệt sức) và chạy chậm lại. Sút thần sầu tốn 30%, chuyền siêu tốc 6%, skill 40%."],
+    ["stamina", "Thể lực", "Cầu thủ mất sức dần trong cả trận, nhanh hơn khi chạy nhiều; dưới 70% thể lực mọi chỉ số giảm dần (tới −20% khi kiệt sức) và chạy chậm lại. Skill tốn 25%, sút thần sầu 15%, chuyền siêu tốc 4,5%, nhân hệ số theo chỉ số Thể lực: bền 100 chỉ tốn một nửa, 50 tốn đủ, 30 tốn thêm 20%."],
+    ["odds", "Thủ môn và tỉ lệ skill", "Các tỉ lệ cố định chỉ là mốc ở chỉ số 82: skill sút vào 70% (thủ môn giỏi bớt tới 8 điểm, tiền đạo giỏi thêm tới 4), skill thủ môn giảm thủng lưới theo mức của skill ±5 điểm, penalty đoán đúng bắt 100/80/80/20% ±8 điểm theo Bắt bóng (và ∓5 theo Dứt điểm người sút)."],
     ["swap", "Đổi vị trí · OVR theo vị trí", "Mỗi cầu thủ có OVR riêng cho từng vị trí (TM/HV/TV/TĐ); OVR đội là trung bình của 6 người theo vị trí đang đá. Trong Kế hoạch trận có thể đổi chỗ hai người trên sân; đổi sơ đồ hay thay người tự động sẽ tự xếp lại cho OVR đội cao nhất."],
     ["goal", "Sau bàn thắng", "Trọng tài chỉ thổi giao bóng khi hai đội đã về hết nửa sân nhà."],
     ["cards", "Thẻ phạt", "Tranh bóng: 30% lỗi nhẹ, 15% lỗi đáng thẻ vàng, 5% lỗi nặng. Xoạc trúng người: 50% cướp bóng, 50% thẻ đỏ."],
@@ -430,8 +494,8 @@
   ];
   const PEN_ITEMS = [
     ["wrong", "Thủ môn đoán sai hướng", 100, "Sút khác hướng thủ môn đổ người luôn vào lưới."],
-    ["saver", "Đoán đúng · thủ môn có Bắt pen", 0, "Thủ môn có Bắt pen đoán đúng thì bắt được 100%; nếu người sút có Sút pen thì còn bắt 80% (20% vào)."],
-    ["plain", "Đoán đúng · không có Bắt pen", 20, "Thủ môn không có Bắt pen đoán đúng thì bắt 80%; người sút có Sút pen thì chỉ còn bắt 20% (80% vào)."],
+    ["saver", "Đoán đúng · thủ môn có Bắt pen", 0, "Thủ môn có Bắt pen đoán đúng thì bắt được khoảng 100%; nếu người sút có Sút pen thì còn bắt khoảng 80%. Mỗi mốc dịch tới ±8 điểm theo chỉ số Bắt bóng của thủ môn và ∓5 điểm theo Dứt điểm của người sút."],
+    ["plain", "Đoán đúng · không có Bắt pen", 20, "Thủ môn không có Bắt pen đoán đúng thì bắt khoảng 80%; người sút có Sút pen thì chỉ còn bắt khoảng 20%. Dịch theo chỉ số như trên."],
     ["who", "Ai có skill penalty", 30, "Chỉ khoảng 30% cầu thủ sân có Sút pen và 50% thủ môn có Bắt pen. Skill penalty tự bật ở mọi lượt sút, không cần bấm phím."]
   ];
   function renderRulesGuide(container) {
@@ -981,8 +1045,13 @@
     if (!p) return "";
     const b = p.body, queued = d.queue.find(q => q.off === id || q.on === id);
     const top = `<div class="pd-top">${figureSvg(view.api, id, "-26 -98 56 66", "pd-face")}<div class="pd-id"><span class="pd-num">#${p.num}</span><strong>${escapeHtml(p.name)}</strong><span class="pd-pos">${posBadge(p.onPitch ? p.line ?? p.role : p.role)}<small>${p.posName ? escapeHtml(p.posName) + " · " : ""}${p.roleName ? escapeHtml(p.roleName) : "Sở trường: " + (LINE_LABEL[p.natural] ?? p.natural)}${p.onPitch ? "" : " · dự bị"}</small></span></div><div class="pd-ovr"><b data-level="${levelOf(p.ovr ?? 0)}">${p.ovr ?? "–"}</b><small>OVR</small></div>${radarSvg(p.stats)}</div>`;
+    const clubTeam = d.team, pdArt = `<svg viewBox="-26 -98 56 66" aria-hidden="true"><g fill="none" stroke="var(--color-ink)" stroke-linecap="round" stroke-linejoin="round">${view.api?.figure?.(id) ?? ""}</g></svg>`;
+    const oddsText = p.odds ? (p.odds.penaltySave != null ? `Skill sút của đối thủ vào ${p.odds.skillShot}% · đoán đúng pen bắt ${p.odds.penaltySave}%` : `Skill sút vào ${p.odds.skillShot}% · pen vào ${p.odds.penaltyScore}% khi thủ môn đoán đúng`) : "";
+    const card = page === 0 && p.ovrs ? playerCardHtml(p, { art: pdArt, logo: clubTeam?.logo ?? "", club: clubTeam?.name ?? "", color: clubTeam?.colors?.shirt ?? "#1d2340", rows: [
+      ["Đang đá", `${posBadge(p.onPitch ? p.line ?? p.role : p.role)} OVR <b>${p.ovr ?? "–"}</b>${p.onPitch ? "" : " · dự bị"}`], ["Vai trò", escapeHtml(p.roleName || "–")],
+      ["Thể lực", `${Math.round(p.energy * 100)}% · skill tốn ${p.skillCost}%`], oddsText && ["Tỉ lệ", oddsText]].filter(Boolean) }) : "";
     const info = page === 0
-      ? `<dl class="pd-info"><div><dt>Chiều cao</dt><dd>${b.height} cm</dd></div><div><dt>Cân nặng</dt><dd>${b.weight} kg</dd></div><div><dt>Tầm với</dt><dd>${b.reach.toFixed(2).replace(".", ",")} m</dd></div><div><dt>Thể lực</dt><dd>${Math.round(p.energy * 100)}%</dd></div><div><dt>Thẻ</dt><dd>${p.yellows ? p.yellows + " vàng" : "Chưa có"}</dd></div><div><dt>Tình trạng</dt><dd>${p.injured ? "Chấn thương" : p.subbing ? "Đang thay người" : queued ? (queued.off === id ? "Sẽ ra sân" : "Sẽ vào sân") : p.onPitch ? "Trên sân" : "Dự bị"}</dd></div></dl>`
+      ? card + `<dl class="pd-info"><div><dt>Chiều cao</dt><dd>${b.height} cm</dd></div><div><dt>Cân nặng</dt><dd>${b.weight} kg</dd></div><div><dt>Tầm với</dt><dd>${b.reach.toFixed(2).replace(".", ",")} m</dd></div><div><dt>Thể lực</dt><dd>${Math.round(p.energy * 100)}%</dd></div><div><dt>Thẻ</dt><dd>${p.yellows ? p.yellows + " vàng" : "Chưa có"}</dd></div><div><dt>Tình trạng</dt><dd>${p.injured ? "Chấn thương" : p.subbing ? "Đang thay người" : queued ? (queued.off === id ? "Sẽ ra sân" : "Sẽ vào sân") : p.onPitch ? "Trên sân" : "Dự bị"}</dd></div></dl>`
         + (p.summary ? `<p class="pd-summary">${escapeHtml(p.summary)}${p.celebration ? ` · Ăn mừng: <b>${escapeHtml(CELEBRATION_NAMES[p.celebration] ?? p.celebration)}</b>` : ""}</p>` : "")
         + `<div class="pd-styles"><div class="pd-style atk"><small>Có bóng</small><b>${escapeHtml(p.attack.name)}</b><em>${escapeHtml(p.attack.tag)}</em><p>${escapeHtml(p.attack.desc)}</p></div><div class="pd-style def"><small>Mất bóng</small><b>${escapeHtml(p.defense.name)}</b><em>${escapeHtml(p.defense.tag)}</em><p>${escapeHtml(p.defense.desc)}</p></div></div>`
         + (p.skill ? `<div class="pd-skill"><svg viewBox="0 0 24 24" aria-hidden="true">${skillBadge(p.skill.id, p.skill.icon, "pd-" + p.id)}</svg><span><b>${escapeHtml(p.skill.name)}${p.skill.used ? " · đã dùng" : ""}</b><small>${escapeHtml(p.skill.desc)}</small>${p.penaltySkill ? `<small class="pd-pen">Penalty: ${escapeHtml(p.penaltySkill.name)}</small>` : ""}</span></div>` : "")
@@ -990,7 +1059,7 @@
     const canSwap = d.coached && (queued || (p.onPitch ? p.canOff || p.canSwap : p.canOn));
     const nowLine = p.onPitch ? p.line ?? p.role : p.role;
     const lines = p.ovrs ? `<div class="pd-lines" title="OVR nếu đá ở từng vị trí"><em>OVR theo vị trí</em>${["GK", "DF", "MF", "FW"].map(l => `<span${nowLine === l ? ' class="is-now"' : ""}><small>${LINE_LABEL[l]}</small><b data-level="${levelOf(p.ovrs[l] ?? 0)}">${p.ovrs[l] ?? "–"}</b></span>`).join("")}</div>` : "";
-    return `<div class="plan-detail" tabindex="-1" role="region" aria-label="Thông tin ${escapeHtml(p.name)}"><div class="pd-head"><b>${page === 0 ? "Thông tin cầu thủ" : "Chỉ số"}</b><span class="pd-pages"><kbd>←</kbd><kbd>→</kbd> ${page + 1}/2 · <kbd>↑</kbd><kbd>↓</kbd> đổi người</span></div>${top}<div class="pd-body">${lines}${info}</div>`
+    return `<div class="plan-detail" tabindex="-1" role="region" aria-label="Thông tin ${escapeHtml(p.name)}"><div class="pd-head"><b>${page === 0 ? "Thông tin cầu thủ" : "Chỉ số"}</b><span class="pd-pages"><kbd>←</kbd><kbd>→</kbd> ${page + 1}/2 · <kbd>↑</kbd><kbd>↓</kbd> đổi người</span></div>${page === 0 && card ? "" : top}<div class="pd-body">${page === 0 && card ? "" : lines}${info}</div>`
       + `<div class="pd-actions"><button type="button" class="secondary" data-nav data-pd="page">${page === 0 ? "Xem chỉ số ›" : "‹ Thông tin"}</button>${canSwap ? `<button type="button" class="secondary" data-nav data-pd="sub">${queued ? "Hủy lượt thay" : p.onPitch ? "Thay / đổi vị trí" : "Thay người"} <kbd>X</kbd></button>` : ""}<button type="button" class="secondary" data-nav data-pd="close">Quay lại <kbd>Esc</kbd></button></div></div>`;
   }
   const PLAN_PROMPTS = {

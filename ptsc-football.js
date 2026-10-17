@@ -53,7 +53,10 @@
       penaltyAttack: { label: "Sút penalty", unavailable: "Chỉ sút pen" },
       penaltyDefense: { label: "Bắt penalty", unavailable: "Chỉ bắt pen" }
     },
-    skillRules: { cost: .4, shotGoal: .7, duration: 2, defenseDuration: 3, usesPerMatch: 1,
+    skillRules: { cost: .25, shotGoal: .7,
+      // The keeper's (and the striker's) ratings move the fixed odds a little either way, from a rating of 82: ±8 points
+      // for a skill shot (the striker ±4), ±5 points on a keeper skill's reduction, ±8 (and ∓5) on a penalty save.
+      spread: { shotKeeper: .08, shotStriker: .04, keeperSave: .05, penaltyKeeper: .08, penaltyStriker: .05, pivot: 82, range: 17 }, duration: 2, defenseDuration: 3, usesPerMatch: 1,
       // Which kind of open-play skill a man gets by position: defenders and keepers sometimes get an attacking one.
       mix: { FW: { attack: .85, defense: .15 }, MF: { attack: .6, defense: .4 }, DF: { attack: .3, defense: .7 }, GK: { keeper: .75, attack: .25 } },
       keeperAttack: ["laserPass", "maestro", "burst"], penaltyShooters: .3, penaltyKeepers: .5, keeperAuto: { minutes: 5, chancePerMinute: .07 }, colors: { FW: "#f7a42c", MF: "#edcf49", DF: "#39d88c", GK: "#ed5353" } },
@@ -196,10 +199,10 @@
       distance: 7 + power * 27, height: action === "pass" ? 0 : 0.12 + power * power * 2.1,
       arc: action === "pass" ? Math.max(0.035, (power - 0.4) * 4) : 0.04 + power * power * 0.85,
       windup: special ? 0.6 : action === "pass" ? 0.16 : 0.22,
-      cost: special ? 0.3 : 0.005 + power * 0.025 };
+      cost: special ? 0.15 : 0.005 + power * 0.025 };
   }
   /** Two quick taps of pass: a hard ground ball to the furthest team-mate, dearer than any shot. */
-  const RAPID_PASS = { power: 1, speed: 26, distance: Infinity, height: 0, arc: 0.03, windup: 0.1, cost: 0.06, need: 0.12 };
+  const RAPID_PASS = { power: 1, speed: 26, distance: Infinity, height: 0, arc: 0.03, windup: 0.1, cost: 0.045 };
   const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   // Three layers: the ground (one polygon), a static backdrop of stands and pitch that the compositor moves with the
   // camera without repainting, and the scene (people, ball, goals, effects) drawn on top.
@@ -708,6 +711,17 @@
     const stat = (p, key) => { const raw = rawStat(p, key); return p?.energy == null || key === "stamina" ? raw : raw * (0.8 + 0.2 * fit(p)); };
     /** A rating's distance from an ordinary 70, as a fraction (85 → +0.15). */
     const edge = (p, key) => (stat(p, key) - 70) / 100;
+    /** What an effort costs him against an average man: stamina 100 pays half, 50 the full price, 30 a fifth more. */
+    const costScale = p => clamp(1.5 - rawStat(p, "stamina") / 100, 0.5, 1.2);
+    const skillCost = p => GAME_DATA.skillRules.cost * costScale(p);
+    /** How far a rating sits from the pivot the fixed odds are set at, −1…+1 (82 → 0, 99 → +1, 65 → −1). */
+    const oddsEdge = (p, key) => { const sp = GAME_DATA.skillRules.spread; return clamp((stat(p, key) - sp.pivot) / sp.range, -1, 1); };
+    /** A skill shot's chance against this keeper: 70% moved by his handling and the striker's finishing. */
+    const skillShotOdds = (shooter, keeper) => { const sp = GAME_DATA.skillRules.spread; return clamp(GAME_DATA.skillRules.shotGoal - (keeper ? oddsEdge(keeper, "goalkeeping") * sp.shotKeeper : 0) + (shooter ? oddsEdge(shooter, "finishing") * sp.shotStriker : 0), 0.5, 0.85); };
+    /** How much a keeper's own skill cuts the chance of a goal: the skill's figure moved by his handling. */
+    const keeperSkillSave = (keeper, skill) => clamp((skill?.save ?? 0) + oddsEdge(keeper, "goalkeeping") * GAME_DATA.skillRules.spread.keeperSave, 0.05, 0.6);
+    /** A penalty saved when the keeper guesses right: the fixed 100/80/80/20% moved by both men's ratings. */
+    const penaltySaveOdds = (keeper, taker, saver, attackSkill) => { const sp = GAME_DATA.skillRules.spread; return clamp((saver ? (attackSkill ? .8 : 1) : (attackSkill ? .2 : .8)) + (keeper ? oddsEdge(keeper, "goalkeeping") * sp.penaltyKeeper : 0) - (taker ? oddsEdge(taker, "finishing") * sp.penaltyStriker : 0), 0, 1); };
     const RATED_LINES = ["GK", "DF", "MF", "FW"];
     /** The line a man is rated in: the one his slot has in his side's shape; his natural position on the bench. */
     const lineOf = p => !p ? null : p.bench || p.role === "SUB" ? p.natural ?? "MF" : p.team ? shapeSlot(p, SHAPES[game.shape[p.team]]).line : p.role;
@@ -914,7 +928,7 @@
       if (p.specialPrimed) return { ready: false, label: "Đã bật" };
       if (p.specialUsed) return { ready: false, label: "Đã dùng" };
       if (skill.auto) return { ready: false, label: specialActive(p) ? "Đang bật" : "Tự kích hoạt" };
-      if (p.energy < GAME_DATA.skillRules.cost) return { ready: false, label: "Thiếu lực" };
+      if (p.energy < skillCost(p)) return { ready: false, label: "Thiếu lực" };
       if (["fulltime", "ceremony", "draw"].includes(game.mode)) return { ready: false, label: "Hết trận" };
       if (!skill.contexts.includes(context)) return { ready: false, label: GAME_DATA.skillContexts[skill.contexts[0]].unavailable };
       if (game.refBreak) return { ready: false, label: "Đợi trọng tài" };
@@ -937,7 +951,7 @@
         p.skillIconUntil = T + 2.5; say(p, `Đã bật: ${skill.name}!`, "var(--art-gold)", 1.3);
         return true;
       }
-      p.specialUsed = true; p.energy = Math.max(0, p.energy - GAME_DATA.skillRules.cost); if (h) h.charge = null;
+      p.specialUsed = true; p.energy = Math.max(0, p.energy - skillCost(p)); if (h) h.charge = null;
       game.stats.specialUses = (game.stats.specialUses ?? 0) + 1;
       if (["shot", "pass"].includes(skill.effect)) { p.script = null; p.busyUntil = T; }
       return executeSpecial(p);
@@ -975,7 +989,8 @@
         // The skill always fires: an on-target special shot that goes in 70% of the time, less against a keeper whose
         // own skill is switched on (by that skill's usual reduction).
         const keeper = GK[otherTeam(p.team)], keeperSkill = specialActive(keeper) ? activeSpecialData(keeper) : null;
-        const goalProbability = GAME_DATA.skillRules.shotGoal * (keeperSkill?.auto ? 1 - keeperSkill.save : 1);
+        const goalProbability = skillShotOdds(p, on(keeper) ? keeper : null) * (keeperSkill?.auto ? 1 - keeperSkillSave(keeper, keeperSkill) : 1);
+        (game.stats.skillShotOdds ??= []).push({ odds: +goalProbability.toFixed(4), keeperGk: stat(keeper, "goalkeeping"), finishing: stat(p, "finishing"), keeperSkill: !!keeperSkill?.auto });
         p.skillIconUntil = T + 1.6;
         return shoot(p, { style: "knuckle", onTarget: true, goalProbability, manual: true, windup: .6, label: skill.name.toUpperCase() });
       }
@@ -1180,6 +1195,8 @@
     function takeManualMovement(p, h) {
       const pressing = h.pressing && !!pressTarget(p);
       if (restartLocked(p) || movementCommitted(p) || !(h.x || h.y || pressing)) return;
+      // On his way to meet a pass he keeps running to it; the player steers him again once he has it.
+      if (p.script && T < (p.receiveUntil ?? 0) && game.mode === "play" && !game.stoppage && (ball.mode === "fly" || (ball.owner && ball.owner !== p && ball.owner.team === p.team))) return;
       p.script = null; p.faceLock = null; p.busyUntil = T;
       p.keys = p.keys.filter(k => !["jockey", "ready", "stance", "wall", "run", "dribble", "dribbleLow"].includes(k[2]));
       if (game.stoppage || game.mode !== "play") p.waitMovement = true;
@@ -1192,7 +1209,7 @@
       lockRestartSelection(h);
       const freeKick = freeKickReady(h), p = freeKick ? selectFreeKickTaker() : ball.owner;
       const kickoff = action === "pass" && (kickoffReady() || goalKickReady());
-      if (!h || !["pass", "shoot"].includes(action) || !p || p.team !== h.team || !on(p) || game.mode !== "play" || (game.stoppage && !kickoff && !freeKick) || (!freeKick && (p.script || T < p.busyUntil))) return false;
+      if (!h || !["pass", "shoot"].includes(action) || !p || p.team !== h.team || !on(p) || game.mode !== "play" || (game.stoppage && !kickoff && !freeKick) || (!freeKick && !kickoff && (p.script || T < p.busyUntil))) return false;
       if (freeKick) { p.script = null; p.busyUntil = T; ball.owner = p; }
       selectBallOwner(p); h.charge = { action, owner: p, start: T }; return true;
     };
@@ -1245,7 +1262,7 @@
         const now = performance.now(), consecutive = now - (h.switchAt ?? -Infinity) <= GAME_DATA.controls.switchSequenceMs;
         if (!consecutive) h.switchOrder = candidates;
         else h.switchOrder = [...(h.switchOrder ?? []).filter(controllable), ...candidates.filter(p => !(h.switchOrder ?? []).includes(p))];
-        const next = consecutive ? h.switchOrder[(h.switchOrder.indexOf(h.selected) + 1) % h.switchOrder.length] : candidates[0];
+        const next = consecutive ? h.switchOrder[(h.switchOrder.indexOf(h.selected) + 1) % h.switchOrder.length] : candidates[0] === h.selected && candidates[1] ? candidates[1] : candidates[0];
         if (h.selected !== next) h.charge = null;
         h.selected = next; h.switchAt = now; h.manualSwitchAt = T; h.manualChoiceUntil = Infinity; h.autoOwner = ball.owner;
         controlledSay(h, "switch");
@@ -1290,7 +1307,7 @@
       }
       if (action === "slide" && ball.owner !== p && T - h.tackleAt > 1.5) {
         const c = ball.owner, direction = aimFor(h, p).world;
-        h.tackleAt = T; p.energy = Math.max(0.05, p.energy - 0.035);
+        h.tackleAt = T; p.energy = Math.max(0.05, p.energy - 0.035 * costScale(p));
         game.stats.slides = (game.stats.slides ?? 0) + 1;
         if (c && on(c) && !c.injured && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) <= SLIDE_ASSIST_RANGE * sweepOf(p)) {
           tackle(c, p, T + clamp(mdist(p.pos, c.pos) / 12, .18, .5), { slide: true });
@@ -1307,7 +1324,7 @@
         const c = game.carrier;
         if (c && !protectedBall(c) && c.team !== h.team && ball.mode === "carried" && mdist(p.pos, c.pos) < 2.7 * sweepOf(p)) {
           h.tackleAt = T;
-          p.energy = Math.max(0.05, p.energy - 0.015);
+          p.energy = Math.max(0.05, p.energy - 0.015 * costScale(p));
           p.keys.push([T, T + 0.35, "tap"]); p.busyUntil = T + 0.45;
           at(T + 0.12, () => {
             if (game.mode !== "play" || game.stoppage || protectedBall(c) || ball.owner !== c || ball.mode !== "carried" || !on(p) || mdist(p.pos, c.pos) > 3) return;
@@ -1381,7 +1398,7 @@
     function directedKick(c, h, action, options = {}) {
       controlledSay(h, action);
       const special = action === "shoot" && !!options.special, rapid = action === "pass" && !!options.rapid;
-      if ((special && c.energy < 0.3) || (rapid && c.energy < RAPID_PASS.need)) { say(c, "Không đủ thể lực!", "var(--color-coral)"); return false; }
+      if ((special || rapid) && c.energy < 0.05 + (special ? kickProfile("shoot", 1, true).cost : RAPID_PASS.cost) * costScale(c) + 0.02) { say(c, "Không đủ thể lực!", "var(--color-coral)"); return false; }
       let profile = kickProfile(action, options.power ?? 0.25, special);
       const direction = aimFor(h, c).world, assisted = support;
       let raw = rayEnd(c, direction, action === "shoot" ? Infinity : profile.distance);
@@ -1413,7 +1430,7 @@
           target = [goal[0], clamp(t > 0 ? c.pos[1] + direction[1] * t : 0.5, GOAL_V[0] + 0.015, GOAL_V[1] - 0.015)];
         }
         if ((assisted || raw.endLine) && Math.abs(target[0] - goal[0]) < 1e-5 && target[1] > GOAL_V[0] && target[1] < GOAL_V[1]) {
-          c.energy = Math.max(0.05, c.energy - profile.cost);
+          c.energy = Math.max(0.05, c.energy - profile.cost * costScale(c));
           if (special) game.stats.specialShots = (game.stats.specialShots ?? 0) + 1;
           game.lastKick = { action, assisted, power: profile.power, height: assisted ? Math.min(1.85, profile.height) : profile.height, arc: profile.arc, special, origin: [...c.pos], target: [...target], receiver: null };
           return shoot(c, { style: special ? "knuckle" : profile.power > 0.65 ? "power" : "kick", aimedW: toT(c.team, target)[1], onTarget: true, manual: true,
@@ -1422,7 +1439,7 @@
       }
       const distance = mdist(c.pos, target), throwing = ball.mode === "held";
       const Tk = T + profile.windup, flight = Math.max(0.25, distance / profile.speed, gravFlight(profile.arc));
-      c.energy = Math.max(0.05, c.energy - profile.cost);
+      c.energy = Math.max(0.05, c.energy - profile.cost * costScale(c));
       if (special) game.stats.specialShots = (game.stats.specialShots ?? 0) + 1;
       game.lastKick = { action, assisted, power: profile.power, height: profile.height, arc: profile.arc, special, rapid, origin: [...c.pos], target: [...target], receiver: receiver?.name ?? null };
       if (action === "shoot") game.stats.shots++;
@@ -1434,7 +1451,7 @@
         const candidate = nearest(players.filter(p => p !== c && on(p) && (!p.script || T < (p.runCallUntil ?? 0))), target).p;
         if (candidate && mdist(candidate.pos, target) <= RUN * flight * (0.7 + 0.3 * fit(candidate))) receiver = candidate;
       }
-      if (receiver) mkScript(receiver, [T, receiver.pos], [Tk + flight, target], [Tk + flight + 0.25, target]);
+      if (receiver) { mkScript(receiver, [T, receiver.pos], [Tk + flight, target], [Tk + flight + 0.25, target]); if (receiver.team === c.team) receiver.receiveUntil = Tk + flight + 0.1; }
       at(Tk, () => {
         if (game.mode !== "play" || ball.owner !== c) return;
         game.carrier = null;
@@ -1825,7 +1842,7 @@
       lockFace(c, Tk + 0.25, Math.sign(ground(...tgt)[0] - c.g[0]) || ATT[c.team]);
       c.busyUntil = Infinity;
       if (thief) mkScript(thief.p, [T, thief.p.pos], [Tk + flight * f, thief.mid]);
-      mkScript(m, [T, m.pos], [Tk + flight, tgt], [Tk + flight + 0.4, tgt]);
+      mkScript(m, [T, m.pos], [Tk + flight, tgt], [Tk + flight + 0.4, tgt]); m.receiveUntil = Tk + flight + 0.1;
       const goalFace = Math.sign(ground(...toW(c.team, [1, 0.5]))[0] - ground(...tgt)[0]) || ATT[c.team];
       const contact = aerial ? meetBall(m, aerial, tgt, Tk + flight, goalFace) : null;
       at(Tk, () => {
@@ -1972,7 +1989,7 @@
         game.restart = "goalKick"; game.goalKick = { taker: gk, spot, readyAt: ready };
         pointRestart(gk);
         const plan = game.goalKick, serial = game.playSerial;
-        at(T + Math.max(0, dur - 0.25), () => { if (game.goalKick === plan && game.stoppage) { ball.g = ground(...spot); ball.h = 0; ball.mode = "dead"; ball.owner = null; ball.show = true; } });
+        at(T + Math.max(0, dur - 0.25), () => { if (game.goalKick === plan && game.stoppage) { ball.g = ground(...spot); ball.h = 0; ball.mode = "dead"; ball.owner = gk; ball.show = true; } });
         at(T + dur, () => { if (game.goalKick === plan) lockFace(gk, ready + 0.5, Math.sign(ground(...toW(t, [1, 0.5]))[0] - gk.g[0]) || ATT[t]); });
         const takeAutomatically = () => {
           if (game.goalKick !== plan || game.mode !== "play" || !game.stoppage || game.playSerial !== serial) return;
@@ -2049,7 +2066,7 @@
       at(T + 0.9, () => { if (game.mode === "play" && game.corner === plan) { ball.mode = "dead"; ball.seg = null; ball.g = ground(...spot); ball.h = 0; ball.show = true; } });
       const hold = new Map();
       const field = outfield(team[att]);
-      const specialist = [...field].filter(p => !p.injured && p.specialSituations?.cornerAttack && !p.specialUsed && p.energy >= GAME_DATA.skillRules.cost).sort((a, b) => mdist(a.pos, spot) - mdist(b.pos, spot))[0];
+      const specialist = [...field].filter(p => !p.injured && p.specialSituations?.cornerAttack && !p.specialUsed && p.energy >= skillCost(p)).sort((a, b) => mdist(a.pos, spot) - mdist(b.pos, spot))[0];
       const taker = specialist ?? (on(STAR[10]) && att === "R" ? STAR[10] : null) ?? [...field].sort((a, b) => mdist(a.pos, spot) - mdist(b.pos, spot))[0];
       if (!taker) return;
       pointRestart(taker);
@@ -2227,7 +2244,7 @@
       holdStill(c, T, Tk + 0.05); kickPoses(c, Tk, "pass");
       lockFace(c, Tk + 0.25, Math.sign(ground(...tgt)[0] - c.g[0]) || ATT[c.team]);
       c.busyUntil = Infinity;
-      if (run) mkScript(m, [T, m.pos], [Tk + flight, tgt]);
+      if (run) { mkScript(m, [T, m.pos], [Tk + flight, tgt]); m.receiveUntil = Tk + flight + 0.1; }
       at(Tk, () => {
         if (game.mode !== "play" || game.stoppage) return;
         game.carrier = null;
@@ -2755,7 +2772,7 @@
       // The fouled man takes it, unless he is far away (a substitute who has just come on): then whoever is nearest.
       const near = !on(c) || mdist(c.pos, spot) > 10 ? nearest(outfield(team[att]), spot).p : c;
       if (!near) return;
-      const specialist = direct ? outfield(team[att]).filter(p => p.specialSituations?.directFreeKick && !p.specialUsed && p.energy >= GAME_DATA.skillRules.cost).sort((a, b) => (a.specialSituations.directFreeKick === "freeKick" ? -1 : 0) - (b.specialSituations.directFreeKick === "freeKick" ? -1 : 0) || mdist(a.pos, spot) - mdist(b.pos, spot))[0] : null;
+      const specialist = direct ? outfield(team[att]).filter(p => p.specialSituations?.directFreeKick && !p.specialUsed && p.energy >= skillCost(p)).sort((a, b) => (a.specialSituations.directFreeKick === "freeKick" ? -1 : 0) - (b.specialSituations.directFreeKick === "freeKick" ? -1 : 0) || mdist(a.pos, spot) - mdist(b.pos, spot))[0] : null;
       const taker = specialist ?? (att === "R" && direct && on(STAR[7]) && mdist(STAR[7].pos, spot) < 15 ? STAR[7] : near);
       pointRestart(taker);
       const goal = toW(att, [1, 0.5]), dm = [(goal[0] - spot[0]) * LEN, (goal[1] - spot[1]) * WID], dl = Math.hypot(...dm) || 1, dn = [dm[0] / dl, dm[1] / dl];
@@ -2893,7 +2910,7 @@
       let gc = o.goalProbability ?? clamp(goalChance(c, style) - keeperBonus + (o.special ? .24 : 0), 0, .95);
       if (o.goalProbability != null && roll < gc) game.stats.specialGoals = (game.stats.specialGoals ?? 0) + 1;
       const keeperSkill = specialActive(gk) ? activeSpecialData(gk) : null;
-      if (keeperSkill?.auto && o.goalProbability == null) gc *= 1 - keeperSkill.save;
+      if (keeperSkill?.auto && o.goalProbability == null) gc *= 1 - keeperSkillSave(gk, keeperSkill);
       // A keeper already rushing out narrows the angle: the closer he gets, the harder it is to beat him.
       // A keeper rushing out or diving at the shooter's feet narrows the angle: the closer, the harder to beat him.
       const closing = (gk.keeperRush || T < (gk.smotherUntil ?? 0)) && on(gk) ? mdist(gk.pos, c.pos) : Infinity;
@@ -3999,11 +4016,11 @@
         // taker using his penalty skill); a keeper without it saves 80% of ordinary penalties but only 20% of skilled ones.
         const attackSkill = !!p.skillEffects?.[attack], keeper = p.actors?.[defend], saver = keeper?.specialSituations?.penaltyDefense === "penaltySaver";
         const guessed = p.choices[attack] === p.choices[defend];
-        const saveChance = !guessed ? 0 : saver ? (attackSkill ? .8 : 1) : (attackSkill ? .2 : .8);
+        const saveChance = !guessed ? 0 : penaltySaveOdds(keeper, p.actors?.[attack], saver, attackSkill);
         const goal = !(penaltyRng() < saveChance);
         p.history[attack].push(goal); if (goal) p.score[attack]++;
         const skillWinner = guessed && goal && attackSkill ? "attack" : guessed && !goal && saver ? "defense" : null;
-        game.stats.penaltyKicks = (game.stats.penaltyKicks ?? []); game.stats.penaltyKicks.push({ attackSkill, saver, guessed, goal });
+        game.stats.penaltyKicks = (game.stats.penaltyKicks ?? []); game.stats.penaltyKicks.push({ attackSkill, saver, guessed, goal, saveChance: +saveChance.toFixed(4), keeperGk: keeper ? stat(keeper, "goalkeeping") : null });
         p.phase = "result"; p.last = { attack, shot: p.choices[attack], dive: p.choices[defend], actualDive: p.choices[defend], goal, turn: p.turn, skillWinner, attackSkill, saver };
         if (p.kind === "inMatch") {
           at(T + 3, () => {
@@ -5115,6 +5132,10 @@
         skill: skill ? { id: p.specialId, name: skill.name, short: skill.short ?? "", desc: skill.desc ?? "", icon: skill.icon ?? "", role: skill.role, used: !!p.specialUsed } : null,
         penaltySkill: pen ? { id: pen, name: GAME_DATA.skills[pen]?.name ?? "", short: GAME_DATA.skills[pen]?.short ?? "" } : null,
         ovrs: Object.fromEntries(RATED_LINES.map(line => [line, ovrAt(p, line)])),
+        odds: (p.role === "SUB" ? p.natural : p.role) === "GK"
+          ? { skillShot: Math.round(skillShotOdds(null, p) * 100), penaltySave: Math.round(penaltySaveOdds(p, null, p.specialSituations?.penaltyDefense === "penaltySaver", false) * 100) }
+          : { skillShot: Math.round(skillShotOdds(p, null) * 100), penaltyScore: Math.round((1 - penaltySaveOdds(null, p, false, !!p.specialSituations?.penaltyAttack)) * 100) },
+        skillCost: Math.round(skillCost(p) * 100), costScale: +costScale(p).toFixed(2),
         canOff: coached(p.team) && !matchOver() && mayGoOff(p) && !p.subbing, canOn: coached(p.team) && !matchOver() && mayComeOn(p) && !p.subbing,
         canSwap: coached(p.team) && !matchOver() && onPitch && p.role !== "GK" && !p.injured && !p.subbing };
     }
@@ -5269,6 +5290,7 @@
     api.__goalKick = t => { if (game.mode === "play" && !game.stoppage) { game.carrier = null; ball.owner = null; goalKick(t); } };
     api.__lineup = t => team[t].filter(inSquad).map(p => ({ name: p.name, id: p.id, i: p.i, role: p.role, natural: p.natural, line: lineOf(p), ovr: overall(p), pos: [...p.pos] }));
     api.__rating = t => teamRating(t);
+    api.__odds = () => Object.fromEntries(TEAMS.map(t => [t, { keeper: GK[t].name, gk: stat(GK[t], "goalkeeping"), skillShotAgainst: skillShotOdds(null, GK[t]), penaltySave: penaltySaveOdds(GK[t], null, false, false), costs: team[t].filter(on).map(p => [p.name, rawStat(p, "stamina"), +skillCost(p).toFixed(3)]) }]));
     api.__hold = () => ({ corner: game.corner ? [...game.corner.hold.keys()].map(p => p.name) : null, fk: game.fk?.hold ? [...game.fk.hold.keys()].map(p => p.name) : null });
     api.__step = (seconds) => { for (let i = 0; i < Math.round(seconds / DT); i++) step(DT); render(); return api.__state(); };
     api.__state = () => ({ T: +T.toFixed(2), mode: game.mode, score: { ...game.score }, minute: minute(), poss: game.poss, carrier: game.carrier?.name ?? null,
