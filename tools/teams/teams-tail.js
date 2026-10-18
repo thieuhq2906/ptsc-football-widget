@@ -14,7 +14,7 @@ window.PTSCTeams = (() => {
   /** A man as the engine wants him: identity, look, fixed ratings and build, styles. */
   function entry(p, num) {
     return { id: p.id, name: p.name, short: p.short, num, face: p.face, skin: p.face.skin, star: p.star, natural: p.role, pos: p.pos, roleName: p.roleName, summary: p.summary,
-      stats: p.stats, height: p.height, weight: p.weight, attack: p.attack, defense: p.defense, celebration: p.celebration, ovr: p.ovr };
+      stats: p.stats, height: p.height, weight: p.weight, attack: p.attack, defense: p.defense, celebration: p.celebration, ovr: p.ovr, skills: p.skills };
   }
   /**
    * Nine players drawn from the club at random, spread over the positions; the better ones of each line start.

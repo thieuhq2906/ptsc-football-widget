@@ -63,6 +63,11 @@ const server = http.createServer((req, res) => {
     await page.waitForFunction(() => document.getElementById("game").dataset.route === "#/cpu" && !document.getElementById("panel-cpu").hidden);
     assert(await page.locator("#panel-cpu .setup").isVisible(), "Choosing a mode opens its setup screen");
     assert.equal(await page.evaluate(() => document.activeElement.dataset.opt), "clubA", "Setup opens with the cursor on the first row");
+    await page.keyboard.press("KeyF");
+    await page.waitForFunction(() => document.fullscreenElement === document.getElementById("game"));
+    await page.keyboard.press("KeyF");
+    await page.waitForFunction(() => !document.fullscreenElement);
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.opt), "clubA", "F toggles full screen from a menu and keeps the cursor");
     const firstClub = await page.locator('#panel-cpu .opt[data-opt="clubA"]').getAttribute("data-value");
     await page.keyboard.press("ArrowRight");
     const nextClub = await page.locator('#panel-cpu .opt[data-opt="clubA"]').getAttribute("data-value");
@@ -274,6 +279,7 @@ const server = http.createServer((req, res) => {
     }
     console.log("PASS club selection for both sides, random nines spread over the lines, kit clashes resolved");
 
+    assert.deepEqual(await page.evaluate(() => [document.activeElement.dataset.act, document.activeElement.textContent.trim()]), ["resume", "Bắt đầu"], "A new match opens with the cursor on Bắt đầu");
     // New matches wait for Space; the engine loop is then frozen so the test steps it by hand.
     await page.locator("#panel-local .arena").focus(); await page.keyboard.press("Space");
     const before = await page.evaluate(() => {
@@ -740,8 +746,8 @@ const server = http.createServer((req, res) => {
       const table = styles[phase];
       if (table[low] != null && table[high] != null) assert(table[low] < table[high], `${low} must play deeper than ${high}: ` + JSON.stringify(table));
     };
-    ordered("attack", "pivot", "drill"); ordered("attack", "metronome", "lateArrival"); ordered("attack", "launcher", "stepUp");
-    ordered("defense", "shadow", "coiled"); ordered("defense", "shield", "breaker"); ordered("defense", "bulwark", "trap"); ordered("defense", "lineGuard", "libero");
+    ordered("attack", "anchor", "poacher"); ordered("attack", "conductor", "shuttle");
+    ordered("defense", "chaser", "outlet"); ordered("defense", "cover", "marker");
     assert(Object.values(styleTable.attack).concat(Object.values(styleTable.defense)).every(st => st.name && st.tag && st.desc && !("en" in st)), "Every style has its own name, a short tag and a description");
     assert(await page.locator("#screen-info .style-browser .br-tab").count() === 4, "Styles are grouped by zone");
     assert(await page.locator("#screen-info .skill-browser .br-tab").count() === 5, "Skills are grouped by situation");
@@ -758,7 +764,7 @@ const server = http.createServer((req, res) => {
       }
       const custom = { R: { players: [
         { name: "Thủ Thành", head: "buzz", skin: 1, num: 1, stats: { goalkeeping: 92 } }, { name: "Hậu A", head: "spiky", skin: 1, num: 2 }, { name: "Hậu B", head: "curly", skin: 2, num: 3 },
-        { name: "Tiền Vệ", head: "beard", skin: 1, num: 8 }, { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, stats: { finishing: 95, speed: 90 }, attack: "drill", defense: "coiled" },
+        { name: "Tiền Vệ", head: "beard", skin: 1, num: 8 }, { name: "Sát Thủ", head: "quiff", skin: 2, num: 9, stats: { finishing: 95, speed: 90 }, attack: "poacher", defense: "outlet" },
         { name: "Cánh Phải", head: "glasses", skin: 1, num: 11 }], bench: [{ name: "Dự Bị", head: "buzz", skin: 2, num: 12, natural: "DF" }] } };
       const host = document.createElement("div"); document.body.append(host);
       const api = PTSCFootball.mount(host, { mode: "cpu", seed: 4, still: 0, fonts: "none", squads: JSON.stringify(custom) });
@@ -770,7 +776,7 @@ const server = http.createServer((req, res) => {
     const forwards = ratings.all.filter(p => p.role === "FW");
     assert(mean(ratings.all.filter(p => p.role === "GK"), "goalkeeping") > 70 && mean(ratings.all.filter(p => p.role !== "GK"), "goalkeeping") < 40, "Only keepers can keep goal");
     const striker = ratings.roster.R.find(p => p.name === "Sát Thủ");
-    assert(striker && striker.stats.finishing === 95 && striker.stats.speed === 90 && striker.attack === "Mũi khoan" && striker.defense === "Lò xo", "Squads given as data keep fixed ratings and styles: " + JSON.stringify(striker));
+    assert(striker && striker.stats.finishing === 95 && striker.stats.speed === 90 && striker.attack === "Kẻ săn bàn" && striker.defense === "Chờ thời", "Squads given as data keep fixed ratings and styles: " + JSON.stringify(striker));
     assert.equal(ratings.roster.R.find(p => p.name === "Thủ Thành").stats.goalkeeping, 92);
     assert(ratings.roster.B.some(p => p.name === "Vũ"), "A team without custom data keeps the default squad");
     const localPlan = await page.evaluate(() => document.querySelector("#panel-local .match-host").__ptscFootball.plan());
@@ -779,7 +785,7 @@ const server = http.createServer((req, res) => {
       const base = { name: "A", head: "buzz", skin: 1, num: 9, stats: { speed: 80, dribbling: 80, passing: 80, longPass: 80, finishing: 80, heading: 80, defending: 80, strength: 80, stamina: 80, goalkeeping: 20 } };
       const squad = attack => ({ players: [{ ...base, name: "K", num: 1, stats: { ...base.stats, goalkeeping: 80 } }, { ...base, name: "D1", num: 2 }, { ...base, name: "D2", num: 3 }, { ...base, name: "M", num: 4 }, { ...base, name: "F1", num: 5, attack }, { ...base, name: "F2", num: 6 }] });
       const read = attack => { const host = document.createElement("div"); document.body.append(host); const api = PTSCFootball.mount(host, { mode: "local", seed: 2, still: 0, fonts: "none", squads: { R: squad(attack) } }); const p = api.roster().R.find(x => x.name === "F1"); api.destroy(); host.remove(); return { stats: p.stats, attack: p.attack, height: p.body.height }; };
-      return [read("pivot"), read("slalom")];
+      return [read("anchor"), read("flyer")];
     });
     assert.deepEqual(styleFree[0].stats, styleFree[1].stats, "A playing style changes behaviour, never the ratings");
     assert.notEqual(styleFree[0].attack, styleFree[1].attack);
@@ -1360,6 +1366,57 @@ const server = http.createServer((req, res) => {
     assert(deadBalls.kickoff.kickoffSeen && deadBalls.kickoff.maxD <= .505, "Nobody crosses the halfway line while a kick-off waits: " + JSON.stringify(deadBalls.kickoff));
     assert(deadBalls.corner.waiting && deadBalls.corner.samples >= 12 && deadBalls.corner.hold >= 6 && deadBalls.corner.minBox >= 3, "The men placed for a corner hold their spots while the taker waits: " + JSON.stringify(deadBalls.corner));
     console.log("PASS a waiting kick-off and a waiting corner keep their shape");
+
+    // Skills are fixed by the data: the same man has the same skills every match, never an attacking skill and a
+    // dead-ball one together; skills come back after a ten-minute cooldown.
+    const fixedSkills = await page.evaluate(() => {
+      const ATTACK = new Set(["burst", "finisher", "phantom", "maestro", "laserPass"]);
+      const data = PTSC_TEAMS.teams.flatMap(t => t.players);
+      const clash = data.filter(p => ATTACK.has(p.skills?.open) && (p.skills.freeKick || p.skills.corner)).map(p => p.name);
+      const missing = data.filter(p => !p.skills || (!p.skills.open && !p.skills.freeKick && !p.skills.corner && !p.skills.cornerDefense)).map(p => p.name);
+      const seen = new Map(), diff = [];
+      for (const seed of [3, 9]) {
+        const f = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 }, seed);
+        for (const t of ["R", "B"]) for (const p of [...f.api.plan()[t].players, ...f.api.plan()[t].bench]) {
+          const d = data.find(x => x.name === p.name), got = [p.skill?.id ?? null, ...p.setPieces.map(x => x.id).sort()].join(",");
+          const want = [d.skills.open ?? null, ...["freeKick", "corner", "cornerDefense", "penalty", "penaltySave"].map(k => d.skills[k]).filter(Boolean).sort()].join(",");
+          if (got !== want) diff.push([p.name, got, want]);
+          if (seen.has(p.name) && seen.get(p.name) !== got) diff.push([p.name, "changed"]); seen.set(p.name, got);
+        }
+        f.destroy();
+      }
+      // Cooldown: use a skill, it waits ten match minutes, then it is ready again.
+      const g = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 }, 5);
+      let used = null;
+      for (let i = 0; i < 900 && !used; i++) {
+        __takeRestart(g.api); g.api.__step(.1);
+        const me = g.api.status().players[0];
+        if (me.special.ready && g.api.action("A", "special")) used = { name: me.name, minute: g.api.status().minute };
+      }
+      const after = used && g.api.status().players.find(p => p.name === used.name) ? g.api.status().players[0].special : null;
+      const plan = used && [...g.api.plan().R.players, ...g.api.plan().R.bench].find(p => p.name === used.name);
+      g.destroy();
+      return { clash, missing, diff, used, label: after?.label, planCooldown: plan?.skill?.cooldown, planUsed: plan?.skill?.used };
+    });
+    assert.deepEqual(fixedSkills.clash, [], "No player has an attacking skill and a dead-ball skill together");
+    assert.deepEqual(fixedSkills.missing, [], "Every player has a skill of some kind");
+    assert.deepEqual(fixedSkills.diff, [], "Matches use the data's fixed skills");
+    assert(fixedSkills.used && fixedSkills.planUsed && fixedSkills.planCooldown >= 9 && fixedSkills.planCooldown <= 10, "A used skill cools down for ten match minutes: " + JSON.stringify(fixedSkills));
+    const cooled = await page.evaluate(() => {
+      const g = __clubMatch({ mode: "cpu", teamA: "R", duration: 4 }, 5);
+      let name = null;
+      for (let i = 0; i < 900 && !name; i++) { __takeRestart(g.api); g.api.__step(.1); const me = g.api.status().players[0]; if (me.special.ready && g.api.action("A", "special")) name = me.name; }
+      const rows = [];
+      for (let i = 0; i < 4000 && rows.length < 2; i++) {
+        __takeRestart(g.api); g.api.__step(.1);
+        const p = [...g.api.plan().R.players, ...g.api.plan().R.bench].find(x => x.name === name);
+        if (!rows.length && p.skill.cooldown <= 5) rows.push({ minute: g.api.status().minute, used: p.skill.used });
+        if (rows.length === 1 && !p.skill.used) rows.push({ minute: g.api.status().minute, used: p.skill.used });
+      }
+      g.destroy(); return rows;
+    });
+    assert(cooled.length === 2 && cooled[0].used && !cooled[1].used, "The skill is usable again once its cooldown has run: " + JSON.stringify(cooled));
+    console.log("PASS skills fixed by the data, attack and dead-ball skills exclusive, ten-minute cooldown");
 
     // A goal kick: the keeper walks back to his goal, waits for his player's pass and restarts with it; the computer's keeper passes by himself.
     const goalKicks = await page.evaluate(() => {

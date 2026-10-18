@@ -66,6 +66,7 @@ Các phím hành động nằm thành cụm hai cột, ba hàng: A **R/T – F/G
 - Hướng dẫn trên sân, ngoài sân, phạt góc, đá phạt, skill và penalty đều vẽ theo layout đang dùng. Đổi layout giữa trận có hiệu lực ngay.
 
 Bấm **Vào sân** (hoặc **Trận mới**): sân chờ ở thế giao bóng, menu trận hiện **Nhấn Space để bắt đầu trận đấu**. Nhấn Space để vào trận, rồi dùng lại Space để tạm dừng/tiếp tục. Phím này không nằm trong hướng dẫn cơ bản trên sân.
+Vào trận, con trỏ đặt sẵn ở **Bắt đầu** (Enter hoặc Space để đá). Mọi menu dùng hoàn toàn bằng phím: ↑ ↓ ← → chọn, Enter xác nhận, Q/E đổi nhóm, Esc quay lại, **F bật/tắt toàn màn hình** (trong lúc đá, F là phím chuyền nên dùng khi đang ở menu).
 Khi tạm dừng (Space, Esc hoặc nút tạm dừng trong sân), menu trận hiện tỉ số, phút và **Nhấn Space để tiếp tục trận đấu**; con trỏ nằm ở **Tiếp tục**.
 Pad minh họa gắn WASD cho A, phím mũi tên cho B. Hai cụm hướng dẫn cơ bản nằm riêng góc trái/phải sân, độ mờ 30%.
 Phần trăm và thanh thể lực của người đang điều khiển hiện ngay trong sân: A bên trái, B bên phải, vẫn đọc được khi toàn màn hình; chuyển màu cảnh báo khi dưới 35%.
@@ -111,15 +112,15 @@ Hỗ trợ ngắm giữ cú sút trong khung thành; khi tắt hỗ trợ, sút 
 
 ### Skills đặc biệt
 
-Mỗi cầu thủ dùng tối đa **một lần mỗi trận**, tiêu hao **25% thể lực × hệ số thể lực** (Thể lực 100 tốn 12,5%, 80 tốn 17,5%, 50 tốn 25%, 30 trở xuống tốn 30%), cần đủ thể lực đó để kích hoạt. **Bấm skill là skill luôn được kích hoạt** (không còn thông báo kích hoạt thất bại); kết quả của pha bóng vẫn tùy tình huống. Skill tấn công kéo dài 2 giây bóng trong cuộc; **skill phòng ngự kéo dài 3 giây (hơn 50%)**; skill thủ môn tự bật 5 phút. Khi skill đang hiệu lực, **icon của skill hiện trên đầu cầu thủ** và mất khi hết (skill tức thời như sút/chuyền hiện 1,6 giây). Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Nhấn **E cho A, O cho B**; icon cạnh tên/thể lực là chỉ dẫn, không phải nút chuột.
-Mỗi cầu thủ có một skill trận thường, phần lớn theo vị trí nhưng không cố định: tiền đạo 85% skill tấn công/15% phòng ngự, tiền vệ 60/40, **hậu vệ 30% có skill tấn công**, **thủ môn 25% có skill tấn công** (Chọc khe, Cầm nhịp, Bứt tốc; không có skill sút). Kèm chuyên môn bóng chết phù hợp vai trò. Chỉ khoảng 30% cầu thủ sân có skill sút pen và 50% thủ môn có skill bắt pen. Icon tự chuyển theo tình huống; **tất cả chuyên môn trong trận dùng chung một lượt của cầu thủ** (riêng skill penalty tính riêng). Bấm sai tình huống không mất lượt hay thể lực. Máy dùng cùng bộ điều kiện với người chơi. Bảng skill ngoài sân có mô tả ngắn từng skill.
+Skill **dùng được nhiều lần**: sau mỗi lần dùng có **hồi chiêu 10 phút đồng hồ trận** (đồng hồ dừng thì hồi chiêu cũng dừng; HUD ghi "Hồi chiêu 7'"; ở Chỉ xem đồng hồ chạy rất nhanh nên mỗi skill chỉ dùng một lần để giữ kịch bản trận), mỗi lần tiêu hao **25% thể lực × hệ số thể lực** (Thể lực 100 tốn 12,5%, 80 tốn 17,5%, 50 tốn 25%, 30 trở xuống tốn 30%), cần đủ thể lực đó để kích hoạt. **Bấm skill là skill luôn được kích hoạt** (không còn thông báo kích hoạt thất bại); kết quả của pha bóng vẫn tùy tình huống. Skill tấn công kéo dài 2 giây bóng trong cuộc; **skill phòng ngự kéo dài 3 giây (hơn 50%)**; skill thủ môn tự bật 5 phút. Khi skill đang hiệu lực, **icon của skill hiện trên đầu cầu thủ** và mất khi hết (skill tức thời như sút/chuyền hiện 1,6 giây). Lượt dùng gắn với danh tính cầu thủ, giữ nguyên khi ra/vào sân, qua hiệp phụ; trận mới đặt lại. Nhấn **E cho A, O cho B**; icon cạnh tên/thể lực là chỉ dẫn, không phải nút chuột.
+**Skill của 300 cầu thủ là cố định** (ghi trong `teams.js`, sinh bởi `tools/teams/build-teams.cjs`), suy từ vị trí và chỉ số: tiền đạo lấy Sát thủ vòng cấm / Bứt tốc / Bóng ma theo Dứt điểm, Tốc độ hay Rê bóng cao nhất; tiền vệ trụ và tiền vệ giỏi phòng ngự lấy Máy quét, tiền vệ khác Chuyền xuyên tuyến hoặc Nhạc trưởng; hậu vệ Siêu phòng thủ (Phòng ngự 98+), hậu vệ cánh nhanh Bứt tốc, còn lại Máy quét hoặc Tường thép; thủ môn Thủ môn quét (Neuer, Ederson, ter Stegen, Alisson, Lehmann), Bàn tay thép (cao 1m94+ hoặc khỏe) hoặc Phản xạ. Bóng chết: Vua đá phạt / Đại bác (chuyền dài và dứt điểm cao), Đường cong góc cờ (chuyền dài 88+), Lá chắn không chiến (hậu vệ đánh đầu 90+). **Một cầu thủ không có cùng lúc skill tấn công và skill đá phạt/phạt góc**: ai giỏi bóng chết hơn (Kroos, Beckham, De Bruyne, Pirlo, Roberto Carlos…) chỉ giữ skill bóng chết, còn lại giữ skill tấn công. Skill phòng ngự/thủ môn đi kèm được skill chống phạt góc. **Sút pen** (Dứt điểm 90+) và **bắt pen** (Bắt bóng 95+) đi kèm được mọi skill khác. Thẻ cầu thủ (Thông tin game → Đội bóng và Kế hoạch trận) ghi đủ skill, bóng chết và penalty của từng người. Đội hình tùy chỉnh không ghi skill thì vẫn bốc ngẫu nhiên theo vị trí, cùng luật loại trừ. Icon tự chuyển theo tình huống; **tất cả chuyên môn trong trận dùng chung một lượt của cầu thủ** (riêng skill penalty tính riêng). Bấm sai tình huống không mất lượt hay thể lực. Máy dùng cùng bộ điều kiện với người chơi. Bảng skill ngoài sân có mô tả ngắn từng skill.
 
 | Tình huống | Skill / vai trò | Khi nào dùng và hiệu quả |
 |---|---|---|
 | Tấn công | Bứt tốc bất khả cản, Bóng ma sân cỏ (FW), Nhạc trưởng (MF) | Đội mình triển khai bóng; có thể tăng tốc chạy chỗ không bóng. Hiệu lực 2s bóng trong cuộc, bảo vệ bóng khi cầm bóng. |
 | Tấn công có bóng | Sát thủ vòng cấm (FW), Chuyền xuyên tuyến (MF) | Người đang chọn phải có bóng; sút đặc biệt hoặc chuyền nhanh ngay, không giữ lệnh chờ nhận bóng về sau. |
 | Phòng ngự | Tường thép, Siêu phòng thủ, Máy quét (DF) | Bóng trong cuộc và đối phương triển khai. Cướp bóng có cửa sổ 2s để áp sát trong 5,5–7m; buff phòng ngự có hiệu lực 2s. |
-| Thủ môn (tự kích hoạt) | Bàn tay thép, Thủ môn quét, Phản xạ chớp nhoáng (GK) | Không cần bấm phím, không tốn thể lực. Khi đối phương tấn công trong nửa sân nhà, mỗi phút đồng hồ trận có 7% tự bật; một lần/thủ môn/trận, kéo dài **5 phút đồng hồ trận** (dừng khi bóng chết). Bàn tay thép: giảm 40% khả năng thủng lưới và luôn bắt dính; Phản xạ: giảm 45%, phản ứng nhanh hơn; Thủ môn quét: giảm 20%, lao ra xa thêm 3m. HUD hiện số phút còn lại. |
+| Thủ môn (tự kích hoạt) | Bàn tay thép, Thủ môn quét, Phản xạ chớp nhoáng (GK) | Không cần bấm phím, không tốn thể lực. Khi đối phương tấn công trong nửa sân nhà, mỗi phút đồng hồ trận có 7% tự bật; kéo dài **5 phút đồng hồ trận**, hồi chiêu 10 phút tính từ lúc bật (dừng khi bóng chết). Bàn tay thép: giảm 40% khả năng thủng lưới và luôn bắt dính; Phản xạ: giảm 45%, phản ứng nhanh hơn; Thủ môn quét: giảm 20%, lao ra xa thêm 3m. HUD hiện số phút còn lại. |
 | Đá phạt trực tiếp | Vua đá phạt (MF), Đại bác bóng chết (FW) | Chỉ người thực hiện, đã đứng cạnh bóng và trọng tài cho phép. E/O thực hiện cú sút đặc biệt 70% ghi bàn. Không dùng ở phạt gián tiếp. |
 | Đá phạt góc | Đường cong góc cờ (MF/FW) | Chỉ người đá đã sẵn sàng. E/O tạt bổng; kích hoạt thành công đưa bóng đến người tấn công đánh đầu, không bảo đảm bàn thắng. Các phím F/G/V/B hoặc J/K/N/M vẫn đá góc thường. |
 | Chống phạt góc | Lá chắn không chiến (DF) | Lúc đối thủ chờ đá góc. E/O chuẩn bị cản đúng quả góc đó, tối đa một lá chắn mỗi đội/tình huống. Thành công ưu tiên phá bóng; hết tình huống hủy hiệu ứng. |
@@ -140,10 +141,12 @@ Mỗi cầu thủ có **một lối chơi tấn công** (khi đội mình có b�
 
 | Vùng | Khi có bóng · tấn công | Khi mất bóng · phòng ngự |
 |---|---|---|
-| Tiền đạo | **Mũi khoan**: rình phía xa bóng rồi xé khe. **Nam châm**: đứng giữa vòng cấm hút bóng tạt, đánh đầu. **Bức tường**: lùi về phía bóng làm điểm tựa, nhả bóng. **Vũ công biên**: ôm biên, rê bó vào. **Kẻ đón lõng**: chờ rìa vòng cấm, sút một chạm. **Số 9 ảo**: lùi khỏi hàng thủ để nhận bóng, rê và phối hợp. | **Thợ săn**: áp sát thủ môn và hậu vệ ngay khi mất bóng. **Lò xo**: đứng cao chờ phản công. **Cái bóng**: lùi che trục giữa. |
-| Tiền vệ | **Máy đếm nhịp**: chuyền ngắn giữ nhịp. **Cơn gió muộn**: băng muộn vào vòng cấm. **Người rải bóng**: đứng phía ít người, phất dài đổi cánh. **Tự do**: đi khắp sân, rê và sút. | **Lá chắn**: chắn trước hàng thủ, che đường bóng. **Pít-tông**: lên xuống, áp sát liên tục. **Máy cắt cỏ**: lao vào tranh chấp. **Người đọc trận**: đón lõng cắt bóng. |
-| Hậu vệ | **Bệ phóng**: đứng lại, phất dài. **Trung vệ cầm bóng**: dẫn bóng vượt tuyến. **Đường chồng biên**: chạy chồng phía có bóng và tạt. | **Con đỉa**: bám người. **Chốt chặn cuối**: đứng thấp nhất, bọc lót. **Bẫy việt vị**: dâng hàng thủ. **Tường thành**: lùi sát vòng cấm, che đường sút. |
-| Thủ môn | **Thủ môn chia bài**: triển khai ngắn. **Máy bắn đá**: đứng cao, phát bóng thật xa. | **Gác đền**: bám vạch vôi, cứu thua tốt hơn. **Thủ môn quét**: lao ra rất sớm. |
+| Tiền đạo | **Kẻ săn bàn**: rình trong vòng cấm, xé khe. **Cột trụ**: quay lưng làm điểm tựa, nhả bóng. **Ngòi nổ biên**: ôm biên, đi bóng bó vào. | **Chặn từ xa**: áp sát từ tuyến đầu. **Chờ thời**: đứng trên chờ phản công. |
+| Tiền vệ | **Bộ não**: cầm nhịp, chuyền ngắn. **Con thoi**: lên xuống, băng muộn vào vòng cấm. | **Đánh chặn**: chắn trước hàng thủ, cắt bóng. **Xông xáo**: áp sát và tranh chấp. |
+| Hậu vệ | **Chốt cầm bóng**: dẫn bóng lên, chuyền ngắn. **Cánh chạy chồng**: chạy chồng biên, căng ngang. | **Đeo bám**: kèm người. **Bọc lót**: đứng sau cùng, che đường sút. |
+| Thủ môn | **Thủ môn chơi chân**: triển khai ngắn, đứng cao. **Phát nhanh**: ném xa mở phản công. | **Bám gôn**: đứng trên vạch. **Lao ra sớm**: băng ra cắt bóng. |
+
+17 kiểu thay cho bộ cũ 28 kiểu: bỏ những kiểu của sân 11 người (bẫy việt vị, phất dài đổi cánh, bệ phóng…). Lối chơi của 300 cầu thủ suy từ vị trí, vai trò và chỉ số trong `tools/teams/build-teams.cjs`.
 
 ### Kế hoạch trận
 
@@ -296,6 +299,8 @@ Chép 2 file `ptsc-football.js` và `ptsc-football.css` vào cùng một thư m�
 - Mỗi thẻ `div.ptsc-football` là một trận riêng. Đặt bao nhiêu thẻ cũng được.
 - Widget co giãn theo chiều rộng của thẻ div, chiều cao tự theo tỉ lệ 16:9.
 - File CSS do script tự nạp vào bên trong widget (Shadow DOM), nên CSS của trang không làm vỡ widget và CSS của widget không ảnh hưởng tới trang.
+
+Trong game không bôi đen hay copy được chữ (trừ ô nhập tên layout).
 
 ## Tuỳ chọn (thuộc tính `data-*`)
 

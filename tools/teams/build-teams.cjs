@@ -42,42 +42,55 @@ function shortName(name) {
 }
 /** Playing styles from the role in the data, the position and the ratings; behaviour only. */
 function stylesFor(p) {
-  const role = ROLE_OF[p.pos], s = p.stats, r = p.role, wide = ["LW", "RW", "LM", "RM", "LB", "RB"].includes(p.pos), tall = p.height >= 186;
+  const role = ROLE_OF[p.pos], s = p.stats, r = p.role, wide = ["LW", "RW", "LB", "RB", "LM", "RM"].includes(p.pos), tall = p.height >= 186;
   let attack, defense;
   if (role === "GK") {
-    attack = s.passing >= s.longPass ? "distributor" : "catapult";
-    defense = s.speed >= 60 || /quét|libero/i.test(r) ? "libero" : "lineGuard";
+    const sweeper = SWEEPER_KEEPERS.has(p.name);
+    attack = sweeper || s.passing >= 62 ? "footKeeper" : "quickKeeper";
+    defense = sweeper ? "keeperRush" : "keeperLine";
   } else if (role === "DF") {
-    attack = wide || /biên|công thủ/i.test(r) ? "overlap" : /libero|phát động|điều phối/i.test(r) || s.longPass >= 84 ? "launcher" : s.dribbling >= 68 ? "stepUp" : "launcher";
-    defense = /kèm|máy quét|tranh chấp/i.test(r) ? "leech" : s.speed >= 80 && s.defending >= 82 ? "trap" : /thủ lĩnh|libero/i.test(r) || s.heading >= 82 ? "bulwark" : "lastStand";
+    attack = ["LB", "RB"].includes(p.pos) ? "runner" : "builder";
+    defense = /kèm|tranh chấp|máy quét/i.test(r) || s.strength >= 86 ? "marker" : "cover";
   } else if (role === "MF") {
-    if (/box-to-box/i.test(r)) attack = "lateArrival";
-    else if (/điều phối|chuyền dài|libero/i.test(r)) attack = "spray";
-    else if (/rê bóng|kỹ thuật|cánh/i.test(r) || (s.dribbling >= 90 && ["CAM", "LM", "RM"].includes(p.pos))) attack = "freeSpirit";
-    else if (/nhạc trưởng|điều tiết|sáng tạo/i.test(r)) attack = s.longPass > s.passing ? "spray" : "metronome";
-    else if (/phòng ngự|đánh chặn|trụ|máy quét|tranh chấp/i.test(r)) attack = s.longPass >= 82 ? "spray" : "metronome";
-    else if (p.pos === "CAM" && s.finishing >= 80) attack = "lateArrival";
-    else attack = "metronome";
-    if (/máy quét|tranh chấp|đánh chặn/i.test(r) || s.strength >= 85) defense = "breaker";
-    else if (/phòng ngự|trụ|libero/i.test(r)) defense = s.defending >= 85 && s.passing < 85 ? "breaker" : "shield";
-    else if (/box-to-box/i.test(r) || s.stamina >= 90) defense = "piston";
-    else if (s.defending >= 70) defense = "reader";
-    else defense = "piston";
+    attack = /box-to-box/i.test(r) || ["LM", "RM"].includes(p.pos) || (p.pos === "CAM" && s.finishing >= 80) ? "shuttle" : "conductor";
+    defense = p.pos === "CDM" || /trụ|đánh chặn|phòng ngự|điều phối/i.test(r) ? "screener" : /box-to-box|tranh chấp/i.test(r) || s.stamina >= 88 ? "harrier" : s.defending >= 72 ? "screener" : "harrier";
   } else {
-    if (/nhạc trưởng|sáng tạo|liên kết/i.test(r) || p.pos === "CF" && s.passing >= 85) attack = "falseNine";
-    else if (/tường|không chiến/i.test(r) || (tall && s.heading >= 85 && s.dribbling < 80)) attack = "pivot";
-    else if (/cánh|biên|rê bóng/i.test(r) || (wide && s.dribbling >= 85)) attack = "slalom";
-    else if (/vòng cấm|săn bàn/i.test(r)) attack = s.heading >= 82 ? "magnet" : "drill";
-    else if (/tốc độ|mũi khoan/i.test(r) || s.speed >= 90) attack = "drill";
-    else if (/kỹ thuật|toàn diện/i.test(r)) attack = s.finishing >= 92 && s.speed < 85 ? "rebound" : wide ? "slalom" : "drill";
-    else attack = s.heading >= 82 ? "magnet" : "drill";
-    if (s.stamina >= 86 && s.defending >= 45) defense = "hunter";
-    else if (/tốc độ|mũi khoan|săn bàn|vòng cấm/i.test(r) || s.speed >= 88) defense = "coiled";
-    else defense = "shadow";
+    attack = ["LW", "RW"].includes(p.pos) ? "flyer"
+      : /tường|không chiến|liên kết/i.test(r) || (p.pos === "CF" && s.passing >= 85) || (tall && s.heading >= 88 && s.finishing < 93 && s.dribbling < 85) ? "anchor"
+      : s.dribbling >= 93 && s.dribbling > s.finishing + 3 ? "flyer" : "poacher";
+    defense = s.speed >= 89 && s.defending < 45 ? "outlet" : s.stamina >= 82 || s.defending >= 50 ? "chaser" : "outlet";
   }
   return { attack, defense };
 }
-// Ratings corrected over the workbook: these centre-backs were given a midfielder's defending numbers.
+// Known playing profiles the workbook's numbers cannot tell apart (every keeper there is a shot-stopper).
+const SWEEPER_KEEPERS = new Set(["Manuel Neuer", "Ederson", "Marc-André ter Stegen", "Alisson Becker", "Jens Lehmann"]);
+const CANNON_TAKERS = new Set(["Roberto Carlos"]);
+const ATTACK = new Set(["burst", "finisher", "phantom", "maestro", "laserPass"]);
+function skillsFor(p, stats) {
+  const role = ROLE_OF[p.pos], s = stats, best = list => list.sort((a, b) => b[1] - a[1])[0][0];
+  let open;
+  if (role === "GK") open = SWEEPER_KEEPERS.has(p.name) ? "sweeper" : p.height >= 194 || s.strength >= 84 ? "keeperHands" : "reflex";
+  else if (role === "FW") open = best([["finisher", s.finishing + 1], ["burst", s.speed], ["phantom", s.dribbling]]);
+  else if (role === "MF") open = p.pos === "CDM" || (s.defending >= 85 && s.defending > s.dribbling)
+    ? (s.defending >= 86 ? "interceptor" : "laserPass")
+    : best([["laserPass", (s.passing + s.longPass) / 2 + 1], ["maestro", (s.dribbling + s.passing) / 2], ["finisher", s.finishing - 3], ["burst", s.speed - 4]]);
+  else open = ["LB", "RB"].includes(p.pos) && s.speed >= 89 && s.dribbling >= 82 ? "burst"
+    : s.defending >= 98 ? "superDefense" : s.speed >= s.strength ? "interceptor" : "wall";
+  const outfield = role !== "GK", curl = s.longPass * .6 + s.finishing * .4;
+  const freeKick = !outfield ? null : CANNON_TAKERS.has(p.name) ? "deadBallCannon" : curl >= 86 && s.longPass >= 85 ? "freeKick" : s.finishing >= 93 && s.strength >= 76 ? "deadBallCannon" : null;
+  let corner = (role === "MF" || role === "FW") && s.longPass >= 88 ? "cornerCurve" : null;
+  const cornerDefense = role === "DF" && s.heading >= 90 ? "aerialFort" : null;
+  let open2 = open, fk = freeKick;
+  // An attacking skill and a dead-ball one never go together: he keeps whichever his ratings make him better at.
+  if (ATTACK.has(open) && (fk || corner)) {
+    const openScore = { finisher: s.finishing, burst: s.speed, phantom: s.dribbling, maestro: (s.dribbling + s.passing) / 2, laserPass: (s.passing + s.longPass) / 2 }[open];
+    const setScore = Math.max(fk ? curl : 0, corner ? s.longPass : 0);
+    if (setScore >= openScore || CANNON_TAKERS.has(p.name)) open2 = null; else { fk = null; corner = null; }
+  }
+  return { open: open2, freeKick: fk, corner, cornerDefense,
+    penalty: outfield && s.finishing >= 90 ? "penaltyFinisher" : null,
+    penaltySave: role === "GK" && s.goalkeeping >= 95 ? "penaltySaver" : null };
+}
 const OVERRIDES = {
   "Bayern Munich|Jérôme Boateng": { defending: 91, heading: 86, strength: 86 },
   "Juventus|Leonardo Bonucci": { defending: 92, heading: 84, strength: 80 },
@@ -95,9 +108,10 @@ const out = TEAMS.map(team => {
     const role = ROLE_OF[p.pos], { attack, defense } = stylesFor(p);
     const star = role !== "GK" && p.stats.dribbling >= 92 && p.stats.dribbling >= p.stats.finishing ? 10 : role !== "GK" && p.stats.finishing >= 92 ? 7 : 0;
     const key = team.id + ":" + p.no;
-    return { id: key, name: p.name, short, num: Number.isInteger(f.num) && f.num > 0 && f.num < 100 ? f.num : null, pos: p.pos, role, roleName: p.role, summary: p.summary, ovr: p.ovr, height: p.height, weight: p.weight, stats: { ...p.stats, ...(OVERRIDES[team.sheet + "|" + p.name] ?? {}) }, star, attack, defense,
+    return { id: key, name: p.name, short, num: Number.isInteger(f.num) && f.num > 0 && f.num < 100 ? f.num : null, pos: p.pos, role, roleName: p.role, summary: p.summary, ovr: p.ovr, height: p.height, weight: p.weight, stats: { ...p.stats, ...(OVERRIDES[team.sheet + "|" + p.name] ?? {}) }, star, attack, defense, skills: null,
       celebration: f.celebration ?? null, face: { hair: f.hair ?? "buzz", hairColor: f.hairColor ?? "black", skin: f.skin ?? 1, beard: f.beard ?? "none", brows: f.brows ?? "normal", extras: f.extras ?? "none", build: f.build ?? "round" } };
   });
+  for (const p of squad) p.skills = skillsFor(p, p.stats);
   for (const p of squad) if (!faces.has(team.sheet + "|" + p.name)) used.set(p.name, (used.get(p.name) ?? 0) + 1);
   return { id: team.id, name: team.name, short: team.short, country: team.country, logo: `assets/teams/${team.id}.png`,
     kits: { home: { ...team.kits.home, image: `assets/teams/${team.id}-home.png` }, away: { ...team.kits.away, image: `assets/teams/${team.id}-away.png` } }, players: squad };

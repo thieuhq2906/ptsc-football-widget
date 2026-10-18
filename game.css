@@ -489,6 +489,8 @@ button.prompt:hover, button.prompt:focus-visible { background: #ffffff18; color:
 .pcard-facts dt { color: #48505f; font-size: 12px; font-weight: 700; }
 .pcard-facts dd { margin: 0; font-size: 12px; font-weight: 800; text-align: right; }
 .pcard-facts dd small { color: var(--muted); font-weight: 700; }
+.pcard-skill { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; white-space: nowrap; }
+.pcard-skill svg { width: 18px; height: 18px; flex: none; }
 .pcard-facts .pos-badge { min-width: 0; padding: 0 4px; font-size: 10px; }
 .br-item.player-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; min-height: 46px; padding: 6px 12px; }
 .br-item.player-row .club-ovr { font-size: 17px; }
@@ -812,3 +814,7 @@ button.plan-shape:focus { outline: none; border-color: var(--ink); background: v
 }
 /* Touch screens have no keyboard prompts to read. */
 @media (hover: none) { span.prompt, .pause-prompts { display: none; } }
+
+/* A game, not a page: nothing to select or copy outside text fields. */
+body, #game { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#game input, #game textarea { -webkit-user-select: text; user-select: text; }
