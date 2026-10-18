@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06110d">
+<title>PTSC Cup 3D</title>
+<link rel="stylesheet" href="game.css?v=20261019-3d2">
+<style>
+/* The 3D view draws penalties on the pitch: only the choices and the shoot-out score stay from the 2D scene. */
+.penalty-host { background: transparent !important; pointer-events: none; }
+.penalty-host .penalty-scene { display: none !important; }
+.penalty-host .penalty-choices, .penalty-host .penalty-score { pointer-events: auto; }
+/* A penalty in a match keeps the match scoreboard: no shoot-out score. */
+.penalty-host[data-kind="live"] .penalty-score { display: none; }
+</style>
+</head>
+<body>
+<!-- The whole game is one stage: every menu, setting, guide and the match itself live inside it. -->
+<main id="game" class="game" data-screen="menu" aria-label="PTSC Cup 6v6">
+  <header class="game-bar">
+    <button type="button" class="nav-back" hidden><span class="nav-back-icon" aria-hidden="true">‹</span><span class="nav-back-label">Quay lại</span><kbd>Esc</kbd></button>
+    <p class="crumbs" aria-live="polite"></p>
+    <button type="button" class="tool bar-fullscreen" data-fullscreen aria-pressed="false" aria-label="Toàn màn hình" title="Toàn màn hình"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="expand-icon" d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><path class="collapse-icon" d="M4 9h5V4m11 5h-5V4M9 20v-5H4m11 5v-5h5"/></svg><span class="fullscreen-label">Toàn màn hình</span></button>
+  </header>
+
+  <!-- Watching. As the main menu it plays behind the menu. -->
+  <section id="panel-watch" class="screen watch-screen" data-screen="watch" aria-label="Chỉ xem">
+    <div class="arena" tabindex="0" aria-label="Sân xem trận đấu; Space hoặc Esc mở menu, giữ Tab xem chỉ số">
+      <div class="arena-surface">
+        <div id="watch-match" class="ptsc-football" data-ptsc-manual="1"></div>
+        <div class="arena-tools">
+          <button type="button" class="tool pause" aria-label="Tạm dừng" title="Tạm dừng (Space)"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-icon" d="M8 5v14M16 5v14"/><path class="play-icon" d="M8 5l11 7-11 7z"/></svg></button>
+          <button type="button" class="tool fullscreen" data-fullscreen aria-pressed="false" aria-label="Toàn màn hình" title="Toàn màn hình"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="expand-icon" d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><path class="collapse-icon" d="M4 9h5V4m11 5h-5V4M9 20v-5H4m11 5v-5h5"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <nav class="main-menu" aria-label="Menu chính" hidden>
+      <div class="menu-brand"><span class="brand-ball" aria-hidden="true"></span><div><span class="menu-eyebrow">Sân cỏ văn phòng</span><h1>PTSC Cup <em>6v6</em></h1></div></div>
+      <ul class="menu-list">
+        <li><a class="menu-item is-featured" href="#/cpu" data-go="cpu" data-nav data-kicker="Một người" data-desc="Chọn câu lạc bộ cho bạn và cho máy, độ khó, thời gian và bố trí phím rồi ra sân. Mỗi trận bốc 9 ngôi sao từ 30 người của mỗi đội."><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="2"/><path d="M8 20h8M12 16v4M9 10h.01M15 10h.01"/></svg></span><b>Đấu với máy</b></a></li>
+        <li><a class="menu-item" href="#/local" data-go="local" data-nav data-kicker="Hai người · một bàn phím" data-desc="Mỗi người chọn một câu lạc bộ trên cùng bàn phím. Mỗi bên có 3 lượt tạm dừng 60 giây để thay người và đổi chiến thuật."><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M10 20c0-3 3-5 6-5s6 2 6 5"/></svg></span><b>Hai người</b></a></li>
+        <li><a class="menu-item" href="#/watch" data-go="watch" data-nav data-kicker="Máy đấu máy" data-desc="Hai câu lạc bộ ngẫu nhiên đá với nhau: rượt đuổi, lội ngược dòng, bàn thắng phút cuối. Xem thẻ chỉ số của cả hai đội."><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><b>Chỉ xem</b></a></li>
+        <li><a class="menu-item" href="#/info/skills" data-go="info" data-nav data-kicker="Sổ tay" data-desc="Đội bóng, bảng skill, chỉ số và hình thể, phong cách chơi, layout phím, điều khiển, độ khó và luật."><span class="menu-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></span><b>Thông tin game</b></a></li>
+      </ul>
+      <aside class="menu-preview" aria-live="polite"><span class="menu-preview-kicker"></span><strong class="menu-preview-title"></strong><p class="menu-preview-text"></p></aside>
+    </nav>
+  </section>
+
+  <section id="panel-cpu" class="screen game-panel" data-screen="cpu" data-mode="cpu" aria-label="Đấu với máy" hidden>
+    <div class="setup">
+      <div class="setup-main">
+        <div class="setup-title"><span class="kicker">Đấu với máy</span><h2>Chuẩn bị trận</h2></div>
+        <div class="opt-list" role="group" aria-label="Cài đặt trận"></div>
+        <p class="opt-desc" aria-live="polite"></p>
+      </div>
+      <aside class="setup-side"><div class="matchup"></div><button type="button" class="start" data-nav>Vào sân</button></aside>
+    </div>
+    <div class="match-screen" hidden>
+      <div class="arena" tabindex="0" role="group" aria-label="Sân đấu với máy; dùng bàn phím để chơi, Esc mở menu, giữ Tab xem chỉ số">
+        <div class="arena-surface">
+          <div class="match-host"></div>
+          <div class="arena-hints"><div class="pad-help" data-slot="A"></div></div>
+          <div class="arena-tools">
+            <button type="button" class="tool pause" aria-label="Tạm dừng" title="Tạm dừng (Space)"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-icon" d="M8 5v14M16 5v14"/><path class="play-icon" d="M8 5l11 7-11 7z"/></svg></button>
+            <button type="button" class="tool fullscreen" data-fullscreen aria-pressed="false" aria-label="Toàn màn hình" title="Toàn màn hình"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="expand-icon" d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><path class="collapse-icon" d="M4 9h5V4m11 5h-5V4M9 20v-5H4m11 5v-5h5"/></svg></button>
+          </div>
+        </div>
+        <p class="match-status sr-only" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-local" class="screen game-panel" data-screen="local" data-mode="local" aria-label="Hai người" hidden>
+    <div class="setup">
+      <div class="setup-main">
+        <div class="setup-title"><span class="kicker">Hai người</span><h2>Chuẩn bị trận</h2></div>
+        <div class="opt-list" role="group" aria-label="Cài đặt trận"></div>
+        <p class="opt-desc" aria-live="polite"></p>
+      </div>
+      <aside class="setup-side"><div class="matchup"></div><button type="button" class="start" data-nav>Vào sân</button></aside>
+    </div>
+    <div class="match-screen" hidden>
+      <div class="arena" tabindex="0" role="group" aria-label="Sân đấu hai người; dùng chung bàn phím, Esc mở menu, giữ Tab xem chỉ số">
+        <div class="arena-surface">
+          <div class="match-host"></div>
+          <div class="arena-hints"><div class="pad-help" data-slot="A"></div><div class="pad-help" data-slot="B"></div></div>
+          <div class="arena-tools">
+            <button type="button" class="tool pause" aria-label="Tạm dừng" title="Tạm dừng (Space)"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pause-icon" d="M8 5v14M16 5v14"/><path class="play-icon" d="M8 5l11 7-11 7z"/></svg></button>
+            <button type="button" class="tool fullscreen" data-fullscreen aria-pressed="false" aria-label="Toàn màn hình" title="Toàn màn hình"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="expand-icon" d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><path class="collapse-icon" d="M4 9h5V4m11 5h-5V4M9 20v-5H4m11 5v-5h5"/></svg></button>
+          </div>
+        </div>
+        <p class="match-status sr-only" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-info" class="screen info-screen" data-screen="info" aria-label="Thông tin game" hidden>
+    <div class="info-layout">
+      <nav class="info-nav" role="tablist" aria-label="Thông tin game">
+        <a role="tab" href="#/info/teams" data-pane="teams" data-nav>Đội bóng</a>
+        <a role="tab" href="#/info/skills" data-pane="skills" data-nav>Bảng skill</a>
+        <a role="tab" href="#/info/stats" data-pane="stats" data-nav>Chỉ số &amp; hình thể</a>
+        <a role="tab" href="#/info/styles" data-pane="styles" data-nav>Phong cách chơi</a>
+        <a role="tab" href="#/info/keys" data-pane="keys" data-nav>Layout phím</a>
+        <a role="tab" href="#/info/controls" data-pane="controls" data-nav>Điều khiển</a>
+        <a role="tab" href="#/info/rules" data-pane="rules" data-nav>Độ khó &amp; luật</a>
+      </nav>
+      <div class="info-panes" tabindex="0" aria-label="Nội dung; dùng mũi tên để cuộn">
+        <div class="info-pane" data-pane="teams" role="tabpanel" hidden></div>
+        <div class="info-pane" data-pane="skills" role="tabpanel"></div>
+        <div class="info-pane" data-pane="stats" role="tabpanel" hidden></div>
+        <div class="info-pane" data-pane="styles" role="tabpanel" hidden></div>
+        <div class="info-pane" data-pane="keys" role="tabpanel" hidden></div>
+        <div class="info-pane" data-pane="controls" role="tabpanel" hidden></div>
+        <div class="info-pane" data-pane="rules" role="tabpanel" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="prompt-bar" aria-label="Phím tắt"></footer>
+
+  <div class="game-dialog" hidden>
+    <div class="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="game-dialog-text">
+      <p id="game-dialog-text" class="dialog-text"></p>
+      <div class="dialog-actions"><button type="button" class="menu-item" data-nav data-answer="no">Hủy</button><button type="button" class="menu-item is-danger" data-nav data-answer="yes">Đồng ý</button></div>
+    </div>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/babylonjs@9.29.0/babylon.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/babylonjs-materials@9.29.0/babylonjs.materials.min.js"></script>
+<script src="3d/render3d.js?v=20261019-3d2" defer></script>
+<script src="ptsc-football.js?v=20261019-3d2" defer></script>
+<script src="teams.js?v=20261019-3d2" defer></script>
+<script src="keymap.js?v=20261019-3d2" defer></script>
+<script src="penalties.js?v=20261019-3d2" defer></script>
+<script src="game.js?v=20261019-3d2" defer></script>
+</body>
+</html>

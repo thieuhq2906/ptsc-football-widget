@@ -125,22 +125,24 @@
       const p = state.penalty;
       this.last = [state, paused];
       this.host.hidden = !p || p.phase === "finished";
+      if (p) this.host.dataset.kind = p.kind ?? "shootout";
       if (!p || p.phase === "finished") { this.clearTimers(); this.turn = null; this.phase = null; return; }
       if (!this.paletteApplied) {
         for (const [name, value] of Object.entries(this.api.palette())) if (value) this.host.style.setProperty(name, value);
         this.paletteApplied = !!this.host.style.getPropertyValue("--color-ink");
       }
-      text(this.nodes.title, p.kind === "inMatch" ? "PENALTY" : "LUÂN LƯU");
-      const team = t => `<span class="pen-team${p.attack === t ? " is-attacking" : ""}"><i class="pen-dot" style="background:${colors[t]}"></i>${names[t].toUpperCase()}</span>`;
+      text(this.nodes.title, (p.kind === "inMatch" || p.kind === "live") ? "PENALTY" : "LUÂN LƯU");
+      const nameOf = t => state.teamInfo?.[t]?.short ?? names[t], colorOf = t => state.teamInfo?.[t]?.colors?.shirt ?? colors[t];
+      const team = t => `<span class="pen-team${p.attack === t ? " is-attacking" : ""}"><i class="pen-dot" style="background:${colorOf(t)}"></i>${nameOf(t).toUpperCase()}</span>`;
       const marks = t => `<span class="pen-marks">${p.history[t].map(goal => `<i class="${goal ? "goal" : "saved"}"></i>`).join("")}${"<i></i>".repeat(Math.max(0, 5 - p.history[t].length))}</span>`;
-      const scoreHtml = p.kind === "inMatch"
+      const scoreHtml = (p.kind === "inMatch" || p.kind === "live")
         ? `<div class="pen-bug"><span class="pen-cup">PENALTY</span>${team("R")}<b>${state.score.R}–${state.score.B}</b>${team("B")}</div>`
         : `<div class="pen-bug"><span class="pen-cup">PEN</span>${team("R")}<b>${p.score.R}–${p.score.B}</b>${team("B")}</div><div class="pen-history">${marks("R")}<small>Trận ${state.score.R}–${state.score.B}</small>${marks("B")}</div>`;
       // The result stays hidden until the ball arrives.
       const reveal = p.phase !== "result" || this.revealed || this.turn !== p.turn;
       if (reveal && this.scoreHtml !== scoreHtml) { this.host.querySelector(".penalty-score").innerHTML = scoreHtml; this.scoreHtml = scoreHtml; }
       const message = paused ? "Đang tạm dừng" : p.phase === "result" && !reveal ? "Sút…" : p.phase === "result" ? p.last.skillWinner === "attack" ? "VÀO! BẢN LĨNH CHẤM PHẠT!" : p.last.skillWinner === "defense" ? "NGƯỜI HÙNG BẮT PEN!" : p.last.goal ? "VÀO!" : "THỦ MÔN CẢN PHÁ!"
-        : p.kind === "inMatch" ? `Penalty · Đội ${names[p.attack]} sút` : `Lượt ${Math.floor(p.turn / 2) + 1} · Đội ${names[p.attack]} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
+        : (p.kind === "inMatch" || p.kind === "live") ? `Penalty · ${nameOf(p.attack)} sút` : `Lượt ${Math.floor(p.turn / 2) + 1} · ${nameOf(p.attack)} sút${p.turn >= 10 ? " · lượt quyết định" : ""}`;
       text(this.host.querySelector(".penalty-message"), message);
       for (const card of this.controls.children) {
         const player = p.players.find(item => item.slot === card.dataset.slot);
@@ -148,7 +150,7 @@
         if (!player) continue;
         card.dataset.team = player.team;
         const actor = p.actors?.[player.role === "attack" ? "taker" : "keeper"];
-        text(card.querySelector("strong"), `${player.slot} · ${player.role === "attack" ? "Sút" : "Bắt"} · ${actor?.name ?? names[player.team]}`);
+        text(card.querySelector("strong"), `${player.slot} · ${player.role === "attack" ? "Sút" : "Bắt"} · ${actor?.name ?? nameOf(player.team)}`);
         const keys = this.keys(player.slot), keyHtml = ["left", "center", "right"].map((dir, i) => `<span><kbd>${keys[dir]}</kbd> ${["Trái", "Giữa", "Phải"][i]}</span>`).join("");
         const keyNode = card.querySelector(".penalty-keys");
         if (keyNode.innerHTML !== keyHtml) keyNode.innerHTML = keyHtml;

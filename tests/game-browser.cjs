@@ -829,6 +829,58 @@ const server = http.createServer((req, res) => {
     assert(cornerCauses.every(r => r.corners <= r.touched), "Every corner follows a defender's block or a keeper's parry: " + JSON.stringify(cornerCauses));
     console.log("PASS corners only after a real touch by a defender or the keeper");
 
+    // Ball physics: a shot comes off a man standing in its path, a parry rebounds as a free ball, a free ball
+    // rolling over the touchline gives a kick-in.
+    const physics = await page.evaluate(() => {
+      const mk = seed => { const host = document.createElement("div"); document.body.append(host); const api = PTSCFootball.mount(host, { seed, still: 0, fonts: "none" }); return { api, done() { api.destroy(); host.remove(); } }; };
+      const out = {};
+      {
+        // A shot that was going in, straight at a defender four metres in front of the shooter.
+        const f = mk(3); f.api.__step(.5);
+        f.api.__shotFrom([.7, .5], { style: "kick", goalProbability: 1, aimedW: .5 });
+        const blocker = f.api.__place("B", [.8, .5]);
+        let blocked = null;
+        for (let i = 0; i < 60 && !blocked; i++) { const st = f.api.__step(.05); if (f.api.__stats().blocks > 0) blocked = st; }
+        f.api.__step(1.5);
+        out.block = { blocker, blocked, blocks: f.api.__stats().blocks, blockedShots: f.api.__stats().blockedShots, score: f.api.status().score };
+        f.done();
+      }
+      out.parry = null;
+      for (let seed = 1; seed <= 30 && !out.parry; seed++) {
+        // A hard shot at the keeper from close in is palmed away; look for one pushed back into play.
+        const f = mk(seed); f.api.__step(.5);
+        f.api.__shotFrom([.8, .5], { style: "power", goalProbability: 0, onTarget: true, aimedW: .44 });
+        let rebound = null;
+        for (let i = 0; i < 40 && !rebound; i++) { const st = f.api.__step(.05); if (f.api.__stats().parries > 0 && st.ball === "free") rebound = st; }
+        if (!rebound || rebound.parry.out) { f.done(); continue; }
+        const speeds = []; let end = null;
+        for (let i = 0; i < 200 && !end; i++) { const st = f.api.__step(.05); speeds.push(Math.hypot(st.vel[0], st.vel[2])); if (st.ball !== "free" || Math.hypot(...st.vel) < .01) end = st; }
+        out.parry = { seed, rebound, end: end && { ball: end.ball, owner: end.owner, vel: end.vel }, speeds: speeds.slice(0, 6), corner: f.api.__stats().corners };
+        f.done();
+      }
+      {
+        const f = mk(5); f.api.__step(.5);
+        f.api.__freeBall([.5, .97], [0, 0, 4], "R");
+        let st = null;
+        for (let i = 0; i < 30 && !f.api.status().stoppage; i++) st = f.api.__step(.05);
+        out.kickIn = { st, stoppage: f.api.status().stoppage, kickIns: f.api.__stats().kickIns, note: f.api.status().note };
+        f.done();
+      }
+      return out;
+    });
+    assert(physics.block.blocked && physics.block.blocks >= 1 && physics.block.blockedShots >= 1, "A shot through a defender standing on its line comes off him: " + JSON.stringify(physics.block));
+    assert.equal(physics.block.blocked.ball, "free", "The blocked shot runs free");
+    assert.equal(physics.block.blocked.callout, "Chặn bóng!");
+    assert(physics.block.blocked.vel[0] < 8, "It does not carry on goalwards at shot pace: " + JSON.stringify(physics.block.blocked.vel));
+    assert.deepEqual(physics.block.score, { R: 0, B: 0 }, "The goal the shot was heading for never happens");
+    assert(physics.parry, "A parried shot rebounds into play as a free ball");
+    const ratio = physics.parry.rebound.parry.speed / physics.parry.rebound.parry.incoming;
+    assert(ratio >= .34 && ratio <= .56, "The rebound leaves at 35-55% of the shot's speed: " + JSON.stringify(physics.parry.rebound.parry));
+    assert(physics.parry.speeds.every((s, i) => i === 0 || s <= physics.parry.speeds[i - 1] + .05) || physics.parry.end?.owner, "The free ball slows: " + JSON.stringify(physics.parry.speeds));
+    assert(physics.parry.end && (physics.parry.end.owner || Math.hypot(...physics.parry.end.vel) < .01), "The rebound is collected or comes to rest: " + JSON.stringify(physics.parry.end));
+    assert(physics.kickIn.stoppage && physics.kickIn.kickIns === 1 && /^Đá biên/.test(physics.kickIn.note), "A free ball over the touchline is a kick-in: " + JSON.stringify(physics.kickIn));
+    console.log("PASS shots come off a man in their path, parries rebound as free balls, a free ball over the touchline is a kick-in");
+
     // Holding the press key follows: the man on the ball, the man a pass goes to, or a loose ball; it stops on release.
     const pressFollow = await page.evaluate(() => {
       let steps = 0, moving = 0, closing = 0, released = null;
@@ -994,7 +1046,8 @@ const server = http.createServer((req, res) => {
       const mid = api.plan(); out.midMinute = api.status().minute;
       out.held = mid.R.shape; out.injuries = api.__stats().injuries;
       out.lineupKept = mid.R.players.map(p => p.name).join() === initial;
-      out.cpuRotated = mid.B.players.map(p => p.name).join() !== out.start.B.players.map(p => p.name).join();
+      // A rotation counts once it has started: the men walking off at this very moment are still listed until they reach the bench.
+      out.cpuRotated = mid.B.players.map(p => p.name).join() !== out.start.B.players.map(p => p.name).join() || mid.B.players.some(p => p.subbing);
       // A change asked for during play happens at the next dead ball.
       const off2 = mid.R.players.find(p => p.canOff), on2 = mid.R.bench.find(b => b.canOn);
       out.queued = on2 ? api.queueSub("R", off2.id, on2.id) : { ok: false, reason: "no bench" };
@@ -1457,6 +1510,8 @@ const server = http.createServer((req, res) => {
     });
     assert(switched.length >= 3 && switched.every(Boolean), "Every press of the switch key changes the man: " + JSON.stringify(switched));
     const apart = await page.evaluate(async () => { const api = document.querySelector("#panel-cpu .match-host").__ptscFootball; api.pause(); const out = [];
+      // With the ball at his feet the key calls a run instead; press it while the other side has the ball.
+      for (let i = 0; i < 900; i++) { const s = api.status(); if (!s.stoppage && s.phase === "play" && s.possession === "B" && !s.players[0].hasBall) break; __takeRestart(api); api.__step(.1); }
       for (let n = 0; n < 3; n++) { await new Promise(r => setTimeout(r, 1100)); const before = api.__selected("A").name; api.action("A", "switch"); out.push(before !== api.__selected("A").name); }
       api.play(); return out; });
     assert(apart.every(Boolean), "Separate presses never reselect the same man: " + JSON.stringify(apart));

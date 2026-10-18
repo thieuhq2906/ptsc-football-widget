@@ -1913,7 +1913,8 @@
       return;
     }
     const { slot, action } = bound, state = session.api.status();
-    if (state.phase === "penalties" && PENALTY_ACTIONS[action]) {
+    // A shoot-out, or a penalty played live on the pitch (the 3D view): left, centre, right pick the way.
+    if ((state.phase === "penalties" || state.penalty?.kind === "live") && PENALTY_ACTIONS[action]) {
       if (!event.repeat && !session.paused && !state.ended) { session.api.choosePenalty(slot, PENALTY_ACTIONS[action]); updateHud(session); }
       return;
     }
